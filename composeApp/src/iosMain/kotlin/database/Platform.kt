@@ -9,4 +9,4 @@ actual fun currentTimeMillis(): Long {
 }
 
 actual fun createDatabaseHelper(dbPath: String): DatabaseHelper =
-    IosDatabaseHelper(dbPath)
+    CommonDatabaseHelper()

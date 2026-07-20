@@ -1,4 +1,0 @@
-headers = sqlite3.h
-headerFilter = sqlite3.h
-linkerOpts = -lsqlite3
-package = graphite.sqlite
