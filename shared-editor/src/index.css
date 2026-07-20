@@ -185,6 +185,16 @@ body {
   box-shadow: 0 0 8px var(--accent-color-glow);
 }
 
+.graphite-toolbar-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.graphite-toolbar-btn.disabled:hover {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
 .graphite-toolbar-divider {
   width: 1px;
   height: 20px;

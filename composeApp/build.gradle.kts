@@ -21,9 +21,21 @@ kotlin {
 
     androidTarget()
 
-    iosX64()
-    iosArm64()
-    iosSimulatorArm64()
+    iosX64 {
+        binaries.framework {
+            baseName = "GraphiteCompose"
+        }
+    }
+    iosArm64 {
+        binaries.framework {
+            baseName = "GraphiteCompose"
+        }
+    }
+    iosSimulatorArm64 {
+        binaries.framework {
+            baseName = "GraphiteCompose"
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {

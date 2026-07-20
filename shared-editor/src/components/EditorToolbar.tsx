@@ -4,6 +4,8 @@ import {
   $getSelection,
   $isRangeSelection,
   $isRootOrShadowRoot,
+  CAN_REDO_COMMAND,
+  CAN_UNDO_COMMAND,
   REDO_COMMAND,
   UNDO_COMMAND,
   FORMAT_TEXT_COMMAND,
@@ -36,19 +38,22 @@ import {
 function ToolbarButton({
   onClick,
   active,
+  disabled,
   title,
   children,
 }: {
   onClick: () => void;
   active?: boolean;
+  disabled?: boolean;
   title: string;
   children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       title={title}
-      className={`graphite-toolbar-btn${active ? " active" : ""}`}
+      className={`graphite-toolbar-btn${active ? " active" : ""}${disabled ? " disabled" : ""}`}
     >
       {children}
     </button>
@@ -64,6 +69,8 @@ type BlockType = "p" | "h1" | "h2" | "h3" | "ul" | "ol" | "quote" | "code";
 export function EditorToolbar() {
   const [editor] = useLexicalComposerContext();
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
@@ -114,6 +121,14 @@ export function EditorToolbar() {
         updateToolbar();
         return false;
       }, 1),
+      editor.registerCommand(CAN_UNDO_COMMAND, (payload) => {
+        setCanUndo(payload);
+        return false;
+      }, 1),
+      editor.registerCommand(CAN_REDO_COMMAND, (payload) => {
+        setCanRedo(payload);
+        return false;
+      }, 1),
     );
   }, [editor, updateToolbar]);
 
@@ -146,10 +161,10 @@ export function EditorToolbar() {
 
   return (
     <div className="graphite-toolbar" ref={toolbarRef}>
-      <ToolbarButton onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)} title="Undo">
+      <ToolbarButton onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)} disabled={!canUndo} title="Undo">
         <Undo2 size={16} />
       </ToolbarButton>
-      <ToolbarButton onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)} title="Redo">
+      <ToolbarButton onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)} disabled={!canRedo} title="Redo">
         <Redo2 size={16} />
       </ToolbarButton>
       <ToolbarDivider />
