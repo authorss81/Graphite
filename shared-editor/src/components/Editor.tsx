@@ -4,9 +4,18 @@ import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
+import { ListPlugin } from "@lexical/react/LexicalListPlugin";
+import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import type { EditorState } from "lexical";
+import { HeadingNode, QuoteNode } from "@lexical/rich-text";
+import { ListNode, ListItemNode } from "@lexical/list";
+import { LinkNode } from "@lexical/link";
+import { CodeNode, CodeHighlightNode } from "@lexical/code";
+import { TRANSFORMERS } from "@lexical/markdown";
+import { EditorToolbar } from "./EditorToolbar";
 import { sendUpdateToNative, logToNative, encodeBase64 } from "../utils/bridge";
 
 interface EditorProps {
@@ -33,6 +42,9 @@ const graphiteTheme = {
     underline: "graphite-editor-underline",
     code: "graphite-editor-code",
   },
+  quote: "graphite-editor-quote",
+  link: "graphite-editor-link",
+  code: "graphite-editor-codeblock",
 };
 
 function onError(error: Error) {
@@ -72,6 +84,7 @@ export function Editor({ docId, initialState }: EditorProps) {
     namespace: "GraphiteEditor",
     theme: graphiteTheme,
     onError,
+    nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode, CodeHighlightNode],
     editorState: undefined,
   };
 
@@ -96,6 +109,9 @@ export function Editor({ docId, initialState }: EditorProps) {
     <div className="graphite-editor-container">
       <LexicalComposer initialConfig={initialConfig}>
         <EditorStateLoader initialState={initialState} />
+        <div className="editor-toolbar-wrap">
+          <EditorToolbar />
+        </div>
         <div className="editor-inner">
           <RichTextPlugin
             contentEditable={
@@ -108,6 +124,9 @@ export function Editor({ docId, initialState }: EditorProps) {
             ErrorBoundary={LexicalErrorBoundary}
           />
           <HistoryPlugin />
+          <ListPlugin />
+          <LinkPlugin />
+          <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
           <OnChangePlugin onChange={handleEditorChange} />
         </div>
       </LexicalComposer>

@@ -11,7 +11,12 @@
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",
+    "@lexical/code": "^0.48.0",
+    "@lexical/link": "^0.48.0",
+    "@lexical/list": "^0.48.0",
+    "@lexical/markdown": "^0.48.0",
     "@lexical/react": "^0.48.0",
+    "@lexical/rich-text": "^0.48.0",
     "@supabase/supabase-js": "^2.110.7",
     "lexical": "^0.48.0",
     "lucide-react": "^1.25.0",
