@@ -16,8 +16,8 @@ class GitBackupManager(
         return try {
             println("[GitBackup] Auto-committing changes to note: $noteId ($title)")
 
-            val commitHash = String.format("%08x", snapshotJson.hashCode()) +
-                currentTimeMillis().toString(16).takeLast(8)
+            val hashCodeHex = snapshotJson.hashCode().toUInt().toString(16).padStart(8, '0')
+            val commitHash = hashCodeHex + currentTimeMillis().toString(16).takeLast(8)
 
             dbHelper.executeWrite(
                 "INSERT INTO revision_history (note_id, commit_hash, title, snapshot, created_at) VALUES (?, ?, ?, ?, ?)",
