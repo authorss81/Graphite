@@ -1,0 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Outfit', system-ui, sans-serif;
+  --font-mono: 'Fira Code', 'Courier New', Courier, monospace;
+
+  /* HSL Sleek Dark Palette */
+  --bg-primary: hsl(225, 20%, 9%);
+  --bg-secondary: hsl(225, 20%, 12%);
+  --bg-tertiary: hsl(225, 20%, 15%);
+  --border-color: hsl(225, 15%, 20%);
+  --border-color-glow: hsla(263, 85%, 65%, 0.3);
+  
+  --text-primary: hsl(0, 0%, 96%);
+  --text-secondary: hsl(225, 10%, 75%);
+  --text-muted: hsl(225, 10%, 55%);
+  
+  /* Vibrant Accents */
+  --accent-color: hsl(263, 85%, 65%); /* Neon Purple */
+  --accent-color-glow: hsla(263, 85%, 65%, 0.4);
+  --accent-success: hsl(160, 84%, 39%);
+  --accent-warn: hsl(35, 92%, 55%);
+  
+  --glass-bg: rgba(18, 19, 26, 0.7);
+  --glass-blur: blur(16px);
+  --glass-border: rgba(255, 255, 255, 0.05);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.5);
+  
+  font-family: var(--font-sans);
+  color-scheme: dark;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Premium Editor Container */
+.graphite-editor-container {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  min-height: 400px;
+}
+
+.graphite-editor-container:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 15px var(--border-color-glow);
+}
+
+.editor-inner {
+  position: relative;
+  outline: none;
+}
+
+.editor-input {
+  min-height: 350px;
+  outline: none;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+/* Lexical Block Styles */
+.graphite-editor-paragraph {
+  margin: 0 0 12px 0;
+}
+
+.graphite-editor-h1 {
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 24px 0 12px 0;
+  letter-spacing: -0.5px;
+}
+
+.graphite-editor-h2 {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 20px 0 10px 0;
+}
+
+.graphite-editor-h3 {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 16px 0 8px 0;
+}
+
+.graphite-editor-bold {
+  font-weight: 700;
+}
+
+.graphite-editor-italic {
+  font-style: italic;
+}
+
+.graphite-editor-underline {
+  text-decoration: underline;
+}
+
+.graphite-editor-code {
+  font-family: var(--font-mono);
+  background-color: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 14px;
+  border: 1px solid var(--border-color);
+}
+
+.editor-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--text-muted);
+  pointer-events: none;
+  font-size: 16px;
+}
+
+/* Dynamic glassmorphic navigation buttons */
+.graphite-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.graphite-btn:hover {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+  box-shadow: 0 0 10px var(--accent-color-glow);
+  transform: translateY(-1px);
+}
+
+.graphite-btn:active {
+  transform: translateY(0);
+}
