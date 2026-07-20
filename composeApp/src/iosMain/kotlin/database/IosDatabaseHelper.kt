@@ -3,7 +3,7 @@
 package database
 
 import kotlinx.cinterop.*
-import sqlite3.*
+import graphite.sqlite.*
 
 class IosDatabaseHelper(private val dbPath: String) : DatabaseHelper {
     private var db: CPointer<sqlite3>? = null
