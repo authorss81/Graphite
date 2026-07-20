@@ -15,6 +15,8 @@ import { ListNode, ListItemNode } from "@lexical/list";
 import { LinkNode } from "@lexical/link";
 import { CodeNode, CodeHighlightNode } from "@lexical/code";
 import { TRANSFORMERS } from "@lexical/markdown";
+import { $insertNodes, COMMAND_PRIORITY_LOW } from "lexical";
+import { CanvasNode, $createCanvasNode, INSERT_CANVAS_COMMAND } from "./CanvasNode";
 import { EditorToolbar } from "./EditorToolbar";
 import { sendUpdateToNative, logToNative, encodeBase64 } from "../utils/bridge";
 import { useNoteStore } from "../store/useNoteStore";
@@ -81,6 +83,25 @@ function EditorStateLoader({ initialState }: { initialState?: string }) {
   return null;
 }
 
+function CanvasInserterPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    return editor.registerCommand(
+      INSERT_CANVAS_COMMAND,
+      (data) => {
+        editor.update(() => {
+          $insertNodes([$createCanvasNode(data)]);
+        });
+        return true;
+      },
+      COMMAND_PRIORITY_LOW,
+    );
+  }, [editor]);
+
+  return null;
+}
+
 export function Editor({ docId, initialState }: EditorProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -88,7 +109,7 @@ export function Editor({ docId, initialState }: EditorProps) {
     namespace: "GraphiteEditor",
     theme: graphiteTheme,
     onError,
-    nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode, CodeHighlightNode],
+    nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode, CodeHighlightNode, CanvasNode],
     editorState: undefined,
   };
 
@@ -133,6 +154,7 @@ export function Editor({ docId, initialState }: EditorProps) {
           <LinkPlugin />
           <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
           <OnChangePlugin onChange={handleEditorChange} />
+          <CanvasInserterPlugin />
         </div>
       </LexicalComposer>
     </div>

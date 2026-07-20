@@ -11,6 +11,7 @@ import {
   FORMAT_TEXT_COMMAND,
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
+import { INSERT_CANVAS_COMMAND } from "./CanvasNode";
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import { $isHeadingNode, $createHeadingNode } from "@lexical/rich-text";
@@ -33,6 +34,7 @@ import {
   Link,
   Undo2,
   Redo2,
+  Shapes,
 } from "lucide-react";
 
 function ToolbarButton({
@@ -206,6 +208,10 @@ export function EditorToolbar() {
       </ToolbarButton>
       <ToolbarButton onClick={insertQuote} title="Blockquote">
         <Quote size={16} />
+      </ToolbarButton>
+      <ToolbarDivider />
+      <ToolbarButton onClick={() => editor.dispatchCommand(INSERT_CANVAS_COMMAND, undefined)} title="Insert Drawing Canvas">
+        <Shapes size={16} />
       </ToolbarButton>
     </div>
   );

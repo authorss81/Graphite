@@ -442,3 +442,19 @@ body {
   min-width: 0;
 }
 
+.graphite-canvas-block {
+  position: relative;
+}
+
+.graphite-canvas-block-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+  color: var(--text-muted);
+  font-size: 14px;
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-secondary);
+}
+

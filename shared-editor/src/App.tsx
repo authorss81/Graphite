@@ -1,11 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Editor } from "./components/Editor";
-import { Canvas } from "./components/Canvas";
 import { Sidebar } from "./components/Sidebar";
 import { logToNative, decodeBase64 } from "./utils/bridge";
 import { saveDocs } from "./utils/docStorage";
 import { useNoteStore } from "./store/useNoteStore";
 import { BookOpen, Palette, Info, RotateCcw, Share2 } from "lucide-react";
+
+const Canvas = lazy(() =>
+  import("./components/Canvas").then((m) => ({ default: m.Canvas })),
+);
 
 export function App() {
   const docId = useNoteStore((s) => s.docId);
@@ -194,11 +197,19 @@ export function App() {
           )}
 
           {activeTab === "canvas" && (
-            <Canvas
-              key={docId}
-              initialData={canvasData}
-              onChange={handleCanvasChange}
-            />
+            <Suspense
+              fallback={
+                <div className="graphite-canvas-block-loading">
+                  Loading canvas…
+                </div>
+              }
+            >
+              <Canvas
+                key={docId}
+                initialData={canvasData}
+                onChange={handleCanvasChange}
+              />
+            </Suspense>
           )}
 
           {activeTab === "meta" && (

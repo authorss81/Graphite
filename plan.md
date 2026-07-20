@@ -43,7 +43,7 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 |---|------|---------|--------|
 | 1.1.1 | **State management** | Add Zustand for JS side. Replace bare `useState` plumbing. | ✅ Done |
 | 1.1.2 | **Platform DB (Android)** | Create `androidMain` source set. Implement `DatabaseHelper` via `android.database.sqlite.SQLiteDatabase`. | ✅ Done |
-| 1.1.3 | **Platform DB (iOS)** | Implement `DatabaseHelper` via SQLite.swift (interop) in `iosMain`. | ⬜ Pending (placeholder only) |
+| 1.1.3 | **Platform DB (iOS)** | Implement `DatabaseHelper` via SQLite.swift (interop) in `iosMain`. | ⛔ Blocked — cinterop SQLite experiment reverted (commit `dadb057`). Bindings not visible to `iosMain` despite commonization; needs a macOS-native toolchain to debug. Placeholder `CommonDatabaseHelper` remains. |
 | 1.1.4 | **Real persistence** | Wire `CommonDatabaseHelper` → real SQLite calls. Save editor state on change, load on startup. | ✅ Done (JVM + Android) |
 | 1.1.5 | **Supabase client** | Add `@supabase/supabase-js` (webview) + `supabase-kt` (KMP). Init with anon key. | ✅ Done |
 | 1.1.6 | **Auth flow** | Supabase Auth (email/password + Google OAuth). Login/signup screens. Session persistence. | ⬜ Pending |
@@ -77,9 +77,9 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 | # | Item | Details |
 |---|------|---------|
-| 1.5.1 | **Canvas persistence** | Save Excalidraw elements JSON to `block_entities` (type="canvas"). Load + restore on mount. |
-| 1.5.2 | **Inline canvas block** | Instead of a separate tab, embed canvas as a block inside the Lexical editor (like Notion's inline embeds). |
-| 1.5.3 | **Lazy-load Excalidraw** | Dynamic import Excalidraw (~5MB) only when a canvas block is present. |
+| 1.5.1 | **Canvas persistence** | Save Excalidraw elements JSON to `block_entities` (type="canvas"). Load + restore on mount. | ✅ Done (local: editorState + store canvasData) |
+| 1.5.2 | **Inline canvas block** | Instead of a separate tab, embed canvas as a block inside the Lexical editor (like Notion's inline embeds). | ✅ Done (`CanvasNode` DecoratorNode + `ExcalidrawCanvasComponent`, toolbar insert via `INSERT_CANVAS_COMMAND`) |
+| 1.5.3 | **Lazy-load Excalidraw** | Dynamic import Excalidraw (~5MB) only when a canvas block is present. | ✅ Done (lazy `ExcalidrawCanvasComponent` + lazy `Canvas` tab → separate `prod-*.js` chunk) |
 
 ### 1.6 Testing
 
