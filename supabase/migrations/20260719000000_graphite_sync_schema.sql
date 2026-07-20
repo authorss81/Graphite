@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS block_entities (
     note_id UUID NOT NULL REFERENCES note_nodes(id) ON DELETE CASCADE,
     type TEXT NOT NULL,
     content TEXT NOT NULL,
-    order_index DOUBLE PRECISION NOT NULL, -- LexoRank fractional index
+    order_index TEXT NOT NULL, -- LexoRank string key (fractional index)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );

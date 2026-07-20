@@ -17,6 +17,7 @@ import { CodeNode, CodeHighlightNode } from "@lexical/code";
 import { TRANSFORMERS } from "@lexical/markdown";
 import { EditorToolbar } from "./EditorToolbar";
 import { sendUpdateToNative, logToNative, encodeBase64 } from "../utils/bridge";
+import { useNoteStore } from "../store/useNoteStore";
 
 interface EditorProps {
   docId: string;
@@ -53,9 +54,12 @@ function onError(error: Error) {
 
 function EditorStateLoader({ initialState }: { initialState?: string }) {
   const [editor] = useLexicalComposerContext();
+  const lastLoaded = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!initialState) return;
+    if (lastLoaded.current === initialState) return;
+    lastLoaded.current = initialState;
 
     const trimmed = initialState.trim();
 
@@ -95,6 +99,7 @@ export function Editor({ docId, initialState }: EditorProps) {
       editorState.read(() => {
         const serializedState = JSON.stringify(editorState.toJSON());
         sendUpdateToNative(docId, encodeBase64(serializedState));
+        useNoteStore.getState().updateCurrentContent(serializedState);
       });
     }, 300);
   }, [docId]);

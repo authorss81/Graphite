@@ -11,3 +11,10 @@ shared-editor/dist/
 *.aab
 *.aar
 *.keystore
+
+# Backups
+*.bak
+*.backup
+*.orig
+backup/
+.backup/

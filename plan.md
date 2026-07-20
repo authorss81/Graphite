@@ -10,28 +10,28 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 ### Bugs (must fix before any feature work)
 
-| # | Bug | File | Severity |
-|---|-----|------|----------|
-| B1 | Lexical editor is **uncontrolled** — `initialState` prop is read once on mount. Bridge calls to `loadDocument`/`receiveUpdateFromNative` never actually change editor content. | `Editor.tsx:44-48` | Critical |
-| B2 | `btoa()` crashes on non-Latin1 characters (emojis, CJK, accented letters). No try-catch. | `Editor.tsx:55` | Critical |
-| B3 | `YjsSyncEngine.receiveUpdate` does **no merge** — always accepts remote, discards local. | `YjsSyncEngine.kt:27-39` | Critical |
-| B4 | `GitBackupManager` writes fake hashes into `sync_metadata.yjs_state_vector` column — `YjsSyncEngine` then tries to `Base64.decode()` it, causing runtime crash. | `GitBackupManager.kt:38` vs `YjsSyncEngine.kt:28` | Critical |
-| B5 | `LexoRank.between("a", "aa")` returns a string NOT between them (overshoots when prev is prefix of next). | `LexoRank.kt:28-29,51-52` | Critical |
-| B6 | `receiveUpdateFromNative` has stale closure over `docId` — between state change and cleanup, native calls with new docId are dropped. | `App.tsx:32-42` | Critical |
-| B7 | `Base64.decode` in `YjsSyncEngine` uses `@ExperimentalEncodingApi` — future Kotlin versions may break it. | `YjsSyncEngine.kt:12` | Medium |
-| B8 | `order_index` typed as `REAL` in SQL but LexoRank produces string keys. | `DatabaseSchema.kt:39` | Medium |
+| # | Bug | File | Severity | Status |
+|---|-----|------|----------|--------|
+| B1 | Lexical editor is **uncontrolled** — `initialState` prop is read once on mount. Bridge calls to `loadDocument`/`receiveUpdateFromNative` never actually change editor content. | `Editor.tsx:44-48` | Critical | ✅ Done |
+| B2 | `btoa()` crashes on non-Latin1 characters (emojis, CJK, accented letters). No try-catch. | `Editor.tsx:55` | Critical | ✅ Done |
+| B3 | `YjsSyncEngine.receiveUpdate` does **no merge** — always accepts remote, discards local. | `YjsSyncEngine.kt:27-39` | Critical | ✅ Done |
+| B4 | `GitBackupManager` writes fake hashes into `sync_metadata.yjs_state_vector` column — `YjsSyncEngine` then tries to `Base64.decode()` it, causing runtime crash. | `GitBackupManager.kt:38` vs `YjsSyncEngine.kt:28` | Critical | ✅ Done |
+| B5 | `LexoRank.between("a", "aa")` returns a string NOT between them (overshoots when prev is prefix of next). | `LexoRank.kt:28-29,51-52` | Critical | ✅ Done |
+| B6 | `receiveUpdateFromNative` has stale closure over `docId` — between state change and cleanup, native calls with new docId are dropped. | `App.tsx:32-42` | Critical | ✅ Done |
+| B7 | `Base64.decode` in `YjsSyncEngine` uses `@ExperimentalEncodingApi` — future Kotlin versions may break it. | `YjsSyncEngine.kt:12` | Medium | ✅ Done |
+| B8 | `order_index` typed as `REAL` in SQL but LexoRank produces string keys. | `DatabaseSchema.kt:39` / migration | Medium | ✅ Done (Kotlin schema already TEXT; migration fixed to TEXT) |
 
 ### Immediate Fixes
 
-| # | Action | Priority |
-|---|--------|----------|
-| F1 | Make Editor controlled — use `useLexicalComposerContext()` + `useEffect` on `initialState` prop. | P0 |
-| F2 | Replace `btoa`/`atob` with `TextEncoder`/`TextDecoder` + proper base64 (handle full Unicode). | P0 |
-| F3 | Remove unused `yjs` from `package.json` (it's never imported; the app uses plain JSON, not CRDT). | P0 |
-| F4 | Fix `LexoRank.between()` — when prev is prefix of next, properly extend beyond the prefix. | P0 |
-| F5 | Decouple `GitBackupManager` and `YjsSyncEngine` — separate tables for sync state vs revision history. | P0 |
-| F6 | Add `zombie` column or make `updated_at` auto-update in Supabase migration. | P1 |
-| F7 | Fix RLS on `backlink_entities` — check BOTH `source_note_id` and `target_note_id` ownership. | P1 |
+| # | Action | Priority | Status |
+|---|--------|----------|--------|
+| F1 | Make Editor controlled — use `useLexicalComposerContext()` + `useEffect` on `initialState` prop. | P0 | ✅ Done |
+| F2 | Replace `btoa`/`atob` with `TextEncoder`/`TextDecoder` + proper base64 (handle full Unicode). | P0 | ✅ Done |
+| F3 | Remove unused `yjs` from `package.json` (it's never imported; the app uses plain JSON, not CRDT). | P0 | ✅ Done (`yjs` only a transitive dep of `@lexical/yjs`, not imported/direct) |
+| F4 | Fix `LexoRank.between()` — when prev is prefix of next, properly extend beyond the prefix. | P0 | ✅ Done |
+| F5 | Decouple `GitBackupManager` and `YjsSyncEngine` — separate tables for sync state vs revision history. | P0 | ✅ Done |
+| F6 | Add `zombie` column or make `updated_at` auto-update in Supabase migration. | P1 | ⬜ Pending |
+| F7 | Fix RLS on `backlink_entities` — check BOTH `source_note_id` and `target_note_id` ownership. | P1 | ⬜ Pending |
 
 ---
 
@@ -39,31 +39,31 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 ### 1.1 Architecture Foundation
 
-| # | Item | Details |
-|---|------|---------|
-| 1.1.1 | **State management** | Add Zustand for JS side. Replace bare `useState` plumbing. |
-| 1.1.2 | **Platform DB (Android)** | Create `androidMain` source set. Implement `DatabaseHelper` via `android.database.sqlite.SQLiteDatabase`. |
-| 1.1.3 | **Platform DB (iOS)** | Implement `DatabaseHelper` via SQLite.swift (interop) in `iosMain`. |
-| 1.1.4 | **Real persistence** | Wire `CommonDatabaseHelper` → real SQLite calls. Save editor state on change, load on startup. |
-| 1.1.5 | **Supabase client** | Add `@supabase/supabase-js` (webview) + `supabase-kt` (KMP). Init with anon key. |
-| 1.1.6 | **Auth flow** | Supabase Auth (email/password + Google OAuth). Login/signup screens. Session persistence. |
+| # | Item | Details | Status |
+|---|------|---------|--------|
+| 1.1.1 | **State management** | Add Zustand for JS side. Replace bare `useState` plumbing. | ✅ Done |
+| 1.1.2 | **Platform DB (Android)** | Create `androidMain` source set. Implement `DatabaseHelper` via `android.database.sqlite.SQLiteDatabase`. | ✅ Done |
+| 1.1.3 | **Platform DB (iOS)** | Implement `DatabaseHelper` via SQLite.swift (interop) in `iosMain`. | ⬜ Pending (placeholder only) |
+| 1.1.4 | **Real persistence** | Wire `CommonDatabaseHelper` → real SQLite calls. Save editor state on change, load on startup. | ✅ Done (JVM + Android) |
+| 1.1.5 | **Supabase client** | Add `@supabase/supabase-js` (webview) + `supabase-kt` (KMP). Init with anon key. | ✅ Done |
+| 1.1.6 | **Auth flow** | Supabase Auth (email/password + Google OAuth). Login/signup screens. Session persistence. | ⬜ Pending |
 
 ### 1.2 Editor Polish
 
-| # | Item | Details |
-|---|------|---------|
-| 1.2.1 | **Editor toolbar** | Bold, italic, underline, strikethrough, headings (H1-3), bullet/ordered lists, blockquote, code block, link. Use Lexical's built-in plugins. |
-| 1.2.2 | **Markdown shortcuts** | `# ` → H1, `**bold**`, `- ` → bullet, `1. ` → ordered list, `>` → blockquote, `` `code` ``. |
-| 1.2.3 | **Image paste/upload** | Handle clipboard paste → upload to Supabase Storage → embed as image block. |
-| 1.2.4 | **Debounce sync** | Throttle/debounce `handleEditorChange` to avoid per-keystroke serialization. |
+| # | Item | Details | Status |
+|---|------|---------|--------|
+| 1.2.1 | **Editor toolbar** | Bold, italic, underline, strikethrough, headings (H1-3), bullet/ordered lists, blockquote, code block, link. Use Lexical's built-in plugins. | ✅ Done |
+| 1.2.2 | **Markdown shortcuts** | `# ` → H1, `**bold**`, `- ` → bullet, `1. ` → ordered list, `>` → blockquote, `` `code` ``. | ✅ Done |
+| 1.2.3 | **Image paste/upload** | Handle clipboard paste → upload to Supabase Storage → embed as image block. | ⬜ Pending |
+| 1.2.4 | **Debounce sync** | Throttle/debounce `handleEditorChange` to avoid per-keystroke serialization. | ✅ Done (300ms debounce in Editor.tsx) |
 
 ### 1.3 Document Management
 
-| # | Item | Details |
-|---|------|---------|
-| 1.3.1 | **Folder tree (left sidebar)** | List `note_nodes` with `is_folder=true` as folders, others as documents. Create/rename/delete. |
-| 1.3.2 | **Document picker** | Replace hardcoded `"default-doc"` with real doc selection. Show recent docs on launch. |
-| 1.3.3 | **Tab-based navigation** | Replace tab buttons with a proper side-by-side or sidebar-detail layout. |
+| # | Item | Details | Status |
+|---|------|---------|--------|
+| 1.3.1 | **Folder tree (left sidebar)** | List `note_nodes` with `is_folder=true` as folders, others as documents. Create/rename/delete. | ✅ Done (localStorage-backed tree) |
+| 1.3.2 | **Document picker** | Replace hardcoded `"default-doc"` with real doc selection. Show recent docs on launch. | ✅ Done (localStorage repo, recent doc on launch) |
+| 1.3.3 | **Tab-based navigation** | Replace tab buttons with a proper side-by-side or sidebar-detail layout. | ✅ Done (sidebar + detail pane) |
 
 ### 1.4 Cloud Sync (Basic)
 
@@ -88,7 +88,8 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 | 1.6.1 | **Unit tests (JS)** | Vitest — bridge utilities, LexoRank-like ordering, analytics text extraction. |
 | 1.6.2 | **Unit tests (KMP)** | kotlin.test — `LexoRank.between()`, `YjsSyncEngine` logic. |
 | 1.6.3 | **Component tests** | @testing-library/react — Editor mounting, tab switching, Canvas rendering. |
-| 1.6.4 | **CI** | GitHub Actions — lint + typecheck + test on every PR. |
+| 1.6.4 | **CI** | GitHub Actions — lint + typecheck + test on every PR. | ⬜ Pending |
+| 1.6.5 | **Build CI (Android + iOS)** | GitHub Actions — `build-android.yml` (ubuntu, assembleDebug → AAR) and `build-ios.yml` (macos, linkDebugFrameworkIosArm64 + IosSimulatorArm64 → framework). Both green. | ✅ Done |
 
 ### 1.7 UX Hardening
 
