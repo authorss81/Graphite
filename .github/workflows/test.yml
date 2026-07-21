@@ -1,0 +1,36 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: shared-editor/package-lock.json
+
+      - name: Install dependencies
+        working-directory: shared-editor
+        run: npm ci
+
+      - name: Lint
+        working-directory: shared-editor
+        run: npm run lint
+
+      - name: TypeScript type-check
+        working-directory: shared-editor
+        run: npx tsc -b --noEmit
+
+      - name: Unit & component tests
+        working-directory: shared-editor
+        run: npm test

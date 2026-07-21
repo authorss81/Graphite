@@ -31,7 +31,7 @@ class JvmDatabaseHelper(private val dbPath: String) : DatabaseHelper {
         println("[SQLite] Database connection closed.")
     }
 
-    override fun executeWrite(sql: String, bindArgs: Array<Any>) {
+    override fun executeWrite(sql: String, bindArgs: Array<Any?>) {
         val conn = connection ?: throw IllegalStateException("Database not initialized.")
         val pstmt = conn.prepareStatement(sql)
         for ((index, arg) in bindArgs.withIndex()) {
@@ -43,7 +43,7 @@ class JvmDatabaseHelper(private val dbPath: String) : DatabaseHelper {
 
     override fun executeQuery(
         sql: String,
-        bindArgs: Array<Any>
+        bindArgs: Array<Any?>
     ): List<Map<String, Any>> {
         val conn = connection ?: throw IllegalStateException("Database not initialized.")
         val pstmt = conn.prepareStatement(sql)

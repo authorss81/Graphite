@@ -85,9 +85,9 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 | # | Item | Details |
 |---|------|---------|
-| 1.6.1 | **Unit tests (JS)** | Vitest — bridge utilities, LexoRank-like ordering, analytics text extraction. |
-| 1.6.2 | **Unit tests (KMP)** | kotlin.test — `LexoRank.between()`, `YjsSyncEngine` logic. |
-| 1.6.3 | **Component tests** | @testing-library/react — Editor mounting, tab switching, Canvas rendering. |
+| 1.6.1 | **Unit tests (JS)** | Vitest — bridge utilities, docStorage, CanvasNode serialization. | ✅ Done (3 test files, 16 passing) |
+| 1.6.2 | **Unit tests (KMP)** | kotlin.test — Schema DDL validation + JvmDatabaseHelper CRUD against real SQLite (`:memory:`). 4 tests pass. | ✅ Done |
+| 1.6.3 | **Component tests** | @testing-library/react — Editor mounting, toolbar rendering, serialized state restore. | ✅ Done (Editor.test.tsx, 3 tests) |
 | 1.6.4 | **CI** | GitHub Actions — lint + typecheck + test on every PR. | ⬜ Pending |
 | 1.6.5 | **Build CI (Android + iOS)** | GitHub Actions — `build-android.yml` (ubuntu, assembleDebug → AAR) and `build-ios.yml` (macos, linkDebugFrameworkIosArm64 + IosSimulatorArm64 → framework). Both green. | ✅ Done |
 
@@ -130,6 +130,7 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 | 2.3.2 | **Store embeddings** | Insert into `document_embeddings` table. Handle update on doc change. |
 | 2.3.3 | **Vector search UI** | Search bar → call `pgvector` cosine similarity query → display ranked results with relevance snippets. |
 | 2.3.4 | **Hybrid search** | Combine vector search + full-text search (`to_tsvector`). Rerank results. |
+| 2.3.5 | **Local AI copilot** | On-device embeddings via ONNX Runtime / XNNPACK in WebView. Privacy-first search & AI chat without cloud dependency. Use transformer.js or llama.cpp (WebAssembly) for local inference. |
 
 ### 2.4 Publishing & Sharing
 
@@ -154,6 +155,16 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 | 2.6.1 | **Tag management** | Add/remove tags on documents. Tag autocomplete from existing tags. |
 | 2.6.2 | **Tag sidebar** | List all tags with count. Click to filter document list. |
 | 2.6.3 | **Pin/Archive** | `is_pinned` and `is_archived` toggles. Pinned docs at top of sidebar. Archived docs in separate view. |
+
+### 2.7 Spatial Canvas / Whiteboarding
+
+| # | Item | Details |
+|---|------|---------|
+| 2.7.1 | **Infinite canvas** | Separate workspace mode (like Obsidian Canvas / Heptabase). Pan/zoom infinite 2D space. |
+| 2.7.2 | **Note cards** | Drag notes from sidebar onto canvas as resizable cards. Shows title + preview. |
+| 2.7.3 | **Arrow connections** | Draw arrows between cards. Store as edges in a new `canvas_edges` table. |
+| 2.7.4 | **Freehand drawing** | Excalidraw drawing layer on canvas. Draw, highlight, sticky notes. |
+| 2.7.5 | **Canvas tile persistence** | Save card positions, sizes, arrow endpoints as JSON. Load/render on open. |
 
 ---
 

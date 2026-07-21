@@ -3,8 +3,8 @@ package database
 interface DatabaseHelper {
     fun initializeDatabase(passphrase: String)
     fun closeConnection()
-    fun executeWrite(sql: String, bindArgs: Array<Any>)
-    fun executeQuery(sql: String, bindArgs: Array<Any>): List<Map<String, Any>>
+    fun executeWrite(sql: String, bindArgs: Array<Any?>)
+    fun executeQuery(sql: String, bindArgs: Array<Any?>): List<Map<String, Any>>
 }
 
 class CommonDatabaseHelper : DatabaseHelper {
@@ -20,12 +20,12 @@ class CommonDatabaseHelper : DatabaseHelper {
         println("[Database] Connection closed.")
     }
 
-    override fun executeWrite(sql: String, bindArgs: Array<Any>) {
+    override fun executeWrite(sql: String, bindArgs: Array<Any?>) {
         if (!isInitialized) throw IllegalStateException("Database not initialized.")
         println("[Database Write] $sql | args: ${bindArgs.joinToString()}")
     }
 
-    override fun executeQuery(sql: String, bindArgs: Array<Any>): List<Map<String, Any>> {
+    override fun executeQuery(sql: String, bindArgs: Array<Any?>): List<Map<String, Any>> {
         if (!isInitialized) throw IllegalStateException("Database not initialized.")
         println("[Database Query] $sql | args: ${bindArgs.joinToString()}")
         return emptyList()

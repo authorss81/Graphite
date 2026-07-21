@@ -39,14 +39,14 @@ class AndroidDatabaseHelper(context: Context, dbName: String) : DatabaseHelper {
         db = null
     }
 
-    override fun executeWrite(sql: String, bindArgs: Array<Any>) {
+    override fun executeWrite(sql: String, bindArgs: Array<Any?>) {
         val database = db ?: throw IllegalStateException("Database not initialized.")
         database.execSQL(sql, bindArgs)
     }
 
     override fun executeQuery(
         sql: String,
-        bindArgs: Array<Any>
+        bindArgs: Array<Any?>
     ): List<Map<String, Any>> {
         val database = db ?: throw IllegalStateException("Database not initialized.")
         val cursor = database.rawQuery(sql, bindArgs.map { it.toString() }.toTypedArray())
