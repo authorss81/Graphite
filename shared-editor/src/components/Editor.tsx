@@ -20,6 +20,7 @@ import { CanvasNode, $createCanvasNode, INSERT_CANVAS_COMMAND } from "./CanvasNo
 import { EditorToolbar } from "./EditorToolbar";
 import { sendUpdateToNative, logToNative, encodeBase64 } from "../utils/bridge";
 import { useNoteStore } from "../store/useNoteStore";
+import { toast } from "./Toast";
 
 interface EditorProps {
   docId: string;
@@ -102,6 +103,26 @@ function CanvasInserterPlugin() {
   return null;
 }
 
+function KeyboardHandler() {
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const onResize = () => {
+      const keyboardHeight = window.innerHeight - vv.height;
+      document.documentElement.style.setProperty(
+        "--keyboard-height",
+        `${Math.max(0, keyboardHeight)}px`,
+      );
+    };
+
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
+
+  return null;
+}
+
 export function Editor({ docId, initialState }: EditorProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -117,11 +138,15 @@ export function Editor({ docId, initialState }: EditorProps) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
-      editorState.read(() => {
-        const serializedState = JSON.stringify(editorState.toJSON());
-        sendUpdateToNative(docId, encodeBase64(serializedState));
-        useNoteStore.getState().updateCurrentContent(serializedState);
-      });
+      try {
+        editorState.read(() => {
+          const serializedState = JSON.stringify(editorState.toJSON());
+          sendUpdateToNative(docId, encodeBase64(serializedState));
+          useNoteStore.getState().updateCurrentContent(serializedState);
+        });
+      } catch (err: any) {
+        toast(`Failed to save: ${err.message}`, "error");
+      }
     }, 300);
   }, [docId]);
 
@@ -155,6 +180,7 @@ export function Editor({ docId, initialState }: EditorProps) {
           <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
           <OnChangePlugin onChange={handleEditorChange} />
           <CanvasInserterPlugin />
+          <KeyboardHandler />
         </div>
       </LexicalComposer>
     </div>

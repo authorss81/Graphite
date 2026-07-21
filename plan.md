@@ -88,18 +88,18 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 | 1.6.1 | **Unit tests (JS)** | Vitest — bridge utilities, docStorage, CanvasNode serialization. | ✅ Done (3 test files, 16 passing) |
 | 1.6.2 | **Unit tests (KMP)** | kotlin.test — Schema DDL validation + JvmDatabaseHelper CRUD against real SQLite (`:memory:`). 4 tests pass. | ✅ Done |
 | 1.6.3 | **Component tests** | @testing-library/react — Editor mounting, toolbar rendering, serialized state restore. | ✅ Done (Editor.test.tsx, 3 tests) |
-| 1.6.4 | **CI** | GitHub Actions — lint + typecheck + test on every PR. | ⬜ Pending |
+| 1.6.4 | **CI** | GitHub Actions — lint + typecheck + test on every PR. | ✅ Done |
 | 1.6.5 | **Build CI (Android + iOS)** | GitHub Actions — `build-android.yml` (ubuntu, assembleDebug → AAR) and `build-ios.yml` (macos, linkDebugFrameworkIosArm64 + IosSimulatorArm64 → framework). Both green. | ✅ Done |
 
 ### 1.7 UX Hardening
 
 | # | Item | Details |
 |---|------|---------|
-| 1.7.1 | **Touch targets** | Increase `graphite-btn` padding to meet 48dp minimum. |
-| 1.7.2 | **Keyboard handling** | Add `visualViewport` API listener for mobile keyboard. Adjust editor height on keyboard open. |
-| 1.7.3 | **Safe areas** | Add `env(safe-area-inset-*)` padding for notched devices. |
-| 1.7.4 | **Loading states** | Skeleton screens for doc load, canvas load, sync operations. |
-| 1.7.5 | **Error states** | Toast/banner for sync failures, save errors, network errors. |
+| 1.7.1 | **Touch targets** | Increase `graphite-btn` padding to 12px 20px (48dp min-height) and `graphite-toolbar-btn` to min 44×44px. | ✅ Done |
+| 1.7.2 | **Keyboard handling** | Add `visualViewport` API listener for mobile keyboard. Adjust editor height on keyboard open via `--keyboard-height` CSS variable. | ✅ Done |
+| 1.7.3 | **Safe areas** | Add `env(safe-area-inset-*)` padding for notched devices. Use `100dvh` instead of `100vh`. | ✅ Done |
+| 1.7.4 | **Loading states** | Skeleton CSS animation class (`.graphite-skeleton`), Suspense fallbacks for canvas (already present), toast integration for error feedback. | ✅ Done |
+| 1.7.5 | **Error states** | Toast/banner system via zustand store + `ToastContainer` component with auto-dismiss. Error toasts on save failures, doc load errors, sync errors. | ✅ Done |
 
 ---
 

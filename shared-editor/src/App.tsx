@@ -1,6 +1,7 @@
 import { useEffect, lazy, Suspense } from "react";
 import { Editor } from "./components/Editor";
 import { Sidebar } from "./components/Sidebar";
+import { ToastContainer, toast } from "./components/Toast";
 import { logToNative, decodeBase64 } from "./utils/bridge";
 import { saveDocs } from "./utils/docStorage";
 import { useNoteStore } from "./store/useNoteStore";
@@ -55,6 +56,7 @@ export function App() {
         logToNative("info", `Document loaded: ${id}`);
       } catch (err: any) {
         logToNative("error", `Failed to load document: ${err.message}`);
+        toast(`Failed to load document: ${err.message}`, "error");
       }
     };
 
@@ -66,6 +68,7 @@ export function App() {
         logToNative("info", `Document sync received: ${id}`);
       } catch (err: any) {
         logToNative("error", `Failed to merge update: ${err.message}`);
+        toast(`Sync error: ${err.message}`, "error");
       }
     };
 
@@ -343,6 +346,7 @@ export function App() {
           )}
         </main>
       </div>
+      <ToastContainer />
     </div>
   );
 }

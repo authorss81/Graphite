@@ -34,6 +34,12 @@ function parseStats(editorState: string): {
   }
 }
 
+interface Toast {
+  id: number;
+  message: string;
+  type: "info" | "error" | "success";
+}
+
 interface NoteStore {
   documents: Record<string, GraphiteDoc>;
   docId: string;
@@ -44,9 +50,13 @@ interface NoteStore {
   charCount: number;
   backlinks: string[];
   gitStatus: string;
+  toasts: Toast[];
 
   setActiveTab: (tab: "editor" | "canvas" | "meta") => void;
   setGitStatus: (status: string) => void;
+
+  addToast: (toast: Toast) => void;
+  removeToast: (id: number) => void;
 
   initDocs: () => void;
   selectDocument: (id: string) => void;
@@ -71,10 +81,13 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   wordCount: 0,
   charCount: 0,
   backlinks: [],
-  gitStatus: "Idle",
+  gitStatus: "",
+  toasts: [],
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setGitStatus: (status) => set({ gitStatus: status }),
+  addToast: (toast) => set((s) => ({ toasts: [...s.toasts, toast] })),
+  removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
   initDocs: () => {
     let documents = loadDocs();
