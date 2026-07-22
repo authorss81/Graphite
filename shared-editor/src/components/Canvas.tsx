@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useRef, useCallback } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import { logToNative } from "../utils/bridge";
 
@@ -8,35 +8,72 @@ interface CanvasProps {
 }
 
 export function Canvas({ initialData, onChange }: CanvasProps) {
-  const [elements, setElements] = useState<any[]>(initialData?.elements || []);
-  const [appState, setAppState] = useState<any>(initialData?.appState || {});
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
-  const handleCanvasChange = (newElements: readonly any[], newAppState: any) => {
-    setElements([...newElements]);
-    setAppState(newAppState);
+  const initialCanvasData = useMemo(() => ({
+    elements: initialData?.elements || [],
+    files: initialData?.files || undefined,
+    appState: {
+      viewBackgroundColor: initialData?.appState?.viewBackgroundColor || "#1e1e24",
+    },
+    scrollToContent: true,
+  }), [initialData]);
+
+  const lastLogTime = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Stable callback reference — receives elements, appState, and files (3rd arg)
+  const handleCanvasChange = useCallback((newElements: readonly any[], appState: any, files: any) => {
+    const stateUpdate = {
+      elements: [...newElements],
+      files,
+      appState: {
+        viewBackgroundColor: appState?.viewBackgroundColor || "#1e1e24",
+      },
+    };
+
+    // Debounce state updates to prevent frame drops during drawing
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      onChangeRef.current?.(stateUpdate);
+    }, 300);
     
-    if (onChange) {
-      onChange({
-        elements: newElements,
-        appState: {
-          theme: newAppState.theme,
-          viewBackgroundColor: newAppState.viewBackgroundColor,
-        }
-      });
+    const now = Date.now();
+    if (now - lastLogTime.current > 2000) {
+      logToNative("info", `Canvas updated: ${newElements.length} elements`);
+      lastLogTime.current = now;
     }
-    
-    logToNative("info", `Canvas updated: ${newElements.length} elements`);
-  };
+  }, []);
+
+  const uiOptions = useMemo(() => ({
+    canvasActions: {
+      loadScene: false,
+      saveToActiveFile: false,
+      export: false as const,
+    },
+  }), []);
 
   return (
-    <div className="graphite-canvas-container" style={{ height: "500px", width: "100%", border: "1px solid var(--border-color)", borderRadius: "12px", overflow: "hidden" }}>
+    <div
+      className="graphite-canvas-container"
+      style={{
+        height: "calc(100dvh - 140px)",
+        minHeight: "500px",
+        width: "100%",
+        border: "1px solid var(--border-color)",
+        borderRadius: "12px",
+        overflow: "hidden",
+        position: "relative",
+        background: "#1e1e24",
+      }}
+    >
       <Excalidraw
-        initialData={{
-          elements: elements,
-          appState: { ...appState, theme: "dark" },
-          scrollToContent: true,
-        }}
+        theme="dark"
+        initialData={initialCanvasData}
         onChange={handleCanvasChange}
+        UIOptions={uiOptions}
+        detectScroll={true}
       />
     </div>
   );

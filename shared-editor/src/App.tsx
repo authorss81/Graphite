@@ -1,11 +1,25 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Editor } from "./components/Editor";
 import { Sidebar } from "./components/Sidebar";
+import { AuthScreen } from "./components/AuthScreen";
 import { ToastContainer, toast } from "./components/Toast";
 import { logToNative, decodeBase64 } from "./utils/bridge";
 import { saveDocs } from "./utils/docStorage";
 import { useNoteStore } from "./store/useNoteStore";
-import { BookOpen, Palette, Info, RotateCcw, Share2 } from "lucide-react";
+import { useAuthStore } from "./store/useAuthStore";
+import { BookOpen, Palette, Info, RotateCcw, Share2, Network, Sparkles, LayoutGrid, Puzzle, Users, ShieldCheck } from "lucide-react";
+import { GraphView } from "./components/GraphView";
+import { SpatialCanvas } from "./components/SpatialCanvas";
+import { SemanticSearchModal } from "./components/SemanticSearchModal";
+import { PublishModal } from "./components/PublishModal";
+import { VersionHistoryModal } from "./components/VersionHistoryModal";
+import { AIChatPanel } from "./components/AIChatPanel";
+import { PluginMarketplaceModal } from "./components/PluginMarketplaceModal";
+import { TeamWorkspaceModal } from "./components/TeamWorkspaceModal";
+import { SecurityModal } from "./components/SecurityModal";
+import { logAuditEvent } from "./utils/auditLog";
+
+import { applyPluginEffects } from "./utils/pluginSystem";
 
 const Canvas = lazy(() =>
   import("./components/Canvas").then((m) => ({ default: m.Canvas })),
@@ -22,8 +36,35 @@ export function App() {
   const gitStatus = useNoteStore((s) => s.gitStatus);
   const documents = useNoteStore((s) => s.documents);
   const setActiveTab = useNoteStore((s) => s.setActiveTab);
-  const setGitStatus = useNoteStore((s) => s.setGitStatus);
   const initDocs = useNoteStore((s) => s.initDocs);
+
+  const isInitializing = useAuthStore((s) => s.isInitializing);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const initializeAuth = useAuthStore((s) => s.initialize);
+
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isPublishOpen, setIsPublishOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
+  const [isPluginModalOpen, setIsPluginModalOpen] = useState(false);
+  const [isTeamOpen, setIsTeamOpen] = useState(false);
+  const [isSecurityOpen, setIsSecurityOpen] = useState(false);
+
+  useEffect(() => {
+    applyPluginEffects();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
   useEffect(() => {
     initDocs();
@@ -87,6 +128,20 @@ export function App() {
     useNoteStore.getState().updateCurrentContent(undefined, data);
   };
 
+  if (isInitializing) {
+    return (
+      <div className="auth-screen">
+        <div className="auth-loading">
+          <div className="auth-loading-spinner" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthScreen />;
+  }
+
   const currentTitle = documents[docId]?.title ?? "Untitled";
 
   return (
@@ -127,13 +182,56 @@ export function App() {
           </div>
           <div style={{ display: "flex", gap: "10px" }}>
             <button
+              className="graphite-btn active"
+              onClick={() => setIsAIPanelOpen(true)}
+              title="Graphite AI Assistant Side Panel"
+              style={{ background: "linear-gradient(135deg, #a855f7, #ec4899)", color: "#fff", border: "none" }}
+            >
+              <Sparkles size={16} />
+              AI Assistant
+            </button>
+            <button
               className="graphite-btn"
-              onClick={() => setGitStatus("Backup requested")}
+              onClick={() => setIsSearchOpen(true)}
+              title="AI Semantic Search (Ctrl+K)"
+            >
+              <Sparkles size={16} />
+              AI Search
+            </button>
+            <button
+              className="graphite-btn"
+              onClick={() => setIsHistoryOpen(true)}
+              title="Version History & Git Commits"
             >
               <RotateCcw size={16} />
-              Backup
+              History
             </button>
-            <button className="graphite-btn">
+            <button
+              className="graphite-btn"
+              onClick={() => setIsPluginModalOpen(true)}
+              title="Plugin Marketplace & Extensions"
+            >
+              <Puzzle size={16} />
+              Plugins
+            </button>
+            <button
+              className="graphite-btn"
+              onClick={() => setIsTeamOpen(true)}
+              title="Team Workspace, Members & Comments"
+            >
+              <Users size={16} />
+              Team
+            </button>
+            <button
+              className="graphite-btn"
+              onClick={() => setIsSecurityOpen(true)}
+              title="Security, Encryption & Audit Log"
+              style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "#fff", border: "none" }}
+            >
+              <ShieldCheck size={16} />
+              Security
+            </button>
+            <button className="graphite-btn" onClick={() => setIsPublishOpen(true)}>
               <Share2 size={16} />
               Publish
             </button>
@@ -182,6 +280,35 @@ export function App() {
             className="graphite-btn"
             style={{
               background:
+                activeTab === "spatial"
+                  ? "var(--accent-color)"
+                  : "rgba(255,255,255,0.03)",
+              color:
+                activeTab === "spatial" ? "#fff" : "var(--text-secondary)",
+            }}
+            onClick={() => setActiveTab("spatial")}
+          >
+            <LayoutGrid size={18} />
+            Spatial
+          </button>
+          <button
+            className="graphite-btn"
+            style={{
+              background:
+                activeTab === "graph"
+                  ? "var(--accent-color)"
+                  : "rgba(255,255,255,0.03)",
+              color: activeTab === "graph" ? "#fff" : "var(--text-secondary)",
+            }}
+            onClick={() => setActiveTab("graph")}
+          >
+            <Network size={18} />
+            Graph
+          </button>
+          <button
+            className="graphite-btn"
+            style={{
+              background:
                 activeTab === "meta"
                   ? "var(--accent-color)"
                   : "rgba(255,255,255,0.03)",
@@ -214,6 +341,10 @@ export function App() {
               />
             </Suspense>
           )}
+
+          {activeTab === "graph" && <GraphView />}
+
+          {activeTab === "spatial" && <SpatialCanvas />}
 
           {activeTab === "meta" && (
             <div
@@ -347,6 +478,35 @@ export function App() {
         </main>
       </div>
       <ToastContainer />
+      <SemanticSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      <PublishModal isOpen={isPublishOpen} onClose={() => setIsPublishOpen(false)} />
+      <VersionHistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
+      <AIChatPanel isOpen={isAIPanelOpen} onClose={() => setIsAIPanelOpen(false)} />
+      <PluginMarketplaceModal isOpen={isPluginModalOpen} onClose={() => setIsPluginModalOpen(false)} />
+      <TeamWorkspaceModal
+        isOpen={isTeamOpen}
+        onClose={() => setIsTeamOpen(false)}
+        currentDocId={docId}
+        currentUserId={useAuthStore.getState().session?.user?.id ?? "guest"}
+        currentUserName={useAuthStore.getState().session?.user?.email?.split("@")[0] ?? "Guest"}
+        currentUserEmail={useAuthStore.getState().session?.user?.email ?? "guest@local.dev"}
+      />
+      <SecurityModal
+        isOpen={isSecurityOpen}
+        onClose={() => setIsSecurityOpen(false)}
+        currentDocId={docId}
+        currentDocTitle={documents[docId]?.title ?? "Untitled"}
+        currentDocContent={editorState}
+        onEncryptDoc={(encrypted) => {
+          const updateCurrentContent = useNoteStore.getState().updateCurrentContent;
+          updateCurrentContent(encrypted);
+          logAuditEvent("encryption", "Document encrypted", { docId, docTitle: documents[docId]?.title });
+        }}
+        onDecryptDoc={(decrypted) => {
+          const updateCurrentContent = useNoteStore.getState().updateCurrentContent;
+          updateCurrentContent(decrypted);
+        }}
+      />
     </div>
   );
 }

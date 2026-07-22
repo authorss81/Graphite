@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNoteStore } from "../store/useNoteStore";
+import { useAuthStore } from "../store/useAuthStore";
+import { toast } from "./Toast";
 import type { GraphiteDoc } from "../utils/docStorage";
 import {
   FileText,
@@ -11,6 +13,10 @@ import {
   Pencil,
   ChevronRight,
   ChevronDown,
+  LogOut,
+  Pin,
+  Archive,
+  Tag,
 } from "lucide-react";
 
 interface TreeNode {
@@ -19,11 +25,21 @@ interface TreeNode {
   depth: number;
 }
 
-function buildTree(documents: Record<string, GraphiteDoc>): TreeNode[] {
+function buildTree(documents: Record<string, GraphiteDoc>, filterTag: string | null, showArchived: boolean): TreeNode[] {
+  const activeDocs = Object.values(documents).filter((d) => {
+    if (showArchived) return d.isArchived;
+    if (d.isArchived) return false;
+    if (filterTag && !d.isFolder) {
+      return d.tags?.includes(filterTag);
+    }
+    return true;
+  });
+
   const nodes = new Map<string, TreeNode>();
-  for (const doc of Object.values(documents)) {
+  for (const doc of activeDocs) {
     nodes.set(doc.id, { doc, children: [], depth: 0 });
   }
+
   const roots: TreeNode[] = [];
   for (const node of nodes.values()) {
     const parentId = node.doc.parentId;
@@ -33,6 +49,7 @@ function buildTree(documents: Record<string, GraphiteDoc>): TreeNode[] {
       roots.push(node);
     }
   }
+
   const sortRec = (list: TreeNode[]) => {
     list.sort((a, b) => {
       if (a.doc.isFolder !== b.doc.isFolder) return a.doc.isFolder ? -1 : 1;
@@ -59,8 +76,24 @@ export function Sidebar() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
-  const tree = buildTree(documents);
+  const tree = buildTree(documents, activeTagFilter, showArchived);
+
+  const pinnedNotes = useMemo(() => {
+    return Object.values(documents).filter((d) => !d.isFolder && d.isPinned && !d.isArchived);
+  }, [documents]);
+
+  const tagCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    Object.values(documents).forEach((d) => {
+      if (!d.isArchived && d.tags) {
+        d.tags.forEach((t) => map.set(t, (map.get(t) || 0) + 1));
+      }
+    });
+    return Array.from(map.entries());
+  }, [documents]);
 
   const parentForNew = () => {
     const current = documents[docId];
@@ -85,6 +118,12 @@ export function Sidebar() {
   const commitRename = () => {
     if (renamingId) renameDocument(renamingId, renameValue);
     setRenamingId(null);
+  };
+
+  const handleLogout = async () => {
+    const logout = useAuthStore.getState().logout;
+    await logout();
+    toast("Signed out", "info");
   };
 
   const renderNode = (node: TreeNode) => {
@@ -143,6 +182,32 @@ export function Sidebar() {
           )}
 
           <span className="sidebar-actions">
+            {doc.isFolder && (
+              <>
+                <button
+                  className="sidebar-action-btn"
+                  title="Add Note in Folder"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    createDocument(undefined, doc.id);
+                    setExpanded((prev) => new Set(prev).add(doc.id));
+                  }}
+                >
+                  <FilePlus size={13} />
+                </button>
+                <button
+                  className="sidebar-action-btn"
+                  title="Add Subfolder"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    createFolder(undefined, doc.id);
+                    setExpanded((prev) => new Set(prev).add(doc.id));
+                  }}
+                >
+                  <FolderPlus size={13} />
+                </button>
+              </>
+            )}
             <button
               className="sidebar-action-btn"
               title="Rename"
@@ -178,8 +243,17 @@ export function Sidebar() {
   return (
     <aside className="graphite-sidebar">
       <div className="sidebar-header">
-        <span className="sidebar-title">Documents</span>
+        <span className="sidebar-title">
+          {showArchived ? "Archive" : activeTagFilter ? `#${activeTagFilter}` : "Documents"}
+        </span>
         <div className="sidebar-new-buttons">
+          <button
+            className={`graphite-btn sidebar-new-btn${showArchived ? " active" : ""}`}
+            title={showArchived ? "View active notes" : "View archived notes"}
+            onClick={() => setShowArchived((p) => !p)}
+          >
+            <Archive size={14} />
+          </button>
           <button
             className="graphite-btn sidebar-new-btn"
             title="New document"
@@ -196,12 +270,79 @@ export function Sidebar() {
           </button>
         </div>
       </div>
+
+      {/* Pinned Notes Section */}
+      {!showArchived && pinnedNotes.length > 0 && (
+        <div style={{ padding: "8px 12px 4px 12px", borderBottom: "1px solid var(--border-color)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: "var(--accent-color)", textTransform: "uppercase", marginBottom: "4px" }}>
+            <Pin size={12} /> Pinned Notes
+          </div>
+          {pinnedNotes.map((note) => (
+            <div
+              key={note.id}
+              className={`sidebar-row${note.id === docId ? " selected" : ""}`}
+              onClick={() => selectDocument(note.id)}
+              style={{ paddingLeft: "8px", fontSize: "13px" }}
+            >
+              <FileText size={14} className="sidebar-icon" />
+              <span className="sidebar-label">{note.title}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Tags Section */}
+      {!showArchived && tagCounts.length > 0 && (
+        <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border-color)", display: "flex", flexWrap: "wrap", gap: "4px" }}>
+          {activeTagFilter && (
+            <button
+              type="button"
+              onClick={() => setActiveTagFilter(null)}
+              style={{ background: "rgba(239,68,68,0.2)", color: "#f87171", border: "none", borderRadius: "10px", padding: "2px 6px", fontSize: "11px", cursor: "pointer" }}
+            >
+              Clear Filter
+            </button>
+          )}
+          {tagCounts.map(([t, cnt]) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setActiveTagFilter(activeTagFilter === t ? null : t)}
+              style={{
+                background: activeTagFilter === t ? "var(--accent-color)" : "var(--bg-tertiary)",
+                color: activeTagFilter === t ? "#fff" : "var(--text-secondary)",
+                border: "1px solid var(--border-color)",
+                borderRadius: "10px",
+                padding: "2px 8px",
+                fontSize: "11px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <Tag size={10} />
+              #{t} ({cnt})
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="sidebar-tree">
         {tree.length === 0 ? (
-          <p className="sidebar-empty">No documents yet.</p>
+          <p className="sidebar-empty">
+            {showArchived ? "No archived documents." : activeTagFilter ? `No notes with #${activeTagFilter}` : "No documents yet."}
+          </p>
         ) : (
           tree.map(renderNode)
         )}
+      </div>
+
+      <div className="sidebar-footer">
+        <button className="graphite-btn sidebar-logout-btn" onClick={handleLogout} title="Sign out">
+          <LogOut size={14} />
+          Sign out
+        </button>
       </div>
     </aside>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, startTransition } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -15,12 +15,22 @@ import { ListNode, ListItemNode } from "@lexical/list";
 import { LinkNode } from "@lexical/link";
 import { CodeNode, CodeHighlightNode } from "@lexical/code";
 import { TRANSFORMERS } from "@lexical/markdown";
-import { $insertNodes, COMMAND_PRIORITY_LOW } from "lexical";
+import { $insertNodes, $getSelection, $isRangeSelection, $createParagraphNode, KEY_ENTER_COMMAND, COMMAND_PRIORITY_LOW, COMMAND_PRIORITY_HIGH } from "lexical";
 import { CanvasNode, $createCanvasNode, INSERT_CANVAS_COMMAND } from "./CanvasNode";
+import { ImageNode, $createImageNode, INSERT_IMAGE_COMMAND } from "./ImageNode";
 import { EditorToolbar } from "./EditorToolbar";
+import { SlashMenuPlugin } from "./SlashMenuPlugin";
+import { WikiLinkPlugin } from "./WikiLinkPlugin";
+import { BlockDragHandlePlugin } from "./BlockDragHandlePlugin";
+import { TaskProgressHeader } from "./TaskProgressHeader";
+import { TagManager } from "./TagManager";
 import { sendUpdateToNative, logToNative, encodeBase64 } from "../utils/bridge";
 import { useNoteStore } from "../store/useNoteStore";
+import { uploadFromClipboard } from "../utils/upload";
 import { toast } from "./Toast";
+import { isPluginActive } from "../utils/pluginSystem";
+import { WordStatsBar } from "./WordStatsBar";
+import { $isCodeNode } from "@lexical/code";
 
 interface EditorProps {
   docId: string;
@@ -66,19 +76,26 @@ function EditorStateLoader({ initialState }: { initialState?: string }) {
 
     const trimmed = initialState.trim();
 
-    try {
-      if (trimmed.startsWith("{")) {
-        JSON.parse(initialState);
-        editor.setEditorState(editor.parseEditorState(initialState));
-        return;
-      }
-    } catch {
-      // not JSON
+    if (trimmed.startsWith("enc:")) {
+      // Document is client-side encrypted — skip Lexical AST parsing until unlocked
+      return;
     }
 
-    if (trimmed.startsWith("<")) {
-      editor.setEditorState(editor.parseEditorState(initialState));
-    }
+    startTransition(() => {
+      try {
+        if (trimmed.startsWith("{")) {
+          JSON.parse(initialState);
+          editor.setEditorState(editor.parseEditorState(initialState));
+          return;
+        }
+      } catch {
+        // not JSON
+      }
+
+      if (trimmed.startsWith("<")) {
+        editor.setEditorState(editor.parseEditorState(initialState));
+      }
+    });
   }, [editor, initialState]);
 
   return null;
@@ -123,6 +140,104 @@ function KeyboardHandler() {
   return null;
 }
 
+function ImagePastePlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    const rootElement = editor.getRootElement();
+    if (!rootElement) return;
+
+    const handlePaste = async (event: ClipboardEvent) => {
+      const items = event.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          event.preventDefault();
+          try {
+            const url = await uploadFromClipboard(items);
+            if (url) {
+              editor.dispatchCommand(INSERT_IMAGE_COMMAND, { src: url, alt: "Pasted image" });
+            }
+          } catch (err: any) {
+            toast(`Image paste failed: ${err.message}`, "error");
+          }
+          return;
+        }
+      }
+    };
+
+    rootElement.addEventListener("paste", handlePaste);
+    return () => rootElement.removeEventListener("paste", handlePaste);
+  }, [editor]);
+
+  return null;
+}
+
+function ImageInserterPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    return editor.registerCommand(
+      INSERT_IMAGE_COMMAND,
+      (payload) => {
+        editor.update(() => {
+          $insertNodes([$createImageNode(payload)]);
+        });
+        return true;
+      },
+      COMMAND_PRIORITY_LOW,
+    );
+  }, [editor]);
+
+  return null;
+}
+
+function CodeExitPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    return editor.registerCommand(
+      KEY_ENTER_COMMAND,
+      (event: KeyboardEvent | null) => {
+        if (!event) return false;
+        const selection = $getSelection();
+        if (!$isRangeSelection(selection)) return false;
+
+        const anchorNode = selection.anchor.getNode();
+        const codeNode = anchorNode.getTopLevelElementOrThrow();
+
+        if ($isCodeNode(codeNode)) {
+          if (event.shiftKey || event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+            editor.update(() => {
+              const p = $createParagraphNode();
+              codeNode.insertAfter(p);
+              p.select();
+            });
+            return true;
+          }
+          const text = codeNode.getTextContent();
+          if (text.endsWith("\n") || text.trim() === "") {
+            event.preventDefault();
+            editor.update(() => {
+              const p = $createParagraphNode();
+              codeNode.insertAfter(p);
+              p.select();
+            });
+            return true;
+          }
+        }
+
+        return false;
+      },
+      COMMAND_PRIORITY_HIGH
+    );
+  }, [editor]);
+
+  return null;
+}
+
 export function Editor({ docId, initialState }: EditorProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -130,11 +245,17 @@ export function Editor({ docId, initialState }: EditorProps) {
     namespace: "GraphiteEditor",
     theme: graphiteTheme,
     onError,
-    nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode, CodeHighlightNode, CanvasNode],
+    nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode, CodeHighlightNode, CanvasNode, ImageNode],
     editorState: undefined,
   };
 
   const handleEditorChange = useCallback((editorState: EditorState) => {
+    // If the document is currently encrypted, do not overwrite ciphertext with unencrypted Lexical JSON
+    const currentDoc = useNoteStore.getState().documents[docId];
+    if (currentDoc?.editorState?.trim().startsWith("enc:")) {
+      return;
+    }
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
@@ -163,13 +284,15 @@ export function Editor({ docId, initialState }: EditorProps) {
         <div className="editor-toolbar-wrap">
           <EditorToolbar />
         </div>
-        <div className="editor-inner">
+        <TagManager />
+        <TaskProgressHeader />
+        <div className="editor-inner" style={{ position: "relative" }}>
           <RichTextPlugin
             contentEditable={
               <ContentEditable
                 className="editor-input"
-                aria-placeholder="Write your thoughts..."
-                placeholder={<div className="editor-placeholder">Start writing something amazing...</div>}
+                aria-placeholder="Start writing something amazing... (Type / for commands, [[ for note links)"
+                placeholder={<div className="editor-placeholder">Start writing something amazing... (Type / for commands, [[ for note links)</div>}
               />
             }
             ErrorBoundary={LexicalErrorBoundary}
@@ -180,8 +303,15 @@ export function Editor({ docId, initialState }: EditorProps) {
           <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
           <OnChangePlugin onChange={handleEditorChange} />
           <CanvasInserterPlugin />
+          <ImageInserterPlugin />
+          <ImagePastePlugin />
+          <CodeExitPlugin />
           <KeyboardHandler />
+          <SlashMenuPlugin />
+          <WikiLinkPlugin />
+          <BlockDragHandlePlugin />
         </div>
+        {isPluginActive("word-counter-pro") && <WordStatsBar editorState={initialState} />}
       </LexicalComposer>
     </div>
   );

@@ -3,6 +3,15 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "vector"; -- Enable pgvector for AI semantic search embeddings
 
+-- Trigger function for auto-updating updated_at timestamp
+CREATE OR REPLACE FUNCTION set_updated_at_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = TIMEZONE('utc'::text, NOW());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- 1. Create note_nodes table
 CREATE TABLE IF NOT EXISTS note_nodes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -14,9 +23,14 @@ CREATE TABLE IF NOT EXISTS note_nodes (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
     is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+    is_tombstone BOOLEAN NOT NULL DEFAULT FALSE, -- Soft deletion / zombie column for CRDT sync
     tags TEXT[] DEFAULT '{}'::TEXT[] NOT NULL,
     database_id UUID
 );
+
+CREATE TRIGGER trigger_update_note_nodes_timestamp
+BEFORE UPDATE ON note_nodes
+FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
 
 -- 2. Create block_entities table
 CREATE TABLE IF NOT EXISTS block_entities (
@@ -25,9 +39,14 @@ CREATE TABLE IF NOT EXISTS block_entities (
     type TEXT NOT NULL,
     content TEXT NOT NULL,
     order_index TEXT NOT NULL, -- LexoRank string key (fractional index)
+    is_tombstone BOOLEAN NOT NULL DEFAULT FALSE, -- Soft deletion / zombie column
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+
+CREATE TRIGGER trigger_update_block_entities_timestamp
+BEFORE UPDATE ON block_entities
+FOR EACH ROW EXECUTE FUNCTION set_updated_at_timestamp();
 
 -- 3. Create backlink_entities table
 CREATE TABLE IF NOT EXISTS backlink_entities (
@@ -67,13 +86,17 @@ CREATE POLICY "Users can manage blocks of their own notes"
         )
     );
 
--- Backlinks Policies
+-- Backlinks Policies (Checks BOTH source_note_id and target_note_id ownership - F7 Fix)
 CREATE POLICY "Users can manage backlinks of their own notes" 
     ON backlink_entities FOR ALL 
     USING (
         EXISTS (
             SELECT 1 FROM note_nodes 
             WHERE note_nodes.id = backlink_entities.source_note_id 
+              AND note_nodes.user_id = auth.uid()
+        ) AND EXISTS (
+            SELECT 1 FROM note_nodes 
+            WHERE note_nodes.id = backlink_entities.target_note_id 
               AND note_nodes.user_id = auth.uid()
         )
     );
@@ -91,3 +114,27 @@ CREATE POLICY "Users can manage embeddings of their own notes"
 
 -- Setup Realtime replication for collaborative document edits
 ALTER PUBLICATION supabase_realtime ADD TABLE note_nodes, block_entities, backlink_entities;
+
+-- 5. Create document_sync table for tracking sync state
+CREATE TABLE IF NOT EXISTS document_sync (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    doc_id TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    synced BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+-- Add index on doc_id for efficient lookups
+CREATE INDEX IF NOT EXISTS idx_document_sync_doc_id ON document_sync(doc_id);
+
+-- Add index on created_at for incremental pulls
+CREATE INDEX IF NOT EXISTS idx_document_sync_created_at ON document_sync(created_at);
+
+-- Insert policies for authenticated users
+CREATE POLICY "Users can insert into document_sync" 
+  ON document_sync FOR INSERT 
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Users can read their own sync records" 
+  ON document_sync FOR SELECT 
+  USING (auth.uid() IS NOT NULL);

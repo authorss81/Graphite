@@ -20,7 +20,7 @@ class CommonDatabaseHelper : DatabaseHelper {
         println("[Database] Connection closed.")
     }
 
-    override fun executeWrite(sql: String, bindArgs: Array<Any?>) {
+    override fun executeWrite(sql: String, bindArgs: Array<Any?>): Unit {
         if (!isInitialized) throw IllegalStateException("Database not initialized.")
         println("[Database Write] $sql | args: ${bindArgs.joinToString()}")
     }

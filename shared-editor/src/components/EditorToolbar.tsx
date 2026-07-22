@@ -12,12 +12,16 @@ import {
   SELECTION_CHANGE_COMMAND,
 } from "lexical";
 import { INSERT_CANVAS_COMMAND } from "./CanvasNode";
+import { INSERT_IMAGE_COMMAND } from "./ImageNode";
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
+import { pickImage, uploadImage } from "../utils/upload";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import { $isHeadingNode, $createHeadingNode } from "@lexical/rich-text";
 import { $isListNode, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND, ListNode } from "@lexical/list";
 import { $createQuoteNode } from "@lexical/rich-text";
 import { $createCodeNode } from "@lexical/code";
+import { isPluginActive } from "../utils/pluginSystem";
+import { PomodoroWidget } from "./PomodoroWidget";
 
 import {
   Bold,
@@ -35,6 +39,7 @@ import {
   Undo2,
   Redo2,
   Shapes,
+  ImageIcon,
 } from "lucide-react";
 
 function ToolbarButton({
@@ -161,8 +166,21 @@ export function EditorToolbar() {
     });
   }, [editor]);
 
+  const insertImage = useCallback(async () => {
+    const file = await pickImage();
+    if (!file) return;
+    try {
+      const url = await uploadImage(file);
+      editor.dispatchCommand(INSERT_IMAGE_COMMAND, { src: url, alt: file.name });
+    } catch {
+      // error handled in upload function
+    }
+  }, [editor]);
+
+  const showPomodoro = isPluginActive("pomodoro-timer");
+
   return (
-    <div className="graphite-toolbar" ref={toolbarRef}>
+    <div className="graphite-toolbar" ref={toolbarRef} style={{ display: "flex", alignItems: "center", width: "100%" }}>
       <ToolbarButton onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)} disabled={!canUndo} title="Undo">
         <Undo2 size={16} />
       </ToolbarButton>
@@ -203,6 +221,9 @@ export function EditorToolbar() {
       <ToolbarButton onClick={() => editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://")} title="Insert Link">
         <Link size={16} />
       </ToolbarButton>
+      <ToolbarButton onClick={insertImage} title="Upload Image">
+        <ImageIcon size={16} />
+      </ToolbarButton>
       <ToolbarButton onClick={insertCodeBlock} title="Code Block">
         <Code size={16} />
       </ToolbarButton>
@@ -213,6 +234,8 @@ export function EditorToolbar() {
       <ToolbarButton onClick={() => editor.dispatchCommand(INSERT_CANVAS_COMMAND, undefined)} title="Insert Drawing Canvas">
         <Shapes size={16} />
       </ToolbarButton>
+
+      {showPomodoro && <PomodoroWidget />}
     </div>
   );
 }

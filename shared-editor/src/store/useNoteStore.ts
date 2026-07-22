@@ -1,17 +1,28 @@
 import { create } from "zustand";
 import type { GraphiteDoc } from "../utils/docStorage";
 import { newDocId, loadDocs, saveDocs } from "../utils/docStorage";
+import { SupabaseSyncService } from "../utils/supabase";
+import { createDocCommit } from "../utils/versionHistory";
 
 function parseStats(editorState: string): {
   wordCount: number;
   charCount: number;
   backlinks: string[];
+  totalTodos: number;
+  completedTodos: number;
 } {
-  if (!editorState) return { wordCount: 0, charCount: 0, backlinks: [] };
+  if (!editorState) return { wordCount: 0, charCount: 0, backlinks: [], totalTodos: 0, completedTodos: 0 };
   try {
     const parsed = JSON.parse(editorState);
     let text = "";
+    let totalTodos = 0;
+    let completedTodos = 0;
+
     const traverse = (node: any) => {
+      if (node.type === "checklistitem" || typeof node.checked === "boolean") {
+        totalTodos++;
+        if (node.checked) completedTodos++;
+      }
       if (node.text) text += node.text + " ";
       if (node.children) node.children.forEach(traverse);
     };
@@ -28,9 +39,11 @@ function parseStats(editorState: string): {
       wordCount: words.length,
       charCount: text.length,
       backlinks: [...new Set(foundLinks)],
+      totalTodos,
+      completedTodos,
     };
   } catch {
-    return { wordCount: 0, charCount: 0, backlinks: [] };
+    return { wordCount: 0, charCount: 0, backlinks: [], totalTodos: 0, completedTodos: 0 };
   }
 }
 
@@ -45,14 +58,16 @@ interface NoteStore {
   docId: string;
   editorState: string;
   canvasData: any;
-  activeTab: "editor" | "canvas" | "meta";
+  activeTab: "editor" | "canvas" | "spatial" | "graph" | "meta";
   wordCount: number;
   charCount: number;
   backlinks: string[];
+  totalTodos: number;
+  completedTodos: number;
   gitStatus: string;
   toasts: Toast[];
 
-  setActiveTab: (tab: "editor" | "canvas" | "meta") => void;
+  setActiveTab: (tab: "editor" | "canvas" | "spatial" | "graph" | "meta") => void;
   setGitStatus: (status: string) => void;
 
   addToast: (toast: Toast) => void;
@@ -65,6 +80,10 @@ interface NoteStore {
   renameDocument: (id: string, title: string) => void;
   deleteDocument: (id: string) => void;
   updateCurrentContent: (editorState?: string, canvasData?: any) => void;
+  togglePinDocument: (id: string) => void;
+  toggleArchiveDocument: (id: string) => void;
+  addTagToDocument: (id: string, tag: string) => void;
+  removeTagFromDocument: (id: string, tag: string) => void;
 }
 
 function persistAndSet(documents: Record<string, GraphiteDoc>, extra: Partial<NoteStore> = {}) {
@@ -81,6 +100,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   wordCount: 0,
   charCount: 0,
   backlinks: [],
+  totalTodos: 0,
+  completedTodos: 0,
   gitStatus: "",
   toasts: [],
 
@@ -117,6 +138,39 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       canvasData: current.canvasData,
       ...parseStats(current.editorState),
     });
+
+    // Subscribe to Supabase Realtime updates
+    const syncService = SupabaseSyncService.getInstance();
+    syncService.subscribeRealtime(
+      (updatedId, partialDoc) => {
+        const currentDocs = get().documents;
+        const existing = currentDocs[updatedId] || {
+          id: updatedId,
+          title: "Synced Note",
+          isFolder: false,
+          parentId: null,
+          updatedAt: Date.now(),
+          editorState: "",
+          canvasData: null,
+        };
+        const updatedDoc = { ...existing, ...partialDoc };
+        const nextDocs = { ...currentDocs, [updatedId]: updatedDoc };
+        saveDocs(nextDocs);
+        if (updatedId === get().docId) {
+          set({
+            documents: nextDocs,
+            editorState: updatedDoc.editorState,
+            canvasData: updatedDoc.canvasData,
+            ...parseStats(updatedDoc.editorState),
+          });
+        } else {
+          set({ documents: nextDocs });
+        }
+      },
+      (deletedId) => {
+        get().deleteDocument(deletedId);
+      }
+    );
   },
 
   selectDocument: (id) => {
@@ -151,6 +205,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         activeTab: "editor",
       })
     );
+    SupabaseSyncService.getInstance().syncDocument(id, doc).catch(() => {});
     return id;
   },
 
@@ -167,14 +222,17 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     };
     const documents = { ...get().documents, [id]: doc };
     set(persistAndSet(documents));
+    SupabaseSyncService.getInstance().syncDocument(id, doc).catch(() => {});
     return id;
   },
 
   renameDocument: (id, title) => {
     const documents = { ...get().documents };
     if (!documents[id]) return;
-    documents[id] = { ...documents[id], title: title.trim() || "Untitled" };
+    const updated = { ...documents[id], title: title.trim() || "Untitled", updatedAt: Date.now() };
+    documents[id] = updated;
     set(persistAndSet(documents));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
   },
 
   deleteDocument: (id) => {
@@ -193,7 +251,10 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         }
       }
     }
-    for (const del of toDelete) delete documents[del];
+    for (const del of toDelete) {
+      delete documents[del];
+      SupabaseSyncService.getInstance().queueOfflineOp({ docId: del, action: "delete", payload: {} });
+    }
     saveDocs(documents);
 
     if (toDelete.has(get().docId)) {
@@ -238,7 +299,56 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       wordCount: stats.wordCount,
       charCount: stats.charCount,
       backlinks: stats.backlinks,
+      totalTodos: stats.totalTodos,
+      completedTodos: stats.completedTodos,
       canvasData: nextCanvasData,
     });
+    createDocCommit(docId, cur.title, nextEditorState, nextCanvasData);
+    SupabaseSyncService.getInstance().syncDocument(docId, next).catch(() => {});
+  },
+
+  togglePinDocument: (id) => {
+    const { documents } = get();
+    if (!documents[id]) return;
+    const cur = documents[id];
+    const updated = { ...cur, isPinned: !cur.isPinned, updatedAt: Date.now() };
+    const nextDocs = { ...documents, [id]: updated };
+    set(persistAndSet(nextDocs));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
+  },
+
+  toggleArchiveDocument: (id) => {
+    const { documents } = get();
+    if (!documents[id]) return;
+    const cur = documents[id];
+    const updated = { ...cur, isArchived: !cur.isArchived, updatedAt: Date.now() };
+    const nextDocs = { ...documents, [id]: updated };
+    set(persistAndSet(nextDocs));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
+  },
+
+  addTagToDocument: (id, tag) => {
+    const { documents } = get();
+    if (!documents[id]) return;
+    const cur = documents[id];
+    const cleanTag = tag.trim().replace(/^#/, "");
+    if (!cleanTag) return;
+    const existing = cur.tags || [];
+    if (existing.includes(cleanTag)) return;
+    const updated = { ...cur, tags: [...existing, cleanTag], updatedAt: Date.now() };
+    const nextDocs = { ...documents, [id]: updated };
+    set(persistAndSet(nextDocs));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
+  },
+
+  removeTagFromDocument: (id, tag) => {
+    const { documents } = get();
+    if (!documents[id]) return;
+    const cur = documents[id];
+    const existing = cur.tags || [];
+    const updated = { ...cur, tags: existing.filter((t) => t !== tag), updatedAt: Date.now() };
+    const nextDocs = { ...documents, [id]: updated };
+    set(persistAndSet(nextDocs));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
   },
 }));
