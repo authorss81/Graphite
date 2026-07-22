@@ -29,19 +29,22 @@ class GraphiteWebView(
             javaScriptEnabled = true
             domStorageEnabled = true
             databaseEnabled = true
-            allowFileAccess = true
-            allowContentAccess = true
+            allowFileAccess = false
+            allowContentAccess = false
             loadWithOverviewMode = true
             useWideViewPort = true
-            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
         }
     }
 
     /**
      * Loads a document into the webview by executing window.loadDocument(docId, payloadBase64)
+     * Uses JSON.stringify for safe JS string escaping to prevent injection.
      */
     fun loadDocumentInWebView(docId: String, payloadBase64: String) {
-        val script = "if(window.loadDocument){ window.loadDocument('$docId', '$payloadBase64'); }"
+        val safeDocId = org.json.JSONObject.quote(docId)
+        val safePayload = org.json.JSONObject.quote(payloadBase64)
+        val script = "if(window.loadDocument){ window.loadDocument($safeDocId, $safePayload); }"
         post {
             evaluateJavascript(script, null)
         }

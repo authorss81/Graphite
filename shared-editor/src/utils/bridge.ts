@@ -9,28 +9,16 @@ export function encodeBase64(data: string): string {
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  try {
-    return btoa(binary);
-  } catch {
-    return btoa(unescape(encodeURIComponent(data)));
-  }
+  return btoa(binary);
 }
 
 export function decodeBase64(data: string): string {
-  try {
-    const binary = atob(data);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return new TextDecoder().decode(bytes);
-  } catch {
-    try {
-      return decodeURIComponent(escape(atob(data)));
-    } catch {
-      return atob(data);
-    }
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
   }
+  return new TextDecoder().decode(bytes);
 }
 
 interface BridgeUpdate {

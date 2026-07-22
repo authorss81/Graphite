@@ -1,3 +1,8 @@
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+  return text.replace(/[&<>"']/g, (ch) => map[ch] || ch);
+}
+
 export function downloadFile(filename: string, content: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -45,13 +50,13 @@ export function exportAsMarkdown(title: string, editorStateJSON: string) {
 }
 
 export function exportAsHTML(title: string, editorStateJSON: string) {
-  let bodyHTML = `<h1>${title}</h1>`;
+  let bodyHTML = `<h1>${escapeHtml(title)}</h1>`;
   if (editorStateJSON) {
     try {
       const parsed = JSON.parse(editorStateJSON);
       const traverse = (node: any): string => {
         if (!node) return "";
-        if (node.text) return node.text;
+        if (node.text) return escapeHtml(node.text);
         let childrenText = "";
         if (node.children) {
           childrenText = node.children.map(traverse).join("");
@@ -59,7 +64,7 @@ export function exportAsHTML(title: string, editorStateJSON: string) {
         if (node.type === "paragraph") return `<p>${childrenText}</p>`;
         if (node.type === "heading") return `<${node.tag}>${childrenText}</${node.tag}>`;
         if (node.type === "quote") return `<blockquote>${childrenText}</blockquote>`;
-        if (node.type === "code") return `<pre><code>${childrenText}</code></pre>`;
+        if (node.type === "code") return `<pre><code>${escapeHtml(childrenText)}</code></pre>`;
         if (node.type === "listitem") return `<li>${childrenText}</li>`;
         return childrenText;
       };
@@ -67,7 +72,7 @@ export function exportAsHTML(title: string, editorStateJSON: string) {
         bodyHTML += traverse(parsed.root);
       }
     } catch {
-      bodyHTML += `<p>${editorStateJSON}</p>`;
+      bodyHTML += `<p>${escapeHtml(editorStateJSON)}</p>`;
     }
   }
 
@@ -75,7 +80,7 @@ export function exportAsHTML(title: string, editorStateJSON: string) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #1e293b; background: #fafafa; }
     h1, h2, h3 { color: #0f172a; }

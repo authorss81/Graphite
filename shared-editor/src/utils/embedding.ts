@@ -70,9 +70,8 @@ export async function storeDocumentEmbedding(docId: string, title: string, conte
   if (isSupabaseAvailable() && supabase) {
     try {
       await supabase.from("document_embeddings").upsert({
-        doc_id: docId,
+        note_id: docId,
         embedding: vector,
-        content_snippet: combinedText.slice(0, 300),
         updated_at: new Date().toISOString(),
       });
     } catch {

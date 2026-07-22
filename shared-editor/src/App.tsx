@@ -18,6 +18,7 @@ import { PluginMarketplaceModal } from "./components/PluginMarketplaceModal";
 import { TeamWorkspaceModal } from "./components/TeamWorkspaceModal";
 import { SecurityModal } from "./components/SecurityModal";
 import { logAuditEvent } from "./utils/auditLog";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 import { applyPluginEffects } from "./utils/pluginSystem";
 
@@ -323,7 +324,9 @@ export function App() {
 
         <main style={{ minHeight: "450px", marginTop: "16px" }}>
           {activeTab === "editor" && (
-            <Editor key={docId} docId={docId} initialState={editorState} />
+            <ErrorBoundary name="Editor">
+              <Editor key={docId} docId={docId} initialState={editorState} />
+            </ErrorBoundary>
           )}
 
           {activeTab === "canvas" && (
@@ -334,15 +337,21 @@ export function App() {
                 </div>
               }
             >
-              <Canvas
-                key={docId}
-                initialData={canvasData}
-                onChange={handleCanvasChange}
-              />
+              <ErrorBoundary name="Canvas">
+                <Canvas
+                  key={docId}
+                  initialData={canvasData}
+                  onChange={handleCanvasChange}
+                />
+              </ErrorBoundary>
             </Suspense>
           )}
 
-          {activeTab === "graph" && <GraphView />}
+          {activeTab === "graph" && (
+            <ErrorBoundary name="GraphView">
+              <GraphView />
+            </ErrorBoundary>
+          )}
 
           {activeTab === "spatial" && <SpatialCanvas />}
 

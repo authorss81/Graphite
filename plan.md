@@ -300,24 +300,24 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 | # | Item | File(s) | Effort | Status |
 |---|------|---------|--------|--------|
-| 7.1 | Move Supabase credentials from source to runtime config | SupabaseClient.kt, SyncWorker.kt | 2h | Pending |
-| 7.2 | Fix supabase! non-null assertion | auth.ts | 1h | Pending |
-| 7.3 | Fix onUpgrade — ALTER TABLE, never DROP | AndroidDatabaseHelper.kt | 2h | Pending |
-| 7.4 | Fix encryption Unlock false success | SecurityModal.tsx | 1h | Pending |
-| 7.5 | Fix WikiLink click handler | WikiLinkPlugin.tsx | 2h | Pending |
-| 7.6 | Fix Realtime subscription leak | useNoteStore.ts | 1h | Pending |
-| 7.7 | Remove content_snippet from embedding upsert | embedding.ts | 30m | Pending |
-| 7.8 | Fix WebView JS injection | GraphiteWebView.kt | 2h | Pending |
-| 7.9 | Add HTML escaping to exportAsHTML | exportDoc.ts | 1h | Pending |
-| 7.10 | Set MIXED_CONTENT_NEVER_ALLOW | GraphiteWebView.kt | 15m | Pending |
-| 7.11 | Add origin validation to AndroidJSBridge | AndroidJSBridge.kt | 3h | Pending |
-| 7.12 | Fix encodeBase64 to use proper encoding | bridge.ts | 1h | Pending |
-| 7.13 | Stop silent error swallowing (show toasts) | Multiple | 3h | Pending |
-| 7.14 | Add error boundaries around all components | App.tsx, Editor.tsx, Canvas.tsx | 3h | Pending |
-| 7.15 | Fix recovery codes — mark used, reject reuse | encryption.ts | 1h | Pending |
-| 7.16 | Fix executeWrite type handling | AndroidDatabaseHelper.kt | 1h | Pending |
-| 7.17 | Fix folder delete infinite loop | useNoteStore.ts | 30m | Pending |
-| 7.18 | Cache embeddings in SemanticSearchModal | SemanticSearchModal.tsx | 1h | Pending |
+| 7.1 | Move Supabase credentials from source to runtime config | SupabaseClient.kt | 2h | ✅ Done |
+| 7.2 | Fix supabase! non-null assertion | auth.ts | 1h | ✅ Done |
+| 7.3 | Fix onUpgrade — ALTER TABLE, never DROP | AndroidDatabaseHelper.kt | 2h | ✅ Done |
+| 7.4 | Fix encryption Unlock false success | SecurityModal.tsx | 1h | ✅ Done |
+| 7.5 | Fix WikiLink click handler | WikiLinkPlugin.tsx | 2h | ✅ Done |
+| 7.6 | Fix Realtime subscription leak | useNoteStore.ts | 1h | ✅ Done |
+| 7.7 | Remove content_snippet from embedding upsert | embedding.ts | 30m | ✅ Done |
+| 7.8 | Fix WebView JS injection | GraphiteWebView.kt | 2h | ✅ Done |
+| 7.9 | Add HTML escaping to exportAsHTML | exportDoc.ts | 1h | ✅ Done |
+| 7.10 | Set MIXED_CONTENT_NEVER_ALLOW | GraphiteWebView.kt | 15m | ✅ Done |
+| 7.11 | Add origin validation to AndroidJSBridge | AndroidJSBridge.kt | 3h | ✅ Done |
+| 7.12 | Fix encodeBase64 to use proper encoding | bridge.ts | 1h | ✅ Done |
+| 7.13 | Stop silent error swallowing (show toasts) | useNoteStore.ts | 3h | ✅ Done |
+| 7.14 | Add error boundaries around all components | App.tsx, ErrorBoundary.tsx | 3h | ✅ Done |
+| 7.15 | Fix recovery codes — mark used, reject reuse | encryption.ts | 1h | ✅ Done |
+| 7.16 | Fix executeWrite type handling | AndroidDatabaseHelper.kt | 1h | ✅ Done |
+| 7.17 | Fix folder delete infinite loop | useNoteStore.ts | 30m | ✅ Done |
+| 7.18 | Cache embeddings in SemanticSearchModal | SemanticSearchModal.tsx | 1h | ✅ Done |
 
 ---
 

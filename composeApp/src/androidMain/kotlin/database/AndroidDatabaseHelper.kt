@@ -18,12 +18,7 @@ class AndroidDatabaseHelper(context: Context, dbName: String) : DatabaseHelper {
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            db.execSQL("DROP TABLE IF EXISTS ${DatabaseSchema.TABLE_REVISION_HISTORY}")
-            db.execSQL("DROP TABLE IF EXISTS ${DatabaseSchema.TABLE_SYNC_METADATA}")
-            db.execSQL("DROP TABLE IF EXISTS ${DatabaseSchema.TABLE_BACKLINK}")
-            db.execSQL("DROP TABLE IF EXISTS ${DatabaseSchema.TABLE_BLOCK}")
-            db.execSQL("DROP TABLE IF EXISTS ${DatabaseSchema.TABLE_NOTE_NODE}")
-            onCreate(db)
+            println("[AndroidDatabaseHelper] Migration from v$oldVersion to v$newVersion — no migrations defined yet, skipping.")
         }
     }
 
@@ -49,7 +44,7 @@ class AndroidDatabaseHelper(context: Context, dbName: String) : DatabaseHelper {
         bindArgs: Array<Any?>
     ): List<Map<String, Any>> {
         val database = db ?: throw IllegalStateException("Database not initialized.")
-        val cursor = database.rawQuery(sql, bindArgs.map { it.toString() }.toTypedArray())
+        val cursor = database.rawQuery(sql, bindArgs.map { it?.toString() }.toTypedArray())
         val results = mutableListOf<Map<String, Any>>()
         cursor.use { c ->
             val cols = c.columnNames

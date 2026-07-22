@@ -55,15 +55,35 @@ export function WikiLinkPlugin() {
       const target = e.target as HTMLElement;
       if (!target) return;
       const text = target.innerText || target.textContent || "";
-      const match = text.match(/\[\[(.*?)\]\]/);
-      if (match && match[1]) {
-        const linkTitle = match[1].trim();
-        const found = Object.values(useNoteStore.getState().documents).find(
-          (d) => d.title.toLowerCase() === linkTitle.toLowerCase() && !d.isFolder
-        );
-        if (found) {
-          useNoteStore.getState().selectDocument(found.id);
+      const links = [...text.matchAll(/\[\[(.*?)\]\]/g)];
+      if (links.length === 0) return;
+      const sel = editor.getEditorState().read(() => {
+        const s = $getSelection();
+        if ($isRangeSelection(s)) {
+          return { anchorOffset: s.anchor.offset, anchorNode: s.anchor.getNode() };
         }
+        return null;
+      });
+      let matchedTitle: string | null = null;
+      if (sel) {
+        for (const link of links) {
+          const start = link.index;
+          const end = start + link[0].length;
+          if (sel.anchorOffset >= start && sel.anchorOffset <= end) {
+            matchedTitle = link[1].trim();
+            break;
+          }
+        }
+      }
+      if (!matchedTitle) {
+        matchedTitle = links[links.length - 1][1].trim();
+      }
+      const found = Object.values(useNoteStore.getState().documents).find(
+        (d) => d.title.toLowerCase() === matchedTitle!.toLowerCase() && !d.isFolder
+      );
+      if (found) {
+        e.preventDefault();
+        useNoteStore.getState().selectDocument(found.id);
       }
     };
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useNoteStore } from "../store/useNoteStore";
-import { generateEmbedding, cosineSimilarity, storeDocumentEmbedding } from "../utils/embedding";
+import { generateEmbedding, cosineSimilarity, storeDocumentEmbedding, getCachedEmbedding } from "../utils/embedding";
 import { Sparkles, FileText, X, ArrowRight } from "lucide-react";
 
 interface SearchResult {
@@ -27,9 +27,9 @@ export function SemanticSearchModal({ isOpen, onClose }: Props) {
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 50);
-      // Pre-compute embeddings for all documents
+      // Pre-compute embeddings for all documents (cache-hit skips regeneration)
       Object.values(documents).forEach((doc) => {
-        if (!doc.isFolder) {
+        if (!doc.isFolder && !getCachedEmbedding(doc.id)) {
           storeDocumentEmbedding(doc.id, doc.title, doc.editorState || "");
         }
       });

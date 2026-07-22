@@ -115,6 +115,22 @@ export function setDocLocked(docId: string, locked: boolean): void {
 // ─── Recovery codes ──────────────────────────────────────────────────────────
 
 const RECOVERY_STORAGE_KEY = "graphite_recovery_hash_v1";
+const USED_RECOVERY_KEY = "graphite_used_recovery_v1";
+
+function getUsedCodes(): Set<string> {
+  try {
+    const raw = localStorage.getItem(USED_RECOVERY_KEY);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function markCodeUsed(code: string) {
+  const used = getUsedCodes();
+  used.add(code);
+  localStorage.setItem(USED_RECOVERY_KEY, JSON.stringify([...used]));
+}
 
 export async function generateRecoveryCodes(): Promise<string[]> {
   const codes = Array.from({ length: 8 }, () =>
@@ -123,18 +139,22 @@ export async function generateRecoveryCodes(): Promise<string[]> {
       .join("")
       .toUpperCase()
   );
-  // Store SHA-256 hash of all codes joined, for verification
   const enc = new TextEncoder();
   const hashBuf = await crypto.subtle.digest("SHA-256", enc.encode(codes.join(",")));
   localStorage.setItem(RECOVERY_STORAGE_KEY, bufToBase64(hashBuf));
+  localStorage.removeItem(USED_RECOVERY_KEY);
   return codes;
 }
 
 export async function verifyRecoveryCode(code: string, storedCodes: string[]): Promise<boolean> {
+  const normalized = code.toUpperCase();
+  if (getUsedCodes().has(normalized)) return false;
   const enc = new TextEncoder();
   const testHash = await crypto.subtle.digest("SHA-256", enc.encode(storedCodes.join(",")));
   const stored = localStorage.getItem(RECOVERY_STORAGE_KEY);
-  return stored === bufToBase64(testHash) && storedCodes.includes(code.toUpperCase());
+  const valid = stored === bufToBase64(testHash) && storedCodes.includes(normalized);
+  if (valid) markCodeUsed(normalized);
+  return valid;
 }
 
 export function hasEncryptionSetup(): boolean {

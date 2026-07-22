@@ -120,11 +120,9 @@ export function SecurityModal({
     try {
       const salt = getOrCreateSalt();
       const key = await deriveKey(unlockPassphrase, salt);
-      // Test decrypt if doc is encrypted
       if (isDocEncrypted) {
-        const test = await decryptText(currentDocContent, key);
-        if (test === currentDocContent) throw new Error("Decryption returned unchanged — wrong key?");
-        onDecryptDoc(test);
+        const plaintext = await decryptText(currentDocContent, key);
+        onDecryptDoc(plaintext);
         logAuditEvent("encryption", "Document decrypted", { docId: currentDocId, docTitle: currentDocTitle });
       }
       setCryptoKey(key);
