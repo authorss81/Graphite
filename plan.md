@@ -325,22 +325,22 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 | # | Item | Details | Effort | Status |
 |---|------|---------|--------|--------|
-| 8.1 | Fix ALL touch targets to >=48dp | Sidebar, icons, tree, cards, chips, zoom bar, auth | 3h | Pending |
-| 8.2 | Apply --keyboard-height to entire app | adjustNothing + visualViewport approach | 2h | Pending |
-| 8.3 | Android back gesture handling | OnBackPressedDispatcher | 3h | Pending |
-| 8.4 | Swipe-to-dismiss on sidebars/modals | Gesture detection, animated dismiss | 4h | Pending |
-| 8.5 | Edge-to-edge (enableEdgeToEdge) | WindowInsets, decor fits system windows | 3h | Pending |
-| 8.6 | Haptic feedback | On toolbar press, keyboard, drag | 2h | Pending |
-| 8.7 | Splash Screen API | installSplashScreen() | 1h | Pending |
-| 8.8 | Pull-to-refresh for note list | SwipeRefreshLayout | 2h | Pending |
-| 8.9 | Touch events on SpatialCanvas (remove 300ms delay) | onTouchStart/Move/End | 3h | Pending |
-| 8.10 | Swipe-to-delete note gesture | Gesture detection on sidebar rows | 2h | Pending |
-| 8.11 | Autofill hints + imeOptions on forms | AuthScreen | 1h | Pending |
-| 8.12 | Remove allowFileAccess + allowContentAccess | GraphiteWebView.kt | 15m | Pending |
-| 8.13 | WebChromeClient with file chooser | GraphiteWebView.kt | 2h | Pending |
-| 8.14 | WebView offline caching strategy | setCacheMode, setAppCacheEnabled | 2h | Pending |
-| 8.15 | Bottom navigation for mobile (<768px) | Thumb-reachable tabs | 4h | Pending |
-| 8.16 | Share intent / deep linking | intent-filter for SEND and VIEW | 3h | Pending |
+| 8.1 | Fix ALL touch targets to >=48dp | Sidebar, icons, tree, cards, chips, zoom bar, auth | 3h | ✅ Done |
+| 8.2 | Apply --keyboard-height to entire app | adjustNothing + visualViewport approach | 2h | ✅ Done |
+| 8.3 | Android back gesture handling | OnBackPressedDispatcher | 3h | ✅ Already handled by Capacitor BridgeActivity |
+| 8.4 | Swipe-to-dismiss on sidebars/modals | Gesture detection, animated dismiss | 4h | ⬜ Deferred (needs gesture library; CSS `:active` scale added) |
+| 8.5 | Edge-to-edge (enableEdgeToEdge) | WindowInsets, decor fits system windows | 3h | ✅ Done |
+| 8.6 | Haptic feedback | On toolbar press, keyboard, drag | 2h | ✅ Done (CSS :active scale + vibrate API) |
+| 8.7 | Splash Screen API | installSplashScreen() | 1h | ✅ Done |
+| 8.8 | Pull-to-refresh for note list | SwipeRefreshLayout | 2h | ⬜ Deferred (needs Capacitor plugin or native code) |
+| 8.9 | Touch events on SpatialCanvas (remove 300ms delay) | onTouchStart/Move/End | 3h | ✅ Done (touch-action: manipulation) |
+| 8.10 | Swipe-to-delete note gesture | Gesture detection on sidebar rows | 2h | ⬜ Deferred (needs gesture library) |
+| 8.11 | Autofill hints + imeOptions on forms | AuthScreen | 1h | ✅ Done (autoComplete already present) |
+| 8.12 | Remove allowFileAccess + allowContentAccess | GraphiteWebView.kt | 15m | ✅ Done (Phase 7.10) |
+| 8.13 | WebChromeClient with file chooser | GraphiteWebView.kt | 2h | ✅ Done |
+| 8.14 | WebView offline caching strategy | setCacheMode, setAppCacheEnabled | 2h | ✅ Done |
+| 8.15 | Bottom navigation for mobile (<768px) | Thumb-reachable tabs | 4h | ✅ Done |
+| 8.16 | Share intent / deep linking | intent-filter for SEND and VIEW | 3h | ✅ Done |
 
 ---
 

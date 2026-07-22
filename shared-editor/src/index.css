@@ -312,6 +312,7 @@ body {
   }
   .app-main {
     padding: 16px 12px;
+    padding-bottom: calc(16px + var(--keyboard-height, 0px) + 72px);
   }
   .graphite-sidebar {
     width: 100%;
@@ -321,6 +322,61 @@ body {
     border-right: none;
     border-bottom: 1px solid var(--border-color);
   }
+  .graphite-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1100;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border-top: 1px solid var(--border-color);
+    padding: 4px 0 env(safe-area-inset-bottom, 0) 0;
+    justify-content: space-around;
+  }
+  .graphite-bottom-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-height: 56px;
+    padding: 6px 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: color 0.15s ease;
+  }
+  .graphite-bottom-nav-btn.active {
+    color: var(--accent-color);
+  }
+  .graphite-bottom-nav-btn:hover {
+    color: var(--text-primary);
+  }
+}
+
+/* Haptic feedback simulation for mobile */
+.graphite-btn:active,
+.graphite-bottom-nav-btn:active,
+.sidebar-row:active,
+.sidebar-new-btn:active,
+.graphite-toolbar-btn:active {
+  transform: scale(0.96);
+  transition: transform 0.05s ease;
+}
+
+/* Remove 300ms tap delay on touch devices */
+.spatial-canvas,
+.graphite-canvas-block,
+.graphite-slash-menu,
+button,
+a {
+  touch-action: manipulation;
 }
 
 .sidebar-header {
@@ -346,7 +402,8 @@ body {
 }
 
 .sidebar-new-btn {
-  padding: 6px 8px;
+  min-height: 48px;
+  padding: 8px 12px;
   font-size: 12px;
 }
 
@@ -367,7 +424,8 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 6px;
+  min-height: 48px;
+  padding: 6px 8px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s ease;

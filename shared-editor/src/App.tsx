@@ -52,6 +52,17 @@ export function App() {
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
 
   useEffect(() => {
+    // Track keyboard height for mobile via visualViewport API
+    const handleViewportResize = () => {
+      const vv = window.visualViewport;
+      if (vv) {
+        const offset = window.innerHeight - vv.height;
+        document.documentElement.style.setProperty("--keyboard-height", `${Math.max(0, offset)}px`);
+      }
+    };
+    window.visualViewport?.addEventListener("resize", handleViewportResize);
+    handleViewportResize();
+
     applyPluginEffects();
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
@@ -60,7 +71,10 @@ export function App() {
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.visualViewport?.removeEventListener("resize", handleViewportResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -486,6 +500,13 @@ export function App() {
           )}
         </main>
       </div>
+      <nav className="graphite-bottom-nav" style={{ display: "none" /* shown via media query */ }}>
+        <button className={`graphite-bottom-nav-btn${activeTab === "editor" ? " active" : ""}`} onClick={() => setActiveTab("editor")}><BookOpen size={20} /><span>Editor</span></button>
+        <button className={`graphite-bottom-nav-btn${activeTab === "canvas" ? " active" : ""}`} onClick={() => setActiveTab("canvas")}><Palette size={20} /><span>Canvas</span></button>
+        <button className={`graphite-bottom-nav-btn${activeTab === "spatial" ? " active" : ""}`} onClick={() => setActiveTab("spatial")}><LayoutGrid size={20} /><span>Spatial</span></button>
+        <button className={`graphite-bottom-nav-btn${activeTab === "graph" ? " active" : ""}`} onClick={() => setActiveTab("graph")}><Network size={20} /><span>Graph</span></button>
+        <button className={`graphite-bottom-nav-btn${activeTab === "meta" ? " active" : ""}`} onClick={() => setActiveTab("meta")}><Info size={20} /><span>Info</span></button>
+      </nav>
       <ToastContainer />
       <SemanticSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <PublishModal isOpen={isPublishOpen} onClose={() => setIsPublishOpen(false)} />

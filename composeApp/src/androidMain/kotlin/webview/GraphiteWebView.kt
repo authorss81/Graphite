@@ -1,8 +1,12 @@
 package webview
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.view.View
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -17,6 +21,8 @@ class GraphiteWebView(
     private val bridge: AndroidJSBridge
 ) : WebView(context) {
 
+    private var filePathCallback: ValueCallback<Array<Uri>>? = null
+
     init {
         setupSettings()
         addJavascriptInterface(bridge, "AndroidBridge")
@@ -28,8 +34,35 @@ class GraphiteWebView(
                 bridge.setCurrentUrl(url)
             }
         }
-        webChromeClient = WebChromeClient()
+        webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                view: WebView,
+                filePath: ValueCallback<Array<Uri>>,
+                fileChooserParams: FileChooserParams
+            ): Boolean {
+                filePathCallback?.onReceiveValue(null)
+                filePathCallback = filePath
+                val intent = fileChooserParams.createIntent()
+                try {
+                    (context as Activity).startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
+                } catch (e: Exception) {
+                    filePathCallback?.onReceiveValue(null)
+                    filePathCallback = null
+                    return false
+                }
+                return true
+            }
+        }
         setLayerType(View.LAYER_TYPE_HARDWARE, null)
+    }
+
+    fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
+            filePathCallback?.onReceiveValue(
+                WebChromeClient.FileChooserParams.parseResult(resultCode, data)
+            )
+            filePathCallback = null
+        }
     }
 
     private fun setupSettings() {
@@ -42,7 +75,14 @@ class GraphiteWebView(
             loadWithOverviewMode = true
             useWideViewPort = true
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            cacheMode = WebSettings.LOAD_DEFAULT
+            setAppCacheEnabled(true)
+            setAppCachePath(context.cacheDir.absolutePath + "/graphite_webview_cache")
         }
+    }
+
+    companion object {
+        private const val FILE_CHOOSER_REQUEST_CODE = 10001
     }
 
     /**
