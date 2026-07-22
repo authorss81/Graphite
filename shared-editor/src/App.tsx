@@ -500,7 +500,7 @@ export function App() {
           )}
         </main>
       </div>
-      <nav className="graphite-bottom-nav" style={{ display: "none" /* shown via media query */ }}>
+      <nav className="graphite-bottom-nav">
         <button className={`graphite-bottom-nav-btn${activeTab === "editor" ? " active" : ""}`} onClick={() => setActiveTab("editor")}><BookOpen size={20} /><span>Editor</span></button>
         <button className={`graphite-bottom-nav-btn${activeTab === "canvas" ? " active" : ""}`} onClick={() => setActiveTab("canvas")}><Palette size={20} /><span>Canvas</span></button>
         <button className={`graphite-bottom-nav-btn${activeTab === "spatial" ? " active" : ""}`} onClick={() => setActiveTab("spatial")}><LayoutGrid size={20} /><span>Spatial</span></button>

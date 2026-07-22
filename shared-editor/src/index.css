@@ -275,7 +275,7 @@ body {
 }
 
 .graphite-btn:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.97);
 }
 
 /* App layout (sidebar + detail) */
@@ -306,6 +306,20 @@ body {
   overflow-y: auto;
 }
 
+.graphite-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1100;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  border-top: 1px solid var(--border-color);
+  padding: 4px 0 env(safe-area-inset-bottom, 0) 0;
+  justify-content: space-around;
+}
+
 @media (max-width: 768px) {
   .app-layout {
     flex-direction: column;
@@ -324,16 +338,6 @@ body {
   }
   .graphite-bottom-nav {
     display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 1100;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    border-top: 1px solid var(--border-color);
-    padding: 4px 0 env(safe-area-inset-bottom, 0) 0;
-    justify-content: space-around;
   }
   .graphite-bottom-nav-btn {
     flex: 1;
@@ -361,11 +365,9 @@ body {
 }
 
 /* Haptic feedback simulation for mobile */
-.graphite-btn:active,
 .graphite-bottom-nav-btn:active,
 .sidebar-row:active,
-.sidebar-new-btn:active,
-.graphite-toolbar-btn:active {
+.sidebar-new-btn:active {
   transform: scale(0.96);
   transition: transform 0.05s ease;
 }

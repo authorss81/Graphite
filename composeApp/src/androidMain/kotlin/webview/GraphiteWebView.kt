@@ -40,11 +40,13 @@ class GraphiteWebView(
                 filePath: ValueCallback<Array<Uri>>,
                 fileChooserParams: FileChooserParams
             ): Boolean {
+                val activity = context as? Activity
+                if (activity == null) return false
                 filePathCallback?.onReceiveValue(null)
                 filePathCallback = filePath
                 val intent = fileChooserParams.createIntent()
                 try {
-                    (context as Activity).startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
+                    activity.startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
                 } catch (e: Exception) {
                     filePathCallback?.onReceiveValue(null)
                     filePathCallback = null
@@ -63,6 +65,7 @@ class GraphiteWebView(
             )
             filePathCallback = null
         }
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     private fun setupSettings() {
@@ -76,8 +79,6 @@ class GraphiteWebView(
             useWideViewPort = true
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             cacheMode = WebSettings.LOAD_DEFAULT
-            setAppCacheEnabled(true)
-            setAppCachePath(context.cacheDir.absolutePath + "/graphite_webview_cache")
         }
     }
 
