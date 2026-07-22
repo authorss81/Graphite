@@ -754,13 +754,43 @@ Items marked as done in Phases 4-6 that are NOT actually implemented in the sour
 
 ---
 
+## Git Strategy Recommendation
+
+**Don't build Git into the app.** Git is a source-control tool for code, not a note versioning system. Using it here creates complexity without benefit.
+
+### Why the current approach is wrong
+- `versionHistory.ts` uses `isomorphic-git` + `lightning-fs` (IndexedDB-backed virtual filesystem) — no real remote push, commits are invisible to the user
+- Falls back to **fake SHA-1 hashes** (`git_` + `Math.random().toString(36)`) when virtual FS fails — these cannot be verified or pushed anywhere (lines 194-195)
+- Each note becomes a single file in the virtual Git repo — no branching, merging, or other Git features are used
+- `isomorphic-git` + `lightning-fs` adds ~200KB to bundle for no real benefit
+
+### Version tracking bugs (Phase 19 candidate)
+1. **Fake commit hashes** — `Math.random().toString(36).substring(2,10) + Date.now().toString(16)` is NOT a Git SHA-1; breaks any downstream verification
+2. **Duplicate Git commit on identical content** — `createDocCommit` lines 207-209 check for identity AFTER `git.commit()` already ran (line 181), creating a phantom commit even when returning `prevCommit`
+3. **No Git push** — zero code to sync virtual Git commits anywhere; version history is purely local and volatile (IndexedDB can be cleared)
+4. **Line-based diff, not textual** — `computeTextDiff` (line 223) compares lines by index, not by content similarity; reordering paragraphs reports every line as add+del
+5. **`extractHumanText` regex fragility** — line 123 regex `replace` strips JSON fields with a simple pattern match; nested objects, arrays, and non-standard fields produce garbled output
+6. **localStorage collision** — `HISTORY_KEY = "graphite_doc_history_v1"` shares namespace with sync state and other localStorage keys; potential data corruption
+
+### What to do instead
+| Approach | When | How |
+|----------|------|-----|
+| **Delete Git entirely** | Now | Remove `isomorphic-git`, `lightning-fs`, `versionHistory.ts`; replace with Supabase `document_versions` table (snapshot + diff) |
+| **Use `diff-match-patch`** | Near-term | Store patches in Supabase; reconstruct any version on demand; ~15KB bundle, battle-tested in Google Docs |
+| **Use Yjs correctly** | Phase 15 | Already in project but broken; fix CRDT merge; Yjs inherently tracks history via operations |
+| **Git export only** | Optional future | Add "Export note as Git commit" for developers who want notes in a real repo; use `isomorphic-git` as an optional feature, not core dependency |
+
+**Never create private repos per version** — that would generate thousands of repos (one per save), impossible to manage. Use database versioning with deltas.
+
+---
+
 ## Current Limitations Summary
 
 | Area | Critical | Major | Minor |
 |------|----------|-------|-------|
 | **Persistence** | Nothing saves to disk or cloud | `CommonDatabaseHelper` is all `println` | — |
 | **Sync** | Yjs merge is a no-op | No Supabase client wired | — |
-| **Git** | Fake commit hashes, no JGit | Same table collision with sync state | — |
+| **Git** | Fake commit hashes, phantom Git commits, no push, no real SHA-1 | `diff-match-patch` not used; Yjs broken; line-based diff is wrong | localStorage collision with sync state |
 | **Editor** | Uncontrolled, `btoa` crashes on Unicode | No toolbar, no markdown shortcuts | No keyboard shortcuts doc |
 | **Canvas** | No persistence | Tab-separated, not inline | Fixed 500px height |
 | **Mobile** | No Android target exists | No keyboard handling | No safe areas |
