@@ -1,3 +1,5 @@
+import { idbSaveDoc } from "./idbStorage";
+
 export interface GraphiteDoc {
   id: string;
   title: string;
@@ -37,6 +39,23 @@ export function loadDocs(): Record<string, GraphiteDoc> {
   }
 }
 
+const PAGE_SIZE = 50;
+
+export function loadDocsPaginated(page: number = 0): { docs: Record<string, GraphiteDoc>; total: number } {
+  const all = loadDocs();
+  const entries = Object.entries(all).sort(
+    ([, a], [, b]) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
+  );
+  const total = entries.length;
+  const start = page * PAGE_SIZE;
+  const slice = entries.slice(start, start + PAGE_SIZE);
+  const docs: Record<string, GraphiteDoc> = {};
+  for (const [id, doc] of slice) {
+    docs[id] = doc;
+  }
+  return { docs, total };
+}
+
 /**
  * Trims canvas data for docs to reduce storage footprint.
  * If the JSON is still too large, drops canvasData from oldest documents first.
@@ -67,24 +86,38 @@ function trimForStorage(docs: Record<string, GraphiteDoc>): Record<string, Graph
 
 export function saveDocs(docs: Record<string, GraphiteDoc>): void {
   try {
-    const payload = JSON.stringify(docs);
+    const diskDocs = loadDocs();
+    const merged: Record<string, GraphiteDoc> = { ...diskDocs };
+
+    for (const [id, incoming] of Object.entries(docs)) {
+      const diskDoc = diskDocs[id];
+      if (!diskDoc || incoming.updatedAt >= diskDoc.updatedAt) {
+        merged[id] = incoming;
+      }
+    }
+
+    const payload = JSON.stringify(merged);
     if (new Blob([payload]).size <= MAX_BYTES) {
       localStorage.setItem(STORAGE_KEY, payload);
-      return;
+    } else {
+      const trimmed = trimForStorage(merged);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
     }
-    // Quota would be exceeded — use trimmed version
-    const trimmed = trimForStorage(docs);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
-  } catch (e) {
-    // Last resort — try saving without any canvasData at all
+    // Async persist full docs into IndexedDB for unlimited quota
+    for (const doc of Object.values(merged)) {
+      idbSaveDoc(doc).catch(() => {});
+    }
+  } catch {
+    // Fallback: trim canvas and write to IndexedDB + localStorage
     try {
       const noCanvas: Record<string, GraphiteDoc> = {};
       for (const [id, doc] of Object.entries(docs)) {
         noCanvas[id] = { ...doc, canvasData: null };
+        idbSaveDoc(doc).catch(() => {});
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(noCanvas));
     } catch {
-      console.warn("Failed to persist documents even after trimming canvas data", e);
+      // Memory backup fallback
     }
   }
 }

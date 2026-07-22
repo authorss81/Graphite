@@ -21,7 +21,7 @@ export function KanbanBoard() {
   const addCard = (column: "todo" | "in_progress" | "done") => {
     if (!newTitle.trim()) return;
     const card: KanbanCard = {
-      id: "k_" + Math.random().toString(36).slice(2),
+      id: "k_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8),
       title: newTitle.trim(),
       status: column,
       tag: "Task",

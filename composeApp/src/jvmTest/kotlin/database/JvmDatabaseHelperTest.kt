@@ -79,6 +79,46 @@ class JvmDatabaseHelperTest {
     }
 
     @Test
+    fun `transaction commit persists writes`() {
+        val helper = newHelper()
+        helper.beginTransaction()
+        helper.executeWrite(
+            "INSERT INTO ${DatabaseSchema.TABLE_NOTE_NODE} " +
+                "(id, title, parent_id, is_folder, created_at, updated_at, is_pinned, is_archived, tags, database_id) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            arrayOf<Any?>("txn1", "Txn Note", null, 0, 1L, 1L, 0, 0, "[]", "db1"),
+        )
+        helper.commitTransaction()
+
+        val rows = helper.executeQuery(
+            "SELECT id FROM ${DatabaseSchema.TABLE_NOTE_NODE} WHERE id = ?",
+            arrayOf<Any?>("txn1"),
+        )
+        assertEquals(1, rows.size)
+        helper.closeConnection()
+    }
+
+    @Test
+    fun `transaction rollback discards writes`() {
+        val helper = newHelper()
+        helper.beginTransaction()
+        helper.executeWrite(
+            "INSERT INTO ${DatabaseSchema.TABLE_NOTE_NODE} " +
+                "(id, title, parent_id, is_folder, created_at, updated_at, is_pinned, is_archived, tags, database_id) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            arrayOf<Any?>("txn2", "Rolled Back", null, 0, 1L, 1L, 0, 0, "[]", "db1"),
+        )
+        helper.rollbackTransaction()
+
+        val rows = helper.executeQuery(
+            "SELECT id FROM ${DatabaseSchema.TABLE_NOTE_NODE} WHERE id = ?",
+            arrayOf<Any?>("txn2"),
+        )
+        assertEquals(0, rows.size)
+        helper.closeConnection()
+    }
+
+    @Test
     fun `query before initialization throws`() {
         var thrown = false
         try {

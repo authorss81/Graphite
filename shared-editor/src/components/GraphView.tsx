@@ -55,8 +55,14 @@ export function GraphView() {
     }
 
     const nodeItems: NodeItem[] = targetDocs.map((doc, idx) => {
+      let hash = 0;
+      for (let i = 0; i < doc.id.length; i++) {
+        hash = (hash << 5) - hash + doc.id.charCodeAt(i);
+        hash |= 0;
+      }
+      const normalized = (Math.abs(hash) % 1000) / 1000;
       const angle = (idx / Math.max(1, targetDocs.length)) * Math.PI * 2;
-      const radiusDist = 120 + Math.random() * 80;
+      const radiusDist = 120 + normalized * 80;
       return {
         id: doc.id,
         title: doc.title || "Untitled",
@@ -100,8 +106,10 @@ export function GraphView() {
     return { nodes: nodeItems, edges: edgeItems };
   }, [documents, currentDocId, isLocalMode, filterQuery]);
 
-  const nodesRef = useRef<NodeItem[]>(nodes);
-  nodesRef.current = nodes;
+  const nodesRef = useRef<NodeItem[]>([]);
+  useEffect(() => {
+    nodesRef.current = nodes.map((n) => ({ ...n }));
+  }, [nodes]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -109,20 +117,25 @@ export function GraphView() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let animId: number;
+    const animIdRef = { current: 0 };
+    let mounted = true;
 
     const updateDimensions = () => {
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
-      if (w > 0 && h > 0 && (canvas.width !== w * window.devicePixelRatio || canvas.height !== h * window.devicePixelRatio)) {
-        canvas.width = w * window.devicePixelRatio;
-        canvas.height = h * window.devicePixelRatio;
+      const dpr = window.devicePixelRatio || 1;
+      const targetW = Math.floor(w * dpr);
+      const targetH = Math.floor(h * dpr);
+      if (w > 0 && h > 0 && (canvas.width !== targetW || canvas.height !== targetH)) {
+        canvas.width = targetW;
+        canvas.height = targetH;
       }
     };
 
     updateDimensions();
 
     const simulate = () => {
+      if (!mounted) return;
       updateDimensions();
       const currentNodes = nodesRef.current;
       const width = canvas.clientWidth;
@@ -132,11 +145,9 @@ export function GraphView() {
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
       ctx.clearRect(0, 0, width, height);
 
-      // Apply zoom & pan
       ctx.translate(width / 2 + offset.x, height / 2 + offset.y);
       ctx.scale(zoomLevel, zoomLevel);
 
-      // Force Repulsion & Centering physics
       for (let i = 0; i < currentNodes.length; i++) {
         const n1 = currentNodes[i];
         for (let j = i + 1; j < currentNodes.length; j++) {
@@ -160,7 +171,6 @@ export function GraphView() {
 
       const nodeMap = new Map(currentNodes.map((n) => [n.id, n]));
 
-      // Draw Edges
       ctx.lineWidth = 1.5;
       ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
       for (const edge of edges) {
@@ -174,7 +184,6 @@ export function GraphView() {
         }
       }
 
-      // Draw Nodes
       for (const node of currentNodes) {
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
@@ -186,7 +195,6 @@ export function GraphView() {
         ctx.strokeStyle = "#ffffff";
         ctx.stroke();
 
-        // Draw Labels
         ctx.fillStyle = "#e2e8f0";
         ctx.font = "12px sans-serif";
         ctx.textAlign = "center";
@@ -195,11 +203,14 @@ export function GraphView() {
       }
 
       ctx.restore();
-      animId = requestAnimationFrame(simulate);
+      if (mounted) animIdRef.current = requestAnimationFrame(simulate);
     };
 
-    animId = requestAnimationFrame(simulate);
-    return () => cancelAnimationFrame(animId);
+    animIdRef.current = requestAnimationFrame(simulate);
+    return () => {
+      mounted = false;
+      cancelAnimationFrame(animIdRef.current);
+    };
   }, [edges, zoomLevel, offset]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {

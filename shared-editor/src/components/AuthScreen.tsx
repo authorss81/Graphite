@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { isAuthConfigured } from "../utils/auth";
+import { isAuthConfigured, resetPasswordForEmail } from "../utils/auth";
 import { toast } from "./Toast";
 
 export function AuthScreen() {
@@ -41,13 +41,15 @@ export function AuthScreen() {
     try {
       if (mode === "login") {
         await login(email, password);
+        setPassword("");
         toast("Welcome back!", "success");
       } else {
         await register(email, password);
+        setPassword("");
         toast("Account created! Check your email to confirm.", "success");
       }
     } catch {
-      // error is set in store
+      setPassword("");
     }
   };
 
@@ -107,6 +109,25 @@ export function AuthScreen() {
               Don't have an account?{" "}
               <button className="auth-link" onClick={toggleMode}>
                 Sign up
+              </button>
+              <br />
+              <button
+                className="auth-link"
+                style={{ marginTop: "8px", fontSize: "12px" }}
+                onClick={async () => {
+                  if (!email) {
+                    toast("Please enter your email address first", "error");
+                    return;
+                  }
+                  try {
+                    await resetPasswordForEmail(email);
+                    toast("Password reset email sent!", "success");
+                  } catch (err: unknown) {
+                    toast(err instanceof Error ? err.message : "Reset failed", "error");
+                  }
+                }}
+              >
+                Forgot password?
               </button>
             </>
           ) : (

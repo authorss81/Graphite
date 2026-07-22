@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNoteStore } from "../store/useNoteStore";
 import { X, Shield, Lock, Unlock, Key, Eye, EyeOff, Download, Trash2, CheckCircle, AlertTriangle, FileText, RefreshCw } from "lucide-react";
 import {
   deriveKey,
@@ -120,8 +121,10 @@ export function SecurityModal({
     try {
       const salt = getOrCreateSalt();
       const key = await deriveKey(unlockPassphrase, salt);
-      if (isDocEncrypted) {
-        const plaintext = await decryptText(currentDocContent, key);
+      const liveDoc = useNoteStore.getState().documents[currentDocId];
+      const liveContent = liveDoc?.editorState || currentDocContent;
+      if (isEncrypted(liveContent)) {
+        const plaintext = await decryptText(liveContent, key);
         onDecryptDoc(plaintext);
         logAuditEvent("encryption", "Document decrypted", { docId: currentDocId, docTitle: currentDocTitle });
       }
@@ -132,15 +135,17 @@ export function SecurityModal({
       setError("Wrong passphrase or corrupted data.");
     }
     setIsProcessing(false);
-  }, [unlockPassphrase, isDocEncrypted, currentDocContent, currentDocId, currentDocTitle, onDecryptDoc]);
+  }, [unlockPassphrase, currentDocContent, currentDocId, currentDocTitle, onDecryptDoc]);
 
   const handleEncryptDoc = useCallback(async () => {
     if (!cryptoKey) { setError("Set up or unlock encryption first."); return; }
-    if (isDocEncrypted) { setError("Document is already encrypted."); return; }
+    const liveDoc = useNoteStore.getState().documents[currentDocId];
+    const liveContent = liveDoc?.editorState || currentDocContent;
+    if (isEncrypted(liveContent)) { setError("Document is already encrypted."); return; }
     setIsProcessing(true);
     setError("");
     try {
-      const encrypted = await encryptText(currentDocContent, cryptoKey);
+      const encrypted = await encryptText(liveContent, cryptoKey);
       onEncryptDoc(encrypted);
       setDocLocked(currentDocId, true);
       setSuccess("Document encrypted with AES-256-GCM.");
@@ -149,7 +154,7 @@ export function SecurityModal({
       setError("Encryption failed.");
     }
     setIsProcessing(false);
-  }, [cryptoKey, isDocEncrypted, currentDocContent, currentDocId, currentDocTitle, onEncryptDoc]);
+  }, [cryptoKey, currentDocContent, currentDocId, currentDocTitle, onEncryptDoc]);
 
   const handleDownloadAuditCSV = () => {
     const csv = exportAuditLogCSV();

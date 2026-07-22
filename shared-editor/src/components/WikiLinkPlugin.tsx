@@ -50,54 +50,90 @@ export function WikiLinkPlugin() {
     [editor],
   );
 
+  // Scan and highlight [[WikiLink]] text nodes with interactive pill styling
   useEffect(() => {
-    const handleDocumentClick = (e: MouseEvent) => {
-      const rootEl = editor.getRootElement();
-      if (!rootEl || !rootEl.contains(e.target as Node)) return;
+    if (typeof document === "undefined") return;
+    const rootElement = editor.getRootElement();
+    if (!rootElement) return;
 
-      // Find [[link]] at the current Lexical selection anchor
-      const sel = editor.getEditorState().read(() => {
-        const s = $getSelection();
-        if ($isRangeSelection(s) && s.anchor) {
-          const node = s.anchor.getNode();
-          const text = node.getTextContent();
-          const offset = s.anchor.offset;
-          return { text, offset };
-        }
-        return null;
-      });
+    const highlightWikiLinks = () => {
+      if (typeof document === "undefined") return;
+      const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT, null);
+      let currentNode = walker.nextNode();
+      const nodesToStyle: { textNode: Text; matches: { title: string; start: number; end: number }[] }[] = [];
 
-      if (sel) {
-        const linkRegex = /\[\[(.*?)\]\]/g;
-        let match: RegExpExecArray | null;
-        while ((match = linkRegex.exec(sel.text)) !== null) {
-          const start = match.index;
-          const end = start + match[0].length;
-          if (sel.offset >= start && sel.offset <= end) {
-            const linkTitle = match[1].trim();
-            const found = Object.values(useNoteStore.getState().documents).find(
-              (d) => d.title.toLowerCase() === linkTitle.toLowerCase() && !d.isFolder
-            );
-            if (found) {
-              e.preventDefault();
-              useNoteStore.getState().selectDocument(found.id);
-            }
-            return;
+      while (currentNode) {
+        const val = currentNode.nodeValue || "";
+        if (val.includes("[[")) {
+          const regex = /\[\[(.*?)\]\]/g;
+          let match: RegExpExecArray | null;
+          const matches = [];
+          while ((match = regex.exec(val)) !== null) {
+            matches.push({ title: match[1], start: match.index, end: match.index + match[0].length });
+          }
+          if (matches.length > 0) {
+            nodesToStyle.push({ textNode: currentNode as Text, matches });
           }
         }
+        currentNode = walker.nextNode();
       }
 
-      // Fallback: scan root element text for the first [[link]]
-      const rootText = rootEl.textContent || "";
-      const fallbackMatch = rootText.match(/\[\[(.*?)\]\]/);
-      if (fallbackMatch) {
-        const linkTitle = fallbackMatch[1].trim();
-        const found = Object.values(useNoteStore.getState().documents).find(
-          (d) => d.title.toLowerCase() === linkTitle.toLowerCase() && !d.isFolder
-        );
-        if (found) {
-          e.preventDefault();
-          useNoteStore.getState().selectDocument(found.id);
+      nodesToStyle.forEach(({ textNode }) => {
+        const parent = textNode.parentNode;
+        if (parent && !(parent as HTMLElement).classList?.contains("graphite-wikilink-pill")) {
+          const val = textNode.nodeValue || "";
+          const parts = val.split(/(\[\[.*?\]\])/g);
+          if (parts.length > 1) {
+            const frag = document.createDocumentFragment();
+            parts.forEach((part) => {
+              if (part.startsWith("[[") && part.endsWith("]]")) {
+                const title = part.slice(2, -2);
+                const pill = document.createElement("span");
+                pill.className = "graphite-wikilink-pill";
+                pill.setAttribute("data-wikilink", title);
+                pill.innerText = `🔗 ${title}`;
+                pill.onclick = (e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const found = Object.values(useNoteStore.getState().documents).find(
+                    (d) => d.title.toLowerCase() === title.toLowerCase() && !d.isFolder
+                  );
+                  if (found) {
+                    useNoteStore.getState().selectDocument(found.id);
+                  }
+                };
+                frag.appendChild(pill);
+              } else {
+                frag.appendChild(document.createTextNode(part));
+              }
+            });
+            parent.replaceChild(frag, textNode);
+          }
+        }
+      });
+    };
+
+    const unbind = editor.registerUpdateListener(() => {
+      setTimeout(highlightWikiLinks, 50);
+    });
+    highlightWikiLinks();
+
+    return () => unbind();
+  }, [editor]);
+
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && target.classList?.contains("graphite-wikilink-pill")) {
+        const linkTitle = target.getAttribute("data-wikilink");
+        if (linkTitle) {
+          const found = Object.values(useNoteStore.getState().documents).find(
+            (d) => d.title.toLowerCase() === linkTitle.toLowerCase() && !d.isFolder
+          );
+          if (found) {
+            e.preventDefault();
+            useNoteStore.getState().selectDocument(found.id);
+          }
         }
       }
     };

@@ -1,26 +1,11 @@
-import { useMemo } from "react";
-import { extractHumanText } from "../utils/versionHistory";
+import { useNoteStore } from "../store/useNoteStore";
 import { Clock, FileText, Hash } from "lucide-react";
 
-interface Props {
-  editorState?: string;
-}
-
-export function WordStatsBar({ editorState }: Props) {
-  const stats = useMemo(() => {
-    const text = extractHumanText(editorState || "");
-    if (!text.trim()) {
-      return { words: 0, chars: 0, readTime: "< 1 min" };
-    }
-    const words = text.trim().split(/\s+/).filter(Boolean).length;
-    const chars = text.length;
-    const mins = Math.max(1, Math.ceil(words / 200));
-    return {
-      words,
-      chars,
-      readTime: `${mins} min read`,
-    };
-  }, [editorState]);
+export function WordStatsBar() {
+  const wordCount = useNoteStore((s) => s.wordCount);
+  const charCount = useNoteStore((s) => s.charCount);
+  const mins = Math.max(1, Math.ceil(wordCount / 200));
+  const readTime = wordCount === 0 ? "< 1 min" : `${mins} min read`;
 
   return (
     <div
@@ -29,28 +14,30 @@ export function WordStatsBar({ editorState }: Props) {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "6px 16px",
+        padding: "6px 14px",
         marginTop: "12px",
-        background: "rgba(255, 255, 255, 0.02)",
+        background: "rgba(255, 255, 255, 0.03)",
+        backdropFilter: "blur(8px)",
         border: "1px solid var(--border-color)",
         borderRadius: "8px",
         fontSize: "11px",
+        fontFamily: "'JetBrains Mono', var(--font-mono)",
         color: "var(--text-muted)",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
         <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          <FileText size={12} color="var(--accent-color)" />
-          <strong style={{ color: "var(--text-secondary)" }}>{stats.words}</strong> words
+          <FileText size={12} style={{ color: "var(--accent-color)" }} />
+          <strong style={{ color: "var(--text-secondary)", fontWeight: 600 }}>{wordCount}</strong> words
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
           <Hash size={12} />
-          <strong style={{ color: "var(--text-secondary)" }}>{stats.chars}</strong> chars
+          <strong style={{ color: "var(--text-secondary)", fontWeight: 600 }}>{charCount}</strong> chars
         </span>
       </div>
       <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
         <Clock size={12} />
-        {stats.readTime}
+        {readTime}
       </span>
     </div>
   );

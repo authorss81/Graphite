@@ -31,6 +31,20 @@ class JvmDatabaseHelper(private val dbPath: String) : DatabaseHelper {
         println("[SQLite] Database connection closed.")
     }
 
+    override fun beginTransaction() {
+        connection?.autoCommit = false
+    }
+
+    override fun commitTransaction() {
+        connection?.commit()
+        connection?.autoCommit = true
+    }
+
+    override fun rollbackTransaction() {
+        connection?.rollback()
+        connection?.autoCommit = true
+    }
+
     override fun executeWrite(sql: String, bindArgs: Array<Any?>) {
         val conn = connection ?: throw IllegalStateException("Database not initialized.")
         val pstmt = conn.prepareStatement(sql)

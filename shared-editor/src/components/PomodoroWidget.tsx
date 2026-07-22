@@ -6,16 +6,19 @@ export function PomodoroWidget() {
   const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
+    let timer: ReturnType<typeof setInterval> | null = null;
     if (isActive && seconds > 0) {
-      interval = setInterval(() => setSeconds((s) => s - 1), 1000);
-    } else if (seconds === 0) {
-      setIsActive(false);
+      const targetTime = Date.now() + seconds * 1000;
+      timer = setInterval(() => {
+        const remaining = Math.max(0, Math.round((targetTime - Date.now()) / 1000));
+        setSeconds(remaining);
+        if (remaining === 0) setIsActive(false);
+      }, 500);
     }
     return () => {
-      if (interval) clearInterval(interval);
+      if (timer) clearInterval(timer);
     };
-  }, [isActive, seconds]);
+  }, [isActive]);
 
   const toggleTimer = () => setIsActive(!isActive);
   const resetTimer = () => {

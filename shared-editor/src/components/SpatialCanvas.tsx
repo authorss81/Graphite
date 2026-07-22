@@ -30,23 +30,42 @@ export function SpatialCanvas() {
     if (data.cards.length === 0) {
       // Seed initial cards from existing documents
       const docs = Object.values(documents).filter((d) => !d.isFolder);
-      const seededCards: SpatialCard[] = docs.slice(0, 4).map((d, i) => ({
-        id: "card_" + d.id,
-        docId: d.id,
-        title: d.title,
-        x: (i % 2) * 320 + 100,
-        y: Math.floor(i / 2) * 240 + 100,
-        width: 280,
-        height: 180,
-      }));
-      setCards(seededCards);
-      setEdges([]);
-      saveSpatialCanvasData({ cards: seededCards, edges: [] });
+      if (docs.length > 0) {
+        const seededCards: SpatialCard[] = docs.slice(0, 4).map((d, i) => ({
+          id: "card_" + d.id,
+          docId: d.id,
+          title: d.title,
+          x: (i % 2) * 320 + 100,
+          y: Math.floor(i / 2) * 240 + 100,
+          width: 280,
+          height: 180,
+        }));
+        setCards(seededCards);
+        setEdges([]);
+        saveSpatialCanvasData({ cards: seededCards, edges: [] });
+      }
     } else {
       setCards(data.cards);
       setEdges(data.edges);
     }
-  }, []);
+  }, [documents]);
+
+  const getSnippet = (raw?: string): string => {
+    if (!raw) return "Empty note";
+    if (raw.trim().startsWith("enc:")) return "[Encrypted Document]";
+    try {
+      const parsed = JSON.parse(raw);
+      let extracted = "";
+      const extractText = (n: any) => {
+        if (n.text) extracted += n.text + " ";
+        if (n.children) n.children.forEach(extractText);
+      };
+      if (parsed.root) extractText(parsed.root);
+      return extracted.trim().slice(0, 120) || "Empty note";
+    } catch {
+      return raw.slice(0, 120);
+    }
+  };
 
   const persist = (nextCards: SpatialCard[], nextEdges: SpatialEdge[]) => {
     setCards(nextCards);
@@ -247,7 +266,7 @@ export function SpatialCanvas() {
         }}
       >
         {/* SVG Arrow Connections Layer */}
-        <svg style={{ position: "absolute", inset: 0, width: "5000px", height: "5000px", pointerEvents: "none" }}>
+        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible", pointerEvents: "none" }}>
           {edges.map((edge) => {
             const fromCard = cards.find((c) => c.id === edge.fromCardId);
             const toCard = cards.find((c) => c.id === edge.toCardId);
@@ -270,7 +289,7 @@ export function SpatialCanvas() {
         {/* Note Cards */}
         {cards.map((card) => {
           const doc = documents[card.docId];
-          const textSnippet = (doc?.editorState || "").replace(/[{}]/g, " ").slice(0, 120);
+          const textSnippet = getSnippet(doc?.editorState);
 
           return (
             <div

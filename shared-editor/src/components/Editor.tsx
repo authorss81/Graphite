@@ -15,7 +15,7 @@ import { ListNode, ListItemNode } from "@lexical/list";
 import { LinkNode } from "@lexical/link";
 import { CodeNode, CodeHighlightNode } from "@lexical/code";
 import { TRANSFORMERS } from "@lexical/markdown";
-import { $insertNodes, $getSelection, $isRangeSelection, $createParagraphNode, KEY_ENTER_COMMAND, COMMAND_PRIORITY_LOW, COMMAND_PRIORITY_HIGH } from "lexical";
+import { $insertNodes, $getSelection, $isRangeSelection, $getRoot, $createParagraphNode, $createTextNode, KEY_ENTER_COMMAND, COMMAND_PRIORITY_LOW, COMMAND_PRIORITY_HIGH } from "lexical";
 import { CanvasNode, $createCanvasNode, INSERT_CANVAS_COMMAND } from "./CanvasNode";
 import { ImageNode, $createImageNode, INSERT_IMAGE_COMMAND } from "./ImageNode";
 import { EditorToolbar } from "./EditorToolbar";
@@ -28,8 +28,10 @@ import { sendUpdateToNative, logToNative, encodeBase64 } from "../utils/bridge";
 import { useNoteStore } from "../store/useNoteStore";
 import { uploadFromClipboard } from "../utils/upload";
 import { toast } from "./Toast";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { isPluginActive } from "../utils/pluginSystem";
 import { WordStatsBar } from "./WordStatsBar";
+import { ShieldCheck } from "lucide-react";
 import { $isCodeNode } from "@lexical/code";
 
 interface EditorProps {
@@ -72,7 +74,6 @@ function EditorStateLoader({ initialState }: { initialState?: string }) {
   useEffect(() => {
     if (!initialState) return;
     if (lastLoaded.current === initialState) return;
-    lastLoaded.current = initialState;
 
     const trimmed = initialState.trim();
 
@@ -81,19 +82,49 @@ function EditorStateLoader({ initialState }: { initialState?: string }) {
       return;
     }
 
+    // Skip redundant setEditorState if current Lexical state already matches initialState
+    try {
+      const currentJson = editor.getEditorState().read(() => JSON.stringify(editor.getEditorState().toJSON()));
+      if (currentJson === trimmed) {
+        lastLoaded.current = initialState;
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+
+    lastLoaded.current = initialState;
+
     startTransition(() => {
       try {
         if (trimmed.startsWith("{")) {
-          JSON.parse(initialState);
-          editor.setEditorState(editor.parseEditorState(initialState));
+          const parsedState = editor.parseEditorState(initialState);
+          editor.setEditorState(parsedState);
           return;
         }
-      } catch {
-        // not JSON
+      } catch (err) {
+        logToNative("error", `Failed to parse Lexical editor state: ${err instanceof Error ? err.message : String(err)}`);
+        // Fallback: convert raw text to paragraph nodes to prevent editor crash on unknown nodes
+        try {
+          editor.update(() => {
+            const root = $getRoot();
+            root.clear();
+            const p = $createParagraphNode();
+            p.append($createTextNode(initialState));
+            root.append(p);
+          });
+        } catch {
+          /* fallback swallow */
+        }
       }
 
       if (trimmed.startsWith("<")) {
-        editor.setEditorState(editor.parseEditorState(initialState));
+        try {
+          const parsedState = editor.parseEditorState(initialState);
+          editor.setEditorState(parsedState);
+        } catch {
+          /* ignore fallback */
+        }
       }
     });
   }, [editor, initialState]);
@@ -159,8 +190,8 @@ function ImagePastePlugin() {
             if (url) {
               editor.dispatchCommand(INSERT_IMAGE_COMMAND, { src: url, alt: "Pasted image" });
             }
-          } catch (err: any) {
-            toast(`Image paste failed: ${err.message}`, "error");
+          } catch (err: unknown) {
+            toast(`Image paste failed: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
           }
           return;
         }
@@ -240,6 +271,7 @@ function CodeExitPlugin() {
 
 export function Editor({ docId, initialState }: EditorProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const pendingSaveRef = useRef<{ targetDocId: string; editorState: EditorState } | null>(null);
 
   const initialConfig = {
     namespace: "GraphiteEditor",
@@ -249,36 +281,59 @@ export function Editor({ docId, initialState }: EditorProps) {
     editorState: undefined,
   };
 
-  const handleEditorChange = useCallback((editorState: EditorState) => {
-    // If the document is currently encrypted, do not overwrite ciphertext with unencrypted Lexical JSON
-    const currentDoc = useNoteStore.getState().documents[docId];
+  const flushPendingSave = useCallback(() => {
+    if (!pendingSaveRef.current) return;
+    const { targetDocId, editorState } = pendingSaveRef.current;
+    pendingSaveRef.current = null;
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = undefined;
+    }
+
+    const currentDoc = useNoteStore.getState().documents[targetDocId];
     if (currentDoc?.editorState?.trim().startsWith("enc:")) {
       return;
     }
 
+    try {
+      editorState.read(() => {
+        const serializedState = JSON.stringify(editorState.toJSON());
+        if (!serializedState.trim().startsWith("enc:")) {
+          sendUpdateToNative(targetDocId, encodeBase64(serializedState));
+          useNoteStore.getState().updateContentForDoc(targetDocId, serializedState);
+        }
+      });
+    } catch (err: unknown) {
+      toast(`Failed to save: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
+    }
+  }, []);
+
+  const handleEditorChange = useCallback((editorState: EditorState) => {
+    const targetDocId = docId;
+    const currentDoc = useNoteStore.getState().documents[targetDocId];
+    if (currentDoc?.editorState?.trim().startsWith("enc:")) {
+      return;
+    }
+
+    pendingSaveRef.current = { targetDocId, editorState };
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
-      try {
-        editorState.read(() => {
-          const serializedState = JSON.stringify(editorState.toJSON());
-          sendUpdateToNative(docId, encodeBase64(serializedState));
-          useNoteStore.getState().updateCurrentContent(serializedState);
-        });
-      } catch (err: any) {
-        toast(`Failed to save: ${err.message}`, "error");
-      }
+      flushPendingSave();
     }, 300);
-  }, [docId]);
+  }, [docId, flushPendingSave]);
 
   useEffect(() => {
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      flushPendingSave();
     };
-  }, []);
+  }, [docId, flushPendingSave]);
 
   return (
     <div className="graphite-editor-container">
+      <ErrorBoundary name="LexicalComposer">
       <LexicalComposer initialConfig={initialConfig}>
         <EditorStateLoader initialState={initialState} />
         <div className="editor-toolbar-wrap">
@@ -286,6 +341,29 @@ export function Editor({ docId, initialState }: EditorProps) {
         </div>
         <TagManager />
         <TaskProgressHeader />
+        {initialState?.trim().startsWith("enc:") && (
+          <div
+            style={{
+              padding: "16px",
+              margin: "16px",
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--accent-color)",
+              borderRadius: "10px",
+              color: "var(--text-primary)",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+            }}
+          >
+            <ShieldCheck size={24} style={{ color: "var(--accent-color)" }} />
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "14px" }}>Encrypted Document</div>
+              <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                This document is client-side encrypted. Click Security in the top bar to enter your password and unlock.
+              </div>
+            </div>
+          </div>
+        )}
         <div className="editor-inner" style={{ position: "relative" }}>
           <RichTextPlugin
             contentEditable={
@@ -311,8 +389,9 @@ export function Editor({ docId, initialState }: EditorProps) {
           <WikiLinkPlugin />
           <BlockDragHandlePlugin />
         </div>
-        {isPluginActive("word-counter-pro") && <WordStatsBar editorState={initialState} />}
+        {isPluginActive("word-counter-pro") && <WordStatsBar />}
       </LexicalComposer>
+      </ErrorBoundary>
     </div>
   );
 }

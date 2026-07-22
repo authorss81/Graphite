@@ -7,11 +7,19 @@
 const PBKDF2_ITERATIONS = 600_000;
 const KEY_STORAGE_KEY = "graphite_enc_salt_v1";
 const LOCK_STORAGE_KEY = "graphite_enc_locked_docs_v1";
+const STORAGE_VERSION_KEY = "graphite_enc_storage_version";
+const CURRENT_ENC_VERSION = 1;
 
 // ─── Utility: base64url ───────────────────────────────────────────────────────
 
 export function bufToBase64(buf: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)));
+  }
+  return btoa(binary);
 }
 
 export function base64ToBuf(b64: string): ArrayBuffer {
@@ -160,4 +168,19 @@ export async function verifyRecoveryCode(code: string, storedCodes: string[]): P
 
 export function hasEncryptionSetup(): boolean {
   return localStorage.getItem(KEY_STORAGE_KEY) !== null;
+}
+
+export function getStorageVersion(): number {
+  try {
+    const raw = localStorage.getItem(STORAGE_VERSION_KEY);
+    return raw ? Number(raw) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function migrateStorageIfNeeded(): void {
+  const version = getStorageVersion();
+  if (version >= CURRENT_ENC_VERSION) return;
+  localStorage.setItem(STORAGE_VERSION_KEY, String(CURRENT_ENC_VERSION));
 }

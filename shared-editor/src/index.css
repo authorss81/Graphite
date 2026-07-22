@@ -274,8 +274,35 @@ body {
   transform: translateY(-1px);
 }
 
+.graphite-btn.danger:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
 .graphite-btn:active {
   transform: translateY(0) scale(0.97);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.graphite-modal-card {
+  animation: modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* App layout (sidebar + detail) */
@@ -782,15 +809,37 @@ a {
 .graphite-canvas-block .excalidraw-container {
   font-size: 14px;
   font-family: var(--font-sans);
-  position: relative !important;
-  width: 100% !important;
-  height: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 
 /* Slash Command & WikiLink Menu Styles */
+.graphite-wikilink-pill {
+  color: var(--accent-color);
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid var(--border-color-glow);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.18s ease;
+}
+
+.graphite-wikilink-pill:hover {
+  background: var(--accent-color);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 10px var(--accent-color-glow);
+}
+
 .graphite-slash-menu {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);

@@ -3,7 +3,6 @@ import type { GraphiteDoc } from "../utils/docStorage";
 import { newDocId, loadDocs, saveDocs } from "../utils/docStorage";
 import { SupabaseSyncService } from "../utils/supabase";
 import { createDocCommit } from "../utils/versionHistory";
-import { toast } from "../components/Toast";
 
 let unsubscribeRealtime: (() => void) | null = null;
 
@@ -61,7 +60,7 @@ interface NoteStore {
   docId: string;
   editorState: string;
   canvasData: any;
-  activeTab: "editor" | "canvas" | "spatial" | "graph" | "meta";
+  activeTab: "editor" | "canvas" | "spatial" | "graph" | "kanban" | "meta";
   wordCount: number;
   charCount: number;
   backlinks: string[];
@@ -70,7 +69,7 @@ interface NoteStore {
   gitStatus: string;
   toasts: Toast[];
 
-  setActiveTab: (tab: "editor" | "canvas" | "spatial" | "graph" | "meta") => void;
+  setActiveTab: (tab: "editor" | "canvas" | "spatial" | "graph" | "kanban" | "meta") => void;
   setGitStatus: (status: string) => void;
 
   addToast: (toast: Toast) => void;
@@ -83,6 +82,7 @@ interface NoteStore {
   renameDocument: (id: string, title: string) => void;
   deleteDocument: (id: string) => void;
   updateCurrentContent: (editorState?: string, canvasData?: any) => void;
+  updateContentForDoc: (targetDocId: string, editorState?: string, canvasData?: any) => void;
   togglePinDocument: (id: string) => void;
   toggleArchiveDocument: (id: string) => void;
   addTagToDocument: (id: string, tag: string) => void;
@@ -211,7 +211,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         activeTab: "editor",
       })
     );
-    SupabaseSyncService.getInstance().syncDocument(id, doc).catch(() => toast("Sync failed — check console for details", "error"));
+    SupabaseSyncService.getInstance().syncDocument(id, doc).catch(() => {});
     return id;
   },
 
@@ -228,7 +228,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     };
     const documents = { ...get().documents, [id]: doc };
     set(persistAndSet(documents));
-    SupabaseSyncService.getInstance().syncDocument(id, doc).catch(() => toast("Sync failed — check console for details", "error"));
+    SupabaseSyncService.getInstance().syncDocument(id, doc).catch(() => {});
     return id;
   },
 
@@ -238,7 +238,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...documents[id], title: title.trim() || "Untitled", updatedAt: Date.now() };
     documents[id] = updated;
     set(persistAndSet(documents));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => toast("Sync failed — check console for details", "error"));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
   },
 
   deleteDocument: (id) => {
@@ -260,10 +260,11 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       }
     }
     for (const del of toDelete) {
-      delete documents[del];
-      SupabaseSyncService.getInstance().queueOfflineOp({ docId: del, action: "delete", payload: {} });
+      if (documents[del]) {
+        documents[del] = { ...documents[del], isArchived: true, updatedAt: Date.now() };
+      }
     }
-    saveDocs(documents);
+    set(persistAndSet(documents));
 
     if (toDelete.has(get().docId)) {
       const remaining = Object.values(documents);
@@ -312,7 +313,41 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       canvasData: nextCanvasData,
     });
     createDocCommit(docId, cur.title, nextEditorState, nextCanvasData);
-    SupabaseSyncService.getInstance().syncDocument(docId, next).catch(() => toast("Sync failed — check console for details", "error"));
+    SupabaseSyncService.getInstance().syncDocument(docId, next).catch(() => {});
+  },
+
+  updateContentForDoc: (targetDocId, editorState, canvasData) => {
+    const { documents } = get();
+    if (!targetDocId || !documents[targetDocId]) return;
+    const cur = documents[targetDocId];
+    if (cur.editorState?.trim().startsWith("enc:") && editorState && !editorState.trim().startsWith("enc:")) {
+      return;
+    }
+    const nextEditorState = editorState ?? cur.editorState;
+    const nextCanvasData = canvasData !== undefined ? canvasData : cur.canvasData;
+    const next: GraphiteDoc = {
+      ...cur,
+      editorState: nextEditorState,
+      canvasData: nextCanvasData,
+      updatedAt: Date.now(),
+    };
+    const nextDocs = { ...documents, [targetDocId]: next };
+    saveDocs(nextDocs);
+
+    if (targetDocId === get().docId) {
+      const stats = parseStats(nextEditorState);
+      set({
+        documents: nextDocs,
+        editorState: nextEditorState,
+        canvasData: nextCanvasData,
+        ...stats,
+      });
+    } else {
+      set({ documents: nextDocs });
+    }
+
+    createDocCommit(targetDocId, next.title, nextEditorState, nextCanvasData);
+    SupabaseSyncService.getInstance().syncDocument(targetDocId, next).catch(() => {});
   },
 
   togglePinDocument: (id) => {
@@ -322,7 +357,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, isPinned: !cur.isPinned, updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => toast("Sync failed — check console for details", "error"));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
   },
 
   toggleArchiveDocument: (id) => {
@@ -332,7 +367,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, isArchived: !cur.isArchived, updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => toast("Sync failed — check console for details", "error"));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
   },
 
   addTagToDocument: (id, tag) => {
@@ -346,7 +381,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, tags: [...existing, cleanTag], updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => toast("Sync failed — check console for details", "error"));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
   },
 
   removeTagFromDocument: (id, tag) => {
@@ -357,6 +392,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, tags: existing.filter((t) => t !== tag), updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => toast("Sync failed — check console for details", "error"));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
   },
 }));

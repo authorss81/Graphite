@@ -70,26 +70,35 @@ export const BUILTIN_MARKETPLACE_PLUGINS: PluginManifest[] = [
   },
 ];
 
+let cachedPlugins: PluginManifest[] | null = null;
+
 export function getPlugins(): PluginManifest[] {
+  if (cachedPlugins) return cachedPlugins;
   try {
     const raw = localStorage.getItem(PLUGIN_STORAGE_KEY);
-    if (!raw) return BUILTIN_MARKETPLACE_PLUGINS;
+    if (!raw) {
+      cachedPlugins = BUILTIN_MARKETPLACE_PLUGINS;
+      return cachedPlugins;
+    }
     const installedMap: Record<string, { isInstalled: boolean; isEnabled: boolean }> = JSON.parse(raw);
 
-    return BUILTIN_MARKETPLACE_PLUGINS.map((p) => {
+    cachedPlugins = BUILTIN_MARKETPLACE_PLUGINS.map((p) => {
       const state = installedMap[p.id];
       if (state) {
         return { ...p, isInstalled: state.isInstalled, isEnabled: state.isEnabled };
       }
       return p;
     });
+    return cachedPlugins;
   } catch {
-    return BUILTIN_MARKETPLACE_PLUGINS;
+    cachedPlugins = BUILTIN_MARKETPLACE_PLUGINS;
+    return cachedPlugins;
   }
 }
 
 export function savePlugins(plugins: PluginManifest[]): void {
   try {
+    cachedPlugins = plugins;
     const stateMap: Record<string, { isInstalled: boolean; isEnabled: boolean }> = {};
     plugins.forEach((p) => {
       stateMap[p.id] = { isInstalled: p.isInstalled, isEnabled: p.isEnabled };

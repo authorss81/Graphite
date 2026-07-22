@@ -5,6 +5,9 @@ interface DatabaseHelper {
     fun closeConnection()
     fun executeWrite(sql: String, bindArgs: Array<Any?>)
     fun executeQuery(sql: String, bindArgs: Array<Any?>): List<Map<String, Any>>
+    fun beginTransaction()
+    fun commitTransaction()
+    fun rollbackTransaction()
 }
 
 class CommonDatabaseHelper : DatabaseHelper {
@@ -29,6 +32,21 @@ class CommonDatabaseHelper : DatabaseHelper {
         if (!isInitialized) throw IllegalStateException("Database not initialized.")
         println("[Database Query] $sql | args: ${bindArgs.joinToString()}")
         return emptyList()
+    }
+
+    override fun beginTransaction() {
+        if (!isInitialized) throw IllegalStateException("Database not initialized.")
+        println("[Database] Transaction started.")
+    }
+
+    override fun commitTransaction() {
+        if (!isInitialized) throw IllegalStateException("Database not initialized.")
+        println("[Database] Transaction committed.")
+    }
+
+    override fun rollbackTransaction() {
+        if (!isInitialized) throw IllegalStateException("Database not initialized.")
+        println("[Database] Transaction rolled back.")
     }
 }
 

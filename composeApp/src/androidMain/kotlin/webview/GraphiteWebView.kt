@@ -94,8 +94,14 @@ class GraphiteWebView(
         val safeDocId = org.json.JSONObject.quote(docId)
         val safePayload = org.json.JSONObject.quote(payloadBase64)
         val script = "if(window.loadDocument){ window.loadDocument($safeDocId, $safePayload); }"
-        post {
-            evaluateJavascript(script, null)
+        // Validate script to prevent javascript: injection
+        if (!script.contains("javascript:") && !script.contains("data:") && !script.contains("file:")) {
+            post {
+                evaluateJavascript(script, null)
+            }
+        } else {
+            // Reject potentially malicious script
+            throw IllegalArgumentException("Invalid script detected")
         }
     }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useReducer, lazy, Suspense } from "react";
 import { Editor } from "./components/Editor";
 import { Sidebar } from "./components/Sidebar";
 import { AuthScreen } from "./components/AuthScreen";
@@ -7,18 +7,13 @@ import { logToNative, decodeBase64 } from "./utils/bridge";
 import { saveDocs } from "./utils/docStorage";
 import { useNoteStore } from "./store/useNoteStore";
 import { useAuthStore } from "./store/useAuthStore";
-import { BookOpen, Palette, Info, RotateCcw, Share2, Network, Sparkles, LayoutGrid, Puzzle, Users, ShieldCheck } from "lucide-react";
+import { BookOpen, Palette, Info, RotateCcw, Share2, Network, Sparkles, LayoutGrid, Puzzle, Users, ShieldCheck, Columns3 } from "lucide-react";
 import { GraphView } from "./components/GraphView";
 import { SpatialCanvas } from "./components/SpatialCanvas";
-import { SemanticSearchModal } from "./components/SemanticSearchModal";
-import { PublishModal } from "./components/PublishModal";
-import { VersionHistoryModal } from "./components/VersionHistoryModal";
-import { AIChatPanel } from "./components/AIChatPanel";
+import { KanbanBoard } from "./components/KanbanBoard";
 import { PluginMarketplaceModal } from "./components/PluginMarketplaceModal";
-import { TeamWorkspaceModal } from "./components/TeamWorkspaceModal";
-import { SecurityModal } from "./components/SecurityModal";
-import { logAuditEvent } from "./utils/auditLog";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ModalManager } from "./components/ModalManager";
 
 import { applyPluginEffects } from "./utils/pluginSystem";
 
@@ -43,13 +38,14 @@ export function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const initializeAuth = useAuthStore((s) => s.initialize);
 
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isPublishOpen, setIsPublishOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
-  const [isPluginModalOpen, setIsPluginModalOpen] = useState(false);
-  const [isTeamOpen, setIsTeamOpen] = useState(false);
-  const [isSecurityOpen, setIsSecurityOpen] = useState(false);
+  type ModalAction = { modal: string; open: boolean };
+  const [modals, dispatch] = useReducer(
+    (state: Record<string, boolean>, action: ModalAction) => ({ ...state, [action.modal]: action.open }),
+    { search: false, publish: false, history: false, aiPanel: false, plugins: false, team: false, security: false }
+  );
+  const isPluginModalOpen = modals.plugins;
+  const openModal = (modal: string) => dispatch({ modal, open: true });
+  const closeModal = (modal: string) => dispatch({ modal, open: false });
 
   useEffect(() => {
     // Track keyboard height for mobile via visualViewport API
@@ -67,7 +63,7 @@ export function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setIsSearchOpen((prev) => !prev);
+        dispatch({ modal: "search", open: true });
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -110,9 +106,10 @@ export function App() {
           st.updateCurrentContent(decoded);
         }
         logToNative("info", `Document loaded: ${id}`);
-      } catch (err: any) {
-        logToNative("error", `Failed to load document: ${err.message}`);
-        toast(`Failed to load document: ${err.message}`, "error");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        logToNative("error", `Failed to load document: ${msg}`);
+        toast(`Failed to load document: ${msg}`, "error");
       }
     };
 
@@ -122,9 +119,10 @@ export function App() {
         const decoded = decodeBase64(payloadBase64);
         useNoteStore.getState().updateCurrentContent(decoded);
         logToNative("info", `Document sync received: ${id}`);
-      } catch (err: any) {
-        logToNative("error", `Failed to merge update: ${err.message}`);
-        toast(`Sync error: ${err.message}`, "error");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        logToNative("error", `Failed to merge update: ${msg}`);
+        toast(`Sync error: ${msg}`, "error");
       }
     };
 
@@ -198,7 +196,7 @@ export function App() {
           <div style={{ display: "flex", gap: "10px" }}>
             <button
               className="graphite-btn active"
-              onClick={() => setIsAIPanelOpen(true)}
+              onClick={() => openModal("aiPanel")}
               title="Graphite AI Assistant Side Panel"
               style={{ background: "linear-gradient(135deg, #a855f7, #ec4899)", color: "#fff", border: "none" }}
             >
@@ -207,7 +205,7 @@ export function App() {
             </button>
             <button
               className="graphite-btn"
-              onClick={() => setIsSearchOpen(true)}
+              onClick={() => openModal("search")}
               title="AI Semantic Search (Ctrl+K)"
             >
               <Sparkles size={16} />
@@ -215,7 +213,7 @@ export function App() {
             </button>
             <button
               className="graphite-btn"
-              onClick={() => setIsHistoryOpen(true)}
+              onClick={() => openModal("history")}
               title="Version History & Git Commits"
             >
               <RotateCcw size={16} />
@@ -223,7 +221,7 @@ export function App() {
             </button>
             <button
               className="graphite-btn"
-              onClick={() => setIsPluginModalOpen(true)}
+              onClick={() => openModal("plugins")}
               title="Plugin Marketplace & Extensions"
             >
               <Puzzle size={16} />
@@ -231,7 +229,7 @@ export function App() {
             </button>
             <button
               className="graphite-btn"
-              onClick={() => setIsTeamOpen(true)}
+              onClick={() => openModal("team")}
               title="Team Workspace, Members & Comments"
             >
               <Users size={16} />
@@ -239,14 +237,14 @@ export function App() {
             </button>
             <button
               className="graphite-btn"
-              onClick={() => setIsSecurityOpen(true)}
+              onClick={() => openModal("security")}
               title="Security, Encryption & Audit Log"
               style={{ background: "linear-gradient(135deg, #10b981, #059669)", color: "#fff", border: "none" }}
             >
               <ShieldCheck size={16} />
               Security
             </button>
-            <button className="graphite-btn" onClick={() => setIsPublishOpen(true)}>
+            <button className="graphite-btn" onClick={() => openModal("publish")}>
               <Share2 size={16} />
               Publish
             </button>
@@ -339,7 +337,7 @@ export function App() {
         <main style={{ minHeight: "450px", marginTop: "16px" }}>
           {activeTab === "editor" && (
             <ErrorBoundary name="Editor">
-              <Editor key={docId} docId={docId} initialState={editorState} />
+              <Editor docId={docId} initialState={editorState} />
             </ErrorBoundary>
           )}
 
@@ -367,7 +365,11 @@ export function App() {
             </ErrorBoundary>
           )}
 
-          {activeTab === "spatial" && <SpatialCanvas />}
+          {activeTab === "spatial" && (
+            <ErrorBoundary name="SpatialCanvas">
+              <SpatialCanvas />
+            </ErrorBoundary>
+          )}
 
           {activeTab === "meta" && (
             <div
@@ -498,6 +500,7 @@ export function App() {
               </div>
             </div>
           )}
+          {activeTab === "kanban" && <KanbanBoard />}
         </main>
       </div>
       <nav className="graphite-bottom-nav">
@@ -505,38 +508,12 @@ export function App() {
         <button className={`graphite-bottom-nav-btn${activeTab === "canvas" ? " active" : ""}`} onClick={() => setActiveTab("canvas")}><Palette size={20} /><span>Canvas</span></button>
         <button className={`graphite-bottom-nav-btn${activeTab === "spatial" ? " active" : ""}`} onClick={() => setActiveTab("spatial")}><LayoutGrid size={20} /><span>Spatial</span></button>
         <button className={`graphite-bottom-nav-btn${activeTab === "graph" ? " active" : ""}`} onClick={() => setActiveTab("graph")}><Network size={20} /><span>Graph</span></button>
+        <button className={`graphite-bottom-nav-btn${activeTab === "kanban" ? " active" : ""}`} onClick={() => setActiveTab("kanban")}><Columns3 size={20} /><span>Kanban</span></button>
         <button className={`graphite-bottom-nav-btn${activeTab === "meta" ? " active" : ""}`} onClick={() => setActiveTab("meta")}><Info size={20} /><span>Info</span></button>
       </nav>
       <ToastContainer />
-      <SemanticSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-      <PublishModal isOpen={isPublishOpen} onClose={() => setIsPublishOpen(false)} />
-      <VersionHistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
-      <AIChatPanel isOpen={isAIPanelOpen} onClose={() => setIsAIPanelOpen(false)} />
-      <PluginMarketplaceModal isOpen={isPluginModalOpen} onClose={() => setIsPluginModalOpen(false)} />
-      <TeamWorkspaceModal
-        isOpen={isTeamOpen}
-        onClose={() => setIsTeamOpen(false)}
-        currentDocId={docId}
-        currentUserId={useAuthStore.getState().session?.user?.id ?? "guest"}
-        currentUserName={useAuthStore.getState().session?.user?.email?.split("@")[0] ?? "Guest"}
-        currentUserEmail={useAuthStore.getState().session?.user?.email ?? "guest@local.dev"}
-      />
-      <SecurityModal
-        isOpen={isSecurityOpen}
-        onClose={() => setIsSecurityOpen(false)}
-        currentDocId={docId}
-        currentDocTitle={documents[docId]?.title ?? "Untitled"}
-        currentDocContent={editorState}
-        onEncryptDoc={(encrypted) => {
-          const updateCurrentContent = useNoteStore.getState().updateCurrentContent;
-          updateCurrentContent(encrypted);
-          logAuditEvent("encryption", "Document encrypted", { docId, docTitle: documents[docId]?.title });
-        }}
-        onDecryptDoc={(decrypted) => {
-          const updateCurrentContent = useNoteStore.getState().updateCurrentContent;
-          updateCurrentContent(decrypted);
-        }}
-      />
+      <ModalManager modals={modals} onCloseModal={closeModal} />
+      <PluginMarketplaceModal isOpen={isPluginModalOpen} onClose={() => closeModal("plugins")} />
     </div>
   );
 }

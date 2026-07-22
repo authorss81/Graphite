@@ -47,14 +47,20 @@ export function saveSpatialCanvasData(data: SpatialCanvasData): void {
   }
 
   if (isSupabaseAvailable() && supabase) {
-    try {
-      supabase.from("canvas_edges").upsert({
+    supabase
+      .from("canvas_edges")
+      .upsert({
         id: "spatial_workspace",
         data: data,
         updated_at: new Date().toISOString(),
-      });
-    } catch {
-      // offline fallback
-    }
+      })
+      .then(
+        (res: any) => {
+          if (res?.error) console.warn("Spatial canvas sync failed:", res.error.message);
+        },
+        (err: unknown) => {
+          console.warn("Spatial sync error:", err);
+        }
+      );
   }
 }

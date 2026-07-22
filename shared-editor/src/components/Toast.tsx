@@ -10,9 +10,10 @@ interface Toast {
 let nextId = 0;
 
 export function toast(message: string, type: Toast["type"] = "info") {
-  useNoteStore.getState().addToast({ id: ++nextId, message, type });
+  const currentId = ++nextId;
+  useNoteStore.getState().addToast({ id: currentId, message, type });
   setTimeout(() => {
-    useNoteStore.getState().removeToast(nextId);
+    useNoteStore.getState().removeToast(currentId);
   }, 4000);
 }
 

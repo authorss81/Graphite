@@ -44,6 +44,12 @@ export async function getCurrentSession(): Promise<Session | null> {
   return data.session;
 }
 
+export async function resetPasswordForEmail(email: string): Promise<void> {
+  const client = getClient();
+  const { error } = await client.auth.resetPasswordForEmail(email);
+  if (error) throw error;
+}
+
 export function onAuthStateChange(
   callback: (session: Session | null) => void,
 ): () => void {

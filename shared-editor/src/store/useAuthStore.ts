@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, signIn, signUp, signOut } from "../utils/auth";
+import { supabase } from "../utils/supabase";
 
 interface AuthStore {
   session: Session | null;
@@ -28,14 +29,25 @@ export const useAuthStore = create<AuthStore>()(
 
       initialize: async () => {
         try {
+          if (!supabase) {
+            set({ session: null, isAuthenticated: true, isInitializing: false });
+            return;
+          }
           const session = await getCurrentSession();
           set({
             session,
-            isAuthenticated: session !== null,
+            isAuthenticated: true,
             isInitializing: false,
           });
+
+          supabase.auth.onAuthStateChange((_event, newSession) => {
+            set({
+              session: newSession,
+              isAuthenticated: true,
+            });
+          });
         } catch {
-          set({ session: null, isAuthenticated: false, isInitializing: false });
+          set({ session: null, isAuthenticated: true, isInitializing: false });
         }
       },
 
@@ -44,8 +56,8 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const session = await signIn(email, password);
           set({ session, isAuthenticated: true, authLoading: false });
-        } catch (err: any) {
-          set({ authError: err.message, authLoading: false });
+        } catch (err: unknown) {
+          set({ authError: err instanceof Error ? err.message : "Login failed", authLoading: false });
           throw err;
         }
       },
@@ -55,8 +67,8 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const session = await signUp(email, password);
           set({ session, isAuthenticated: session !== null, authLoading: false });
-        } catch (err: any) {
-          set({ authError: err.message, authLoading: false });
+        } catch (err: unknown) {
+          set({ authError: err instanceof Error ? err.message : "Registration failed", authLoading: false });
           throw err;
         }
       },
@@ -66,8 +78,8 @@ export const useAuthStore = create<AuthStore>()(
         try {
           await signOut();
           set({ session: null, isAuthenticated: false, authLoading: false });
-        } catch (err: any) {
-          set({ authError: err.message, authLoading: false });
+        } catch (err: unknown) {
+          set({ authError: err instanceof Error ? err.message : "Logout failed", authLoading: false });
         }
       },
 

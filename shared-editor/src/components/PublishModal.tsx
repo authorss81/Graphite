@@ -19,7 +19,9 @@ export function PublishModal({ isOpen, onClose }: Props) {
 
   if (!isOpen || !currentDoc) return null;
 
-  const publicUrl = `https://graphite.studio/p/${docId}`;
+  const publicUrl = typeof window !== "undefined"
+    ? `${window.location.origin}${window.location.pathname}#doc=${docId}`
+    : `https://graphite.studio/p/${docId}`;
 
   const copyShareLink = () => {
     navigator.clipboard.writeText(publicUrl).then(() => {

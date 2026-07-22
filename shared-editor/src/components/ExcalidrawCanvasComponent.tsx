@@ -19,16 +19,70 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
   const nodeKeyRef = useRef(nodeKey);
   nodeKeyRef.current = nodeKey;
 
-  // Re-calculate bounds on layout resize
+  // Stroke buffering state
+  const stateRef = useRef<{
+    elements: any[];
+    files: any;
+    appState: { viewBackgroundColor: string };
+    timestamp: number;
+  } | null>(null);
+  const isDrawingRef = useRef(false);
+  const commitLaterRef = useRef(false);
+
+
+
+  // Track drawing state via pointer events on container
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const observer = new ResizeObserver(() => {
-      window.dispatchEvent(new Event("resize"));
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+
+    const handlePointerDown = () => {
+      isDrawingRef.current = true;
+    };
+
+    const handlePointerUp = () => {
+      if (isDrawingRef.current && commitLaterRef.current) {
+        // Commit the buffered state
+        if (stateRef.current) {
+          const currentData = stateRef.current;
+          editor.update(() => {
+            const node = $getNodeByKey(nodeKeyRef.current);
+            if ($isCanvasNode(node)) {
+              node.setData(currentData);
+            }
+          });
+        }
+        commitLaterRef.current = false;
+      }
+      isDrawingRef.current = false;
+    };
+
+    const handlePointerLeave = () => {
+      if (isDrawingRef.current && commitLaterRef.current) {
+        // Commit on leave as well
+        if (stateRef.current) {
+          const currentData = stateRef.current;
+          editor.update(() => {
+            const node = $getNodeByKey(nodeKeyRef.current);
+            if ($isCanvasNode(node)) {
+              node.setData(currentData);
+            }
+          });
+        }
+        commitLaterRef.current = false;
+      }
+      isDrawingRef.current = false;
+    };
+
+    el.addEventListener("pointerdown", handlePointerDown);
+    el.addEventListener("pointerup", handlePointerUp);
+    el.addEventListener("pointerleave", handlePointerLeave);
+    return () => {
+      el.removeEventListener("pointerdown", handlePointerDown);
+      el.removeEventListener("pointerup", handlePointerUp);
+      el.removeEventListener("pointerleave", handlePointerLeave);
+    };
+  }, [editor]);
 
   const initialCanvasData = useMemo(() => ({
     elements: data?.elements || [],
@@ -41,21 +95,35 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
 
   const onChange = useCallback(
     (elements: readonly any[], appState: any, files: any) => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        editor.update(() => {
-          const node = $getNodeByKey(nodeKeyRef.current);
-          if ($isCanvasNode(node)) {
-            node.setData({
-              elements: [...elements],
-              files,
-              appState: {
-                viewBackgroundColor: appState?.viewBackgroundColor || "#1e1e24",
-              },
+      // Buffer the latest update instead of debouncing for every mouse move
+      // This prevents frame drops during drawing and defers actual commit
+      stateRef.current = {
+        elements: [...elements],
+        files,
+        appState: {
+          viewBackgroundColor: appState?.viewBackgroundColor || "#1e1e24",
+        },
+        timestamp: Date.now()
+      };
+      
+      // For drawing strokes, commit on pointerUp instead of during drag
+      if (isDrawingRef.current) {
+        commitLaterRef.current = true;
+      } else {
+        // For immediate updates (not drawing), commit with minimal debounce
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+          if (stateRef.current) {
+            const currentData = stateRef.current;
+            editor.update(() => {
+              const node = $getNodeByKey(nodeKeyRef.current);
+              if ($isCanvasNode(node)) {
+                node.setData(currentData);
+              }
             });
           }
-        });
-      }, 400);
+        }, 200);
+      }
     },
     [editor],
   );

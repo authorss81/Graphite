@@ -105,10 +105,16 @@ export class SupabaseSyncService {
   queueOfflineOp(op: Omit<OfflineSyncOp, "id" | "timestamp">) {
     const fullOp: OfflineSyncOp = {
       ...op,
-      id: Math.random().toString(36).substring(2, 9),
+      id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
       timestamp: Date.now(),
     };
-    this.state.offlineQueue.push(fullOp);
+
+    // Coalesce queued upserts for the same docId to keep queue bounded and prevent duplicates
+    const filtered = this.state.offlineQueue.filter(
+      (existing) => !(existing.docId === op.docId && existing.action === op.action)
+    );
+    filtered.push(fullOp);
+    this.state.offlineQueue = filtered.slice(-100);
     this.saveOfflineQueue();
   }
 
@@ -153,7 +159,7 @@ export class SupabaseSyncService {
         ? encodeBase64(docPayload.editorState)
         : "";
 
-      const { error } = await supabase.from("note_nodes").upsert([
+      const nodePromise = supabase.from("note_nodes").upsert([
         {
           id: docId,
           title: docPayload.title || "Untitled",
@@ -164,23 +170,24 @@ export class SupabaseSyncService {
         },
       ]);
 
-      if (error) throw error;
+      const blockPromise = (docPayload.editorState !== undefined || docPayload.canvasData !== undefined)
+        ? supabase.from("block_entities").upsert([
+            {
+              note_id: docId,
+              type: "document_content",
+              content: JSON.stringify({
+                editorState: encodedEditor,
+                canvasData: docPayload.canvasData,
+              }),
+              order_index: 0,
+              updated_at: new Date().toISOString(),
+            },
+          ])
+        : Promise.resolve({ error: null });
 
-      if (docPayload.editorState !== undefined || docPayload.canvasData !== undefined) {
-        const { error: blockError } = await supabase.from("block_entities").upsert([
-          {
-            note_id: docId,
-            type: "document_content",
-            content: JSON.stringify({
-              editorState: encodedEditor,
-              canvasData: docPayload.canvasData,
-            }),
-            order_index: 0,
-            updated_at: new Date().toISOString(),
-          },
-        ]);
-        if (blockError) throw blockError;
-      }
+      const [nodeRes, blockRes] = await Promise.all([nodePromise, blockPromise]);
+      if (nodeRes.error) throw nodeRes.error;
+      if (blockRes.error) throw blockRes.error;
 
       this.state.status = "idle";
       this.state.remote.lastSync = Date.now();

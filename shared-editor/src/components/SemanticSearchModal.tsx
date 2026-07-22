@@ -34,7 +34,7 @@ export function SemanticSearchModal({ isOpen, onClose }: Props) {
         }
       });
     }
-  }, [isOpen, documents]);
+  }, [isOpen]);
 
   const results = useMemo(() => {
     if (!query.trim()) return [];

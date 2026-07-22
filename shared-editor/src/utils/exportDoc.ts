@@ -1,3 +1,5 @@
+import { logToNative } from "./bridge";
+
 function escapeHtml(text: string): string {
   const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
   return text.replace(/[&<>"']/g, (ch) => map[ch] || ch);
@@ -45,6 +47,7 @@ export function exportAsMarkdown(title: string, editorStateJSON: string) {
     }
   }
 
+  logToNative("info", `Exported markdown: ${title}`);
   const safeTitle = (title || "Untitled").replace(/[^a-zA-Z0-9_\-]/g, "_");
   downloadFile(`${safeTitle}.md`, textContent, "text/markdown;charset=utf-8");
 }
@@ -93,6 +96,7 @@ export function exportAsHTML(title: string, editorStateJSON: string) {
 </body>
 </html>`;
 
+  logToNative("info", `Exported HTML: ${title}`);
   const safeTitle = (title || "Untitled").replace(/[^a-zA-Z0-9_\-]/g, "_");
   downloadFile(`${safeTitle}.html`, fullHTML, "text/html;charset=utf-8");
 }

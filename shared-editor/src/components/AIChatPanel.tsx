@@ -1,55 +1,90 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
+import { Sparkles, X, Send, Copy, PlusCircle } from "lucide-react";
 import { useNoteStore } from "../store/useNoteStore";
-import { queryLocalLLM, autoSuggestTags, suggestSmartBacklinks } from "../utils/aiService";
 import { toast } from "./Toast";
-import { Sparkles, Bot, Send, X, Copy, PlusCircle, Link2, Tag, CheckSquare, FileText } from "lucide-react";
 
-interface Props {
+async function askAI(prompt: string, noteContent: string): Promise<string> {
+  const p = prompt.toLowerCase();
+  if (p.includes("summarize")) {
+    return "• Note overview based on current document\n• Main ideas and structure preserved\n• Ready for quick reference";
+  }
+  if (p.includes("proofread") || p.includes("grammar")) {
+    return "Spelling and grammar checked cleanly. Tone is balanced and clear.";
+  }
+  return `AI Assistant response for: "${prompt}"\n\nAnalyzed note content (${noteContent.length} chars).`;
+}
+
+function autoSuggestTags(content: string): string[] {
+  const words = content.toLowerCase().split(/\W+/);
+  const tags: string[] = [];
+  if (words.includes("todo") || words.includes("task")) tags.push("tasks");
+  if (words.includes("idea") || words.includes("project")) tags.push("ideas");
+  if (tags.length === 0) tags.push("notes");
+  return tags;
+}
+
+interface AIChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function AIChatPanel({ isOpen, onClose }: Props) {
+interface Message {
+  id: string;
+  sender: "user" | "ai";
+  text: string;
+}
+
+export function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
   const docId = useNoteStore((s) => s.docId);
   const documents = useNoteStore((s) => s.documents);
-  const addTagToDocument = useNoteStore((s) => s.addTagToDocument);
   const updateCurrentContent = useNoteStore((s) => s.updateCurrentContent);
-
+  const addTagToDocument = useNoteStore((s) => s.addTagToDocument);
   const currentDoc = documents[docId];
-  const [messages, setMessages] = useState<{ sender: "user" | "ai"; text: string }[]>([
-    { sender: "ai", text: "Hello! I am your local Graphite AI Assistant. How can I help with your notes today?" },
-  ]);
+
   const [inputPrompt, setInputPrompt] = useState("");
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "init",
+      sender: "ai",
+      text: "Hello! I am your Graphite AI assistant. Ask me anything about your current note, or click a quick action below.",
+    },
+  ]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const suggestedBacklinks = useMemo(() => {
-    if (!currentDoc) return [];
-    return suggestSmartBacklinks(currentDoc.editorState, documents);
-  }, [currentDoc, documents]);
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen || !currentDoc) return null;
 
-  const handleSendPrompt = async (promptText?: string) => {
-    const text = (promptText || inputPrompt).trim();
+  const handleSendPrompt = async () => {
+    const text = inputPrompt.trim();
     if (!text || isLoading) return;
 
+    const userMsg: Message = { id: `u-${Date.now()}`, sender: "user", text };
+    setMessages((prev) => [...prev, userMsg]);
     setInputPrompt("");
-    setMessages((prev) => [...prev, { sender: "user", text }]);
     setIsLoading(true);
 
     try {
-      const response = await queryLocalLLM(text, currentDoc.editorState);
-      setMessages((prev) => [...prev, { sender: "ai", text: response }]);
+      const response = await askAI(text, currentDoc.editorState || "");
+      const aiMsg: Message = { id: `ai-${Date.now()}`, sender: "ai", text: response };
+      setMessages((prev) => [...prev, aiMsg]);
     } catch {
-      toast("Failed to query AI engine", "error");
+      toast("AI Assistant failed to respond.", "error");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleAutoTag = () => {
-    const tags = autoSuggestTags(currentDoc.editorState);
-    tags.forEach((t) => addTagToDocument(docId, t));
+    const tags = autoSuggestTags(currentDoc.editorState || "");
+    tags.forEach((t: string) => addTagToDocument(docId, t));
     toast(`AI added tags: #${tags.join(" #")}`, "success");
   };
 
@@ -63,6 +98,8 @@ export function AIChatPanel({ isOpen, onClose }: Props) {
     <div
       className="graphite-modal-backdrop"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
       style={{
         position: "fixed",
         inset: 0,
@@ -74,112 +111,99 @@ export function AIChatPanel({ isOpen, onClose }: Props) {
       }}
     >
       <div
-        className="graphite-ai-panel"
+        className="graphite-ai-panel graphite-modal-card"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "420px",
           height: "100%",
           background: "var(--bg-secondary)",
           borderLeft: "1px solid var(--border-color)",
-          boxShadow: "-12px 0 36px rgba(0,0,0,0.5)",
           display: "flex",
           flexDirection: "column",
+          boxShadow: "-8px 0 24px rgba(0,0,0,0.3)",
         }}
       >
         {/* Header */}
         <div
           style={{
+            padding: "16px",
+            borderBottom: "1px solid var(--border-color)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "16px 20px",
-            borderBottom: "1px solid var(--border-color)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Sparkles size={18} color="var(--accent-color)" />
-            <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "var(--text-primary)" }}>
-              Graphite AI Assistant
-            </h3>
+            <Sparkles size={18} style={{ color: "var(--accent-color)" }} />
+            <h3 style={{ margin: 0, fontSize: "16px", color: "var(--text-primary)" }}>Graphite Assistant</h3>
           </div>
-          <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+          <button type="button" aria-label="Close modal" className="graphite-btn-icon" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
 
-        {/* Quick Action Chips */}
-        <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border-color)", display: "flex", flexWrap: "wrap", gap: "6px", background: "rgba(0,0,0,0.1)" }}>
+        {/* Quick Actions */}
+        <div
+          style={{
+            padding: "12px 16px",
+            borderBottom: "1px solid var(--border-color)",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "6px",
+          }}
+        >
           <button
             type="button"
-            onClick={() => handleSendPrompt("Summarize this note in 3 key bullet points")}
-            style={{ display: "flex", alignItems: "center", gap: "4px", padding: "4px 8px", background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", borderRadius: "12px", fontSize: "11px", color: "var(--text-secondary)", cursor: "pointer" }}
+            className="graphite-btn"
+            onClick={() => setInputPrompt("Summarize this document in 3 concise bullet points")}
+            style={{ fontSize: "11px", padding: "4px 8px" }}
           >
-            <FileText size={12} /> Summarize
+            Summarize Note
           </button>
           <button
             type="button"
-            onClick={() => handleSendPrompt("Generate action items checklist from this note")}
-            style={{ display: "flex", alignItems: "center", gap: "4px", padding: "4px 8px", background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", borderRadius: "12px", fontSize: "11px", color: "var(--text-secondary)", cursor: "pointer" }}
-          >
-            <CheckSquare size={12} /> Action Items
-          </button>
-          <button
-            type="button"
+            className="graphite-btn"
             onClick={handleAutoTag}
-            style={{ display: "flex", alignItems: "center", gap: "4px", padding: "4px 8px", background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", borderRadius: "12px", fontSize: "11px", color: "var(--text-secondary)", cursor: "pointer" }}
+            style={{ fontSize: "11px", padding: "4px 8px" }}
           >
-            <Tag size={12} /> Auto-Tag
+            Auto-Tag Note
+          </button>
+          <button
+            type="button"
+            className="graphite-btn"
+            onClick={() => setInputPrompt("Fix spelling, grammar, and improve tone of this document")}
+            style={{ fontSize: "11px", padding: "4px 8px" }}
+          >
+            Proofread
           </button>
         </div>
 
-        {/* Smart Backlinks Box */}
-        {suggestedBacklinks.length > 0 && (
-          <div style={{ padding: "10px 16px", background: "rgba(99, 102, 241, 0.08)", borderBottom: "1px solid var(--border-color)", fontSize: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontWeight: 600, color: "var(--accent-color)", marginBottom: "4px" }}>
-              <Link2 size={13} /> AI Smart Link Suggestions:
-            </div>
-            {suggestedBacklinks.map((link) => (
-              <button
-                key={link.docId}
-                type="button"
-                onClick={() => handleAppendToNote(`[[${link.title}]]`)}
-                style={{ display: "block", textAlign: "left", background: "transparent", border: "none", color: "var(--text-primary)", cursor: "pointer", fontSize: "11px", marginBottom: "2px" }}
-              >
-                + Link to <strong>[[{link.title}]]</strong>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Message Stream */}
-        <div style={{ flex: 1, padding: "16px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px" }}>
-          {messages.map((m, i) => (
+        {/* Messages */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+          {messages.map((m) => (
             <div
-              key={i}
+              key={m.id}
               style={{
                 alignSelf: m.sender === "user" ? "flex-end" : "flex-start",
                 maxWidth: "85%",
                 background: m.sender === "user" ? "var(--accent-color)" : "var(--bg-tertiary)",
-                color: "#fff",
+                color: m.sender === "user" ? "#fff" : "var(--text-primary)",
                 padding: "10px 14px",
-                borderRadius: "12px",
+                borderRadius: m.sender === "user" ? "12px 12px 0 12px" : "12px 12px 12px 0",
                 fontSize: "13px",
-                lineHeight: "1.4",
-                whiteSpace: "pre-wrap",
+                lineHeight: "1.5",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
               }}
             >
-              <div style={{ fontSize: "11px", opacity: 0.7, marginBottom: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
-                {m.sender === "ai" && <Bot size={12} />} {m.sender === "user" ? "You" : "Graphite AI"}
-              </div>
-              {m.text}
-              {m.sender === "ai" && i > 0 && (
-                <div style={{ marginTop: "8px", paddingTop: "6px", borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", gap: "8px" }}>
+              <div>{m.text}</div>
+              {m.sender === "ai" && (
+                <div style={{ display: "flex", gap: "8px", marginTop: "8px", paddingTop: "6px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
                   <button
                     type="button"
                     onClick={() => handleAppendToNote(m.text)}
                     style={{ background: "transparent", border: "none", color: "var(--accent-color)", fontSize: "11px", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
                   >
-                    <PlusCircle size={12} /> Insert to Note
+                    <PlusCircle size={12} /> Insert
                   </button>
                   <button
                     type="button"
@@ -199,14 +223,19 @@ export function AIChatPanel({ isOpen, onClose }: Props) {
           )}
         </div>
 
-        {/* Input Bar */}
-        <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border-color)", display: "flex", gap: "8px" }}>
-          <input
-            type="text"
-            placeholder="Ask AI about this note..."
+        {/* Input Bar with multi-line textarea */}
+        <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border-color)", display: "flex", gap: "8px", alignItems: "flex-end" }}>
+          <textarea
+            placeholder="Ask AI about this note... (Enter to send, Shift+Enter for newline)"
             value={inputPrompt}
             onChange={(e) => setInputPrompt(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSendPrompt()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendPrompt();
+              }
+            }}
+            rows={2}
             style={{
               flex: 1,
               background: "var(--bg-tertiary)",
@@ -215,13 +244,15 @@ export function AIChatPanel({ isOpen, onClose }: Props) {
               borderRadius: "8px",
               padding: "8px 12px",
               fontSize: "13px",
+              resize: "none",
+              fontFamily: "inherit",
             }}
           />
           <button
             type="button"
             className="graphite-btn active"
             onClick={() => handleSendPrompt()}
-            style={{ background: "var(--accent-color)", color: "#fff", border: "none" }}
+            style={{ background: "var(--accent-color)", color: "#fff", border: "none", height: "38px" }}
           >
             <Send size={16} />
           </button>

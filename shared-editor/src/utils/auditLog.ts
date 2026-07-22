@@ -76,16 +76,23 @@ export function clearAuditLog(): void {
 export function exportAuditLogCSV(): string {
   const events = getAuditLog();
   const header = "ID,Timestamp,Category,Action,DocId,DocTitle,UserId,UserName";
+  const escapeCsv = (str?: string) => {
+    const val = str ?? "";
+    if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+      return `"${val.replace(/"/g, '""')}"`;
+    }
+    return val;
+  };
   const rows = events.map((e) =>
     [
       e.id,
       new Date(e.ts).toISOString(),
       e.category,
-      `"${e.action}"`,
+      escapeCsv(e.action),
       e.docId ?? "",
-      `"${e.docTitle ?? ""}"`,
+      escapeCsv(e.docTitle),
       e.userId ?? "",
-      e.userName ?? "",
+      escapeCsv(e.userName),
     ].join(",")
   );
   return [header, ...rows].join("\n");
