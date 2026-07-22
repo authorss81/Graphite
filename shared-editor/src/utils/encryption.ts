@@ -127,9 +127,10 @@ function getUsedCodes(): Set<string> {
 }
 
 function markCodeUsed(code: string) {
-  const used = getUsedCodes();
-  used.add(code);
-  localStorage.setItem(USED_RECOVERY_KEY, JSON.stringify([...used]));
+  // Merge with existing set to avoid racy overwrite from other tabs
+  const existing = getUsedCodes();
+  existing.add(code);
+  localStorage.setItem(USED_RECOVERY_KEY, JSON.stringify([...existing]));
 }
 
 export async function generateRecoveryCodes(): Promise<string[]> {

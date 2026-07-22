@@ -52,38 +52,53 @@ export function WikiLinkPlugin() {
 
   useEffect(() => {
     const handleDocumentClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target) return;
-      const text = target.innerText || target.textContent || "";
-      const links = [...text.matchAll(/\[\[(.*?)\]\]/g)];
-      if (links.length === 0) return;
+      const rootEl = editor.getRootElement();
+      if (!rootEl || !rootEl.contains(e.target as Node)) return;
+
+      // Find [[link]] at the current Lexical selection anchor
       const sel = editor.getEditorState().read(() => {
         const s = $getSelection();
-        if ($isRangeSelection(s)) {
-          return { anchorOffset: s.anchor.offset, anchorNode: s.anchor.getNode() };
+        if ($isRangeSelection(s) && s.anchor) {
+          const node = s.anchor.getNode();
+          const text = node.getTextContent();
+          const offset = s.anchor.offset;
+          return { text, offset };
         }
         return null;
       });
-      let matchedTitle: string | null = null;
+
       if (sel) {
-        for (const link of links) {
-          const start = link.index;
-          const end = start + link[0].length;
-          if (sel.anchorOffset >= start && sel.anchorOffset <= end) {
-            matchedTitle = link[1].trim();
-            break;
+        const linkRegex = /\[\[(.*?)\]\]/g;
+        let match: RegExpExecArray | null;
+        while ((match = linkRegex.exec(sel.text)) !== null) {
+          const start = match.index;
+          const end = start + match[0].length;
+          if (sel.offset >= start && sel.offset <= end) {
+            const linkTitle = match[1].trim();
+            const found = Object.values(useNoteStore.getState().documents).find(
+              (d) => d.title.toLowerCase() === linkTitle.toLowerCase() && !d.isFolder
+            );
+            if (found) {
+              e.preventDefault();
+              useNoteStore.getState().selectDocument(found.id);
+            }
+            return;
           }
         }
       }
-      if (!matchedTitle) {
-        matchedTitle = links[links.length - 1][1].trim();
-      }
-      const found = Object.values(useNoteStore.getState().documents).find(
-        (d) => d.title.toLowerCase() === matchedTitle!.toLowerCase() && !d.isFolder
-      );
-      if (found) {
-        e.preventDefault();
-        useNoteStore.getState().selectDocument(found.id);
+
+      // Fallback: scan root element text for the first [[link]]
+      const rootText = rootEl.textContent || "";
+      const fallbackMatch = rootText.match(/\[\[(.*?)\]\]/);
+      if (fallbackMatch) {
+        const linkTitle = fallbackMatch[1].trim();
+        const found = Object.values(useNoteStore.getState().documents).find(
+          (d) => d.title.toLowerCase() === linkTitle.toLowerCase() && !d.isFolder
+        );
+        if (found) {
+          e.preventDefault();
+          useNoteStore.getState().selectDocument(found.id);
+        }
       }
     };
 

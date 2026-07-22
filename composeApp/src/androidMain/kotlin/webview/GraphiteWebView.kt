@@ -1,6 +1,7 @@
 package webview
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.view.View
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -19,7 +20,14 @@ class GraphiteWebView(
     init {
         setupSettings()
         addJavascriptInterface(bridge, "AndroidBridge")
-        webViewClient = WebViewClient()
+        webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                bridge.setCurrentUrl(url)
+            }
+            override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
+                bridge.setCurrentUrl(url)
+            }
+        }
         webChromeClient = WebChromeClient()
         setLayerType(View.LAYER_TYPE_HARDWARE, null)
     }

@@ -3,6 +3,7 @@ package webview
 import android.webkit.JavascriptInterface
 import database.DatabaseHelper
 import sync.YjsSyncEngine
+import java.net.URI
 
 /**
  * Android JavaScript Bridge exposed to the WebView via window.AndroidBridge.
@@ -10,9 +11,8 @@ import sync.YjsSyncEngine
  * ALL calls are origin-validated — only allowed from the known app URL.
  */
 class AndroidJSBridge(
-    private val dbHelper: DatabaseHelper,
     private val syncEngine: YjsSyncEngine,
-    private val allowedOrigins: Set<String> = setOf("https://trabkkiursawlwavtsdv.supabase.co", "file://"),
+    private val allowedHosts: Set<String> = setOf("trabkkiursawlwavtsdv.supabase.co"),
     private val onNativeAction: (action: String, payload: String) -> Unit = { _, _ -> }
 ) {
     private var currentUrl: String = ""
@@ -22,8 +22,17 @@ class AndroidJSBridge(
     }
 
     private fun isAllowed(): Boolean {
-        if (currentUrl.startsWith("file://")) return true
-        return allowedOrigins.any { currentUrl.startsWith(it) }
+        if (currentUrl.isBlank()) {
+            println("[AndroidJSBridge] BLOCKED: currentUrl is empty — setCurrentUrl() was never called")
+            return false
+        }
+        return try {
+            val uri = URI(currentUrl)
+            val host = uri.host ?: return false
+            allowedHosts.any { host == it || host.endsWith(".$it") }
+        } catch (_: Exception) {
+            false
+        }
     }
 
     @JavascriptInterface

@@ -64,7 +64,7 @@ export function exportAsHTML(title: string, editorStateJSON: string) {
         if (node.type === "paragraph") return `<p>${childrenText}</p>`;
         if (node.type === "heading") return `<${node.tag}>${childrenText}</${node.tag}>`;
         if (node.type === "quote") return `<blockquote>${childrenText}</blockquote>`;
-        if (node.type === "code") return `<pre><code>${escapeHtml(childrenText)}</code></pre>`;
+        if (node.type === "code") return `<pre><code>${childrenText}</code></pre>`;
         if (node.type === "listitem") return `<li>${childrenText}</li>`;
         return childrenText;
       };
