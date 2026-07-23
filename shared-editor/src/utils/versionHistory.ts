@@ -13,6 +13,7 @@ export interface DocCommit {
 }
 
 const HISTORY_KEY = "graphite_doc_history_v1";
+const COMMITS_KEY = "graphite_commits_v1";
 const GIT_DIR = "/graphite_vault";
 
 // Virtual Git Filesystem lazy-initialized in browser environment
