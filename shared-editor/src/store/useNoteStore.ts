@@ -61,7 +61,7 @@ interface NoteStore {
   docId: string;
   editorState: string;
   canvasData: any;
-  activeTab: "editor" | "canvas" | "spatial" | "graph" | "kanban" | "meta";
+  activeTab: "editor" | "canvas" | "split" | "spatial" | "graph" | "kanban" | "meta";
   wordCount: number;
   charCount: number;
   backlinks: string[];
@@ -74,7 +74,7 @@ interface NoteStore {
   docPage: number;
   docTotal: number;
 
-  setActiveTab: (tab: "editor" | "canvas" | "spatial" | "graph" | "kanban" | "meta") => void;
+  setActiveTab: (tab: "editor" | "canvas" | "split" | "spatial" | "graph" | "kanban" | "meta") => void;
   setGitStatus: (status: string) => void;
 
   addToast: (toast: Toast) => void;
