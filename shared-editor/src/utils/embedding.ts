@@ -2,52 +2,45 @@ import { supabase, isSupabaseAvailable } from "./supabase";
 
 export const VECTOR_DIM = 384;
 
-// Simple deterministic hash & TF-IDF feature extractor to map tokens to 384D space
-function tokenize(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w.length > 1);
-}
+// Lazy-loaded transformers.js pipeline
+let extractor: any = null;
 
-function hashToken(token: string): number {
-  let hash = 0;
-  for (let i = 0; i < token.length; i++) {
-    hash = (hash << 5) - hash + token.charCodeAt(i);
-    hash |= 0;
+async function getExtractor() {
+  if (extractor) return extractor;
+  try {
+    const { pipeline } = await import("@xenova/transformers");
+    extractor = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+    return extractor;
+  } catch {
+    return null;
   }
-  return Math.abs(hash);
 }
 
-export function generateEmbedding(text: string): number[] {
+export async function generateEmbedding(text: string): Promise<number[]> {
+  const pipe = await getExtractor();
+  if (pipe) {
+    const result = await pipe(text, { pooling: "mean", normalize: true });
+    return Array.from(result.data) as number[];
+  }
+
+  // Fallback: simple hash-based embedding (offline/no-wasm)
   const vector = new Array(VECTOR_DIM).fill(0);
-  const tokens = tokenize(text);
+  const tokens = text.toLowerCase().replace(/[^\w\s]/g, " ").split(/\s+/).filter((w) => w.length > 1);
   if (tokens.length === 0) return vector;
-
   const tfMap = new Map<string, number>();
-  for (const token of tokens) {
-    tfMap.set(token, (tfMap.get(token) || 0) + 1);
-  }
-
+  for (const token of tokens) tfMap.set(token, (tfMap.get(token) || 0) + 1);
   for (const [token, count] of tfMap.entries()) {
     const tf = count / tokens.length;
-    const idx = hashToken(token) % VECTOR_DIM;
-    const sign = hashToken(token + "_sign") % 2 === 0 ? 1 : -1;
-    const weight = tf * (1 + Math.log(token.length));
-    vector[idx] += sign * weight;
+    let hash = 0;
+    for (let i = 0; i < token.length; i++) { hash = (hash << 5) - hash + token.charCodeAt(i); hash |= 0; }
+    const idx = Math.abs(hash) % VECTOR_DIM;
+    const sign = Math.abs(hash * 31) % 2 === 0 ? 1 : -1;
+    vector[idx] += sign * tf * (1 + Math.log(token.length));
   }
-
-  // L2 Normalize
   let normSq = 0;
-  for (let i = 0; i < VECTOR_DIM; i++) {
-    normSq += vector[i] * vector[i];
-  }
+  for (let i = 0; i < VECTOR_DIM; i++) normSq += vector[i] * vector[i];
   const norm = Math.sqrt(normSq) || 1;
-  for (let i = 0; i < VECTOR_DIM; i++) {
-    vector[i] /= norm;
-  }
-
+  for (let i = 0; i < VECTOR_DIM; i++) vector[i] /= norm;
   return vector;
 }
 
@@ -64,7 +57,7 @@ const embeddingCache = new Map<string, { vector: number[]; updatedAt: number }>(
 
 export async function storeDocumentEmbedding(docId: string, title: string, content: string): Promise<number[]> {
   const combinedText = `${title}\n${content}`;
-  const vector = generateEmbedding(combinedText);
+  const vector = await generateEmbedding(combinedText);
   embeddingCache.set(docId, { vector, updatedAt: Date.now() });
 
   if (isSupabaseAvailable() && supabase) {

@@ -13,7 +13,7 @@ export interface DocCommit {
 }
 
 const HISTORY_KEY = "graphite_doc_history_v1";
-const GIT_DIR = "/graphite_vault";
+export const GIT_DIR = "/graphite_vault";
 
 function generateUUID(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {

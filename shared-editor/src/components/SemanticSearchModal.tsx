@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import { generateEmbedding, cosineSimilarity, storeDocumentEmbedding, getCachedEmbedding } from "../utils/embedding";
 import { Sparkles, FileText, X, ArrowRight } from "lucide-react";
@@ -22,12 +22,13 @@ export function SemanticSearchModal({ isOpen, onClose }: Props) {
   const selectDocument = useNoteStore((s) => s.selectDocument);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const computeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 50);
-      // Pre-compute embeddings for all documents (cache-hit skips regeneration)
       Object.values(documents).forEach((doc) => {
         if (!doc.isFolder && !getCachedEmbedding(doc.id)) {
           storeDocumentEmbedding(doc.id, doc.title, doc.editorState || "");
@@ -36,46 +37,32 @@ export function SemanticSearchModal({ isOpen, onClose }: Props) {
     }
   }, [isOpen]);
 
-  const results = useMemo(() => {
-    if (!query.trim()) return [];
-
-    const queryVector = generateEmbedding(query);
-    const qTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-    const docList = Object.values(documents).filter((d) => !d.isFolder);
-
-    const scored: SearchResult[] = docList.map((doc) => {
-      const docText = `${doc.title}\n${doc.editorState || ""}`;
-      const docVector = generateEmbedding(docText);
-      const vScore = cosineSimilarity(queryVector, docVector);
-
-      let matches = 0;
-      const lowerText = docText.toLowerCase();
-      for (const t of qTokens) {
-        if (lowerText.includes(t)) matches++;
-      }
-      const tScore = qTokens.length > 0 ? matches / qTokens.length : 0;
-      const hScore = 0.65 * vScore + 0.35 * tScore;
-
-      // Extract context snippet around query text
-      let snippet = (doc.editorState || "").replace(/[{}]/g, " ").slice(0, 140);
-      const idx = lowerText.indexOf(qTokens[0] || "");
-      if (idx !== -1) {
-        snippet = "..." + lowerText.slice(Math.max(0, idx - 30), Math.min(lowerText.length, idx + 110)) + "...";
-      }
-
-      return {
-        docId: doc.id,
-        title: doc.title || "Untitled",
-        snippet,
-        vectorScore: vScore,
-        textScore: tScore,
-        hybridScore: hScore,
-      };
-    });
-
-    return scored
-      .filter((r) => r.hybridScore > 0.3 || r.textScore > 0)
-      .sort((a, b) => b.hybridScore - a.hybridScore);
+  useEffect(() => {
+    if (computeTimeoutRef.current) clearTimeout(computeTimeoutRef.current);
+    if (!query.trim()) { setResults([]); return; }
+    computeTimeoutRef.current = setTimeout(async () => {
+      const queryVector = await generateEmbedding(query);
+      const qTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+      const docList = Object.values(documents).filter((d) => !d.isFolder);
+      const scored: SearchResult[] = await Promise.all(docList.map(async (doc) => {
+        const docText = `${doc.title}\n${doc.editorState || ""}`;
+        const docVector = await generateEmbedding(docText);
+        const vScore = cosineSimilarity(queryVector, docVector);
+        let matches = 0;
+        const lowerText = docText.toLowerCase();
+        for (const t of qTokens) { if (lowerText.includes(t)) matches++; }
+        const tScore = qTokens.length > 0 ? matches / qTokens.length : 0;
+        const hScore = 0.65 * vScore + 0.35 * tScore;
+        let snippet = (doc.editorState || "").replace(/[{}]/g, " ").slice(0, 140);
+        const idx = lowerText.indexOf(qTokens[0] || "");
+        if (idx !== -1) {
+          snippet = "..." + lowerText.slice(Math.max(0, idx - 30), Math.min(lowerText.length, idx + 110)) + "...";
+        }
+        return { docId: doc.id, title: doc.title || "Untitled", snippet, vectorScore: vScore, textScore: tScore, hybridScore: hScore };
+      }));
+      setResults(scored.filter((r) => r.hybridScore > 0.3 || r.textScore > 0).sort((a, b) => b.hybridScore - a.hybridScore));
+    }, 200);
+    return () => { if (computeTimeoutRef.current) clearTimeout(computeTimeoutRef.current); };
   }, [query, documents]);
 
   useEffect(() => {
