@@ -817,7 +817,139 @@ Items marked as done in Phases 4-6 that have been thoroughly audited, remediated
 ### 21.4 Responsive Multi-Pane Tablet & Desktop Layout
 | # | Enhancement | Details | Target File | Status |
 |---|-------------|---------|-------------|--------|
-| 21.4.1 | Dual Pane Split View | Enabled Editor + Excalidraw Canvas tab switching and responsive viewport layouts | `App.tsx` | ✅ Done |
 
+## Phase 22: Post-Audit Round 3 — Phase 7-18 Verification Remediation
 
+Findings from independent security audit of all claimed-done items in Phases 7-18. Each item is a FAIL from the audit requiring remediation.
+
+### 22.1 Phase 7 Critical Fixes — Missed & Incomplete
+
+| # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
+|---|-------------|---------------|-----------|----------|--------|
+| 22.1.1 | 7.1 Runtime config | Hardcoded `DEFAULT_URL` / `DEFAULT_ANON_KEY` still present. `configure()` is optional — accessing `SupabaseClient.client` without calling `configure()` silently uses hardcoded fallback. | `SupabaseClient.kt:11-12,24-37` | CRITICAL | Pending |
+| 22.1.2 | 7.4 Encryption unlock | `handleUnlock` shows "Unlocked successfully." even when document is NOT encrypted — any arbitrary passphrase is accepted. Key is stored and used for subsequent encryption, risking permanent data loss. Must store/verify a test vector. | `SecurityModal.tsx:131-133` | CRITICAL | Pending |
+| 22.1.3 | 7.8 WebView JS injection — origin validation | `loadDocumentInWebView()` calls `evaluateJavascript` without consulting `isAllowed()` or verifying `currentUrl`. WebView on attacker page can exfiltrate document content. | `GraphiteWebView.kt:93-106` | CRITICAL | Pending |
+| 22.1.4 | 7.8 WebView JS injection — scheme/port validation | `isAllowed()` only checks host — does NOT validate scheme (accepts `http://`) or port (accepts `:9999`). MITM attack possible. | `AndroidJSBridge.kt:24-36` | HIGH | Pending |
+| 22.1.5 | 7.12 encodeBase64 | Still uses `btoa` on line 12 and `atob` on line 16 — not available in Node.js or Workers. Must implement full `Uint8Array`→base64 mapping. | `bridge.ts:12,16` | MEDIUM | Pending |
+| 22.1.6 | 7.15 Recovery codes | `verifyRecoveryCode()` is defined but NEVER CALLED anywhere — UI, store, or event. Feature is entirely dead code. Race condition in `markCodeUsed` (read-then-write without atomicity). | `encryption.ts:158` | MEDIUM | Pending |
+
+### 22.2 Phase 8 Android UX — Incomplete Implementations
+
+| # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
+|---|-------------|---------------|-----------|----------|--------|
+| 22.2.1 | 8.4 Swipe-to-dismiss | Zero gesture detection code exists. CSS `:active` scale transform provides press feedback only — no touch gesture handlers anywhere. | No file implements this | HIGH | Pending |
+| 22.2.2 | 8.6 Haptic feedback | Zero `navigator.vibrate()` calls across entire codebase. CSS comment at `index.css:394` claims "Haptic feedback simulation" but only applies visual scale transform. | No file implements this | MEDIUM | Pending |
+| 22.2.3 | 8.16 Share intent — composeApp manifest | `composeApp/src/androidMain/AndroidManifest.xml` has NO `SEND` or `VIEW` intent-filters. No `MainActivity` class exists in composeApp source tree. Only `shared-editor` manifest has these. | `composeApp/.../AndroidManifest.xml:28-31` | HIGH | Pending |
+
+### 22.3 Phase 18 Fix — Excalidraw Stroke Buffering Not Fully Implemented
+
+| # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
+|---|-------------|---------------|-----------|----------|--------|
+| 22.3.1 | 18.2 Buffer strokes — Canvas.tsx | Component still uses simple `debounceTimerRef` with no ref buffering. Missing: `stateRef`, `isDrawingRef`, `commitLaterRef`, pointer event handlers. Plan claims full implementation but code was NOT updated. | `Canvas.tsx:14-51` | HIGH | Pending |
+| 22.3.2 | 18.2 Buffer strokes — ExcalidrawCanvasComponent.tsx | stateRef/pointer events ARE present but `timerRef` has NO unmount cleanup. 200ms timer can fire after unmount, calling stale `editor` ref. | `ExcalidrawCanvasComponent.tsx:35-85,115` | MEDIUM | Pending |
+
+---
+
+## Phase 23: Deep Security Audit — Additional Vulnerabilities
+
+Vulnerabilities discovered during strict cross-phase audit not listed in previous phases.
+
+| # | Vulnerability | File:Line | Severity | Description | Status |
+|---|---------------|-----------|----------|-------------|--------|
+| 23.1 | `loadDocumentInWebView` `javascript:` check bypassable | `GraphiteWebView.kt:98` | HIGH | `script.contains("javascript:")` substring check can be bypassed via URL encoding (`%6A%61%76%61%73%63%72%69%70%74%3A`), Unicode homoglyphs, or nested encoding. Also redundant given `JSONObject.quote()`. | Pending |
+| 23.2 | `isAllowed()` race condition — stale URL | `AndroidJSBridge.kt:32` | MEDIUM | `onPageStarted`/`doUpdateVisitedHistory` update `currentUrl` asynchronously. JS on old page could execute between navigation start and URL update, bypassing origin check. | Pending |
+| 23.3 | `AndroidJSBridge.getAuthToken()` — token exfiltration | `AndroidJSBridge.kt:62` | HIGH | Any page loaded in WebView can call `AndroidBridge.getAuthToken()` if `isAllowed()` passes AND scheme check fails (22.1.4). Exposes JWT to any `http://` page (MITM). | Pending |
+| 23.4 | `SecurityModal.tsx` passphrase not zeroed from memory after unlock | `SecurityModal.tsx:132` | MEDIUM | `setUnlockPassphrase("")` clears React state but the string remains in memory until garbage collected. Same issue applies to encryption key in React state. | Pending |
+| 23.5 | No rate limiting on encrypt/decrypt attempts | `SecurityModal.tsx:139-154` | MEDIUM | User can attempt unlimited passphrase guesses via Unlock dialog. No exponential backoff, no lockout, no attempt counting. Brute force possible. | Pending |
+| 23.6 | `cryptoKey` stored in React state — accessible via React DevTools | `SecurityModal.tsx:17` | MEDIUM | AES-GCM key is held in component state (`const [cryptoKey, setCryptoKey]`). Anyone with DevTools access can extract the raw CryptoKey. Should use `useRef` with `useMemo`-guarded lifecycle. | Pending |
+| 23.7 | `bufToBase64` and `base64ToBuf` not `isomorphic` — only browser | `encryption.ts:15-21` | MEDIUM | String.fromCharCode/btoa/atob patterns fail in non-browser environments (Service Workers, React Native, SSR). | Pending |
+| 23.8 | `PomodoroWidget.tsx` interval never cleared on unmount | `PomodoroWidget.tsx:8-18` | MEDIUM | `setInterval` with no cleanup effect. Timer continues after component unmount, calling stale state setters. | Pending |
+| 23.9 | `versionHistory.ts` fake SHA fallback still present | `versionHistory.ts:191-194` | MEDIUM | `Math.random().toString(36).substring(2,10)` fallback when Git FS unavailable — generates non-verifiable, non-Git "SHAs". | Pending |
+| 23.10 | `BufToBase64` crashes on SharedArrayBuffer | `encryption.ts:14` | LOW | Uses `String.fromCharCode(...new Uint8Array(buf))` spread operator — crashes if `buf.byteLength > 65536`. 8KB chunking implemented but spread on each chunk still has overhead. | Pending |
+
+---
+
+## Phase 24: Phase 9 Architecture & Code Quality Audit — 8/18 FAIL
+
+Independent audit of Phase 9 "Architecture & Code Quality Refactoring". The plan claims all 18 items are done. Audit found **8 FAIL**, **10 PASS**.
+
+| # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
+|---|-------------|---------------|-----------|----------|--------|
+| 24.1 | 9.1 Split useNoteStore | No `useDocStore`, `useSyncStore`, or `useToastStore` exist. Monolithic `useNoteStore.ts` still holds documents, docId, editorState, canvasData, activeTab, stats, gitStatus, toasts in one interface. | `store/useNoteStore.ts:58-90` | HIGH | Pending |
+| 24.2 | 9.2 Split App.tsx | `App.tsx` is 521 lines (threshold 300). `ModalManager.tsx` extracted but header, nav bar, info tab, bottom nav all still inline. | `App.tsx` (521 lines) | HIGH | Pending |
+| 24.3 | 9.3 Shared ZoomControls | `ZoomControls.tsx` exists but is **never imported** — both `GraphView.tsx:305-315` and `SpatialCanvas.tsx:231-254` use inline zoom controls with raw buttons. | `ZoomControls.tsx` (unused) | MEDIUM | Pending |
+| 24.4 | 9.6 Layered architecture | `SpatialCanvas.tsx:4-8` imports directly from `../utils/spatialCanvasStorage`, bypassing store layer. Direct calls to `loadSpatialCanvasData()`/`saveSpatialCanvasData()` in component. | `SpatialCanvas.tsx:4-8,29,73` | HIGH | Pending |
+| 24.5 | 9.10 Stop imperative getState() | 18 `.getState()` calls remain across 7 component files. All in event handlers (not render paths) but far from "stopped". | `App.tsx:88,117,120,141`, `Editor.tsx:294,304,314`, `ModalManager.tsx:40,43`, `SecurityModal.tsx:124,142`, `Sidebar.tsx:124`, `Toast.tsx:14,16`, `WikiLinkPlugin.tsx:98,102,130,135` | MEDIUM | Pending |
+| 24.6 | 9.12 Fix key={docId} | `key={docId}` **still present** on `<Canvas key={docId}>` at `App.tsx:354`. | `App.tsx:354` | MEDIUM | Pending |
+| 24.7 | 9.15 Replace localStorage with IndexedDB | 7 files still use localStorage as PRIMARY storage with zero IndexedDB fallback. IndexedDB only used as async backup in `docStorage.ts:107-108,116`. Other files: `encryption.ts`, `auditLog.ts`, `versionHistory.ts`, `spatialCanvasStorage.ts`, `pluginSystem.ts`, `supabase.ts`, `teamWorkspace.ts` all localStorage-only. | Multiple files | HIGH | Pending |
+| 24.8 | 9.16 Pagination | `loadDocsPaginated()` defined in `docStorage.ts:44` but **never called**. `Sidebar.tsx:82` renders `tree.map(renderNode)` for ALL documents at once — no pagination. | `docStorage.ts:44`, `Sidebar.tsx:82` | MEDIUM | Pending |
+
+---
+
+## Phase 25: Phase 20 UX Improvements Audit — 15/23 FAIL
+
+Independent audit of Phase 20 "UX Improvements & Usability Polish". The plan claims ALL items are done. Audit found **15 FAIL**, **8 PASS**.
+
+| # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
+|---|-------------|---------------|-----------|----------|--------|
+| 25.1 | 20.1.2 Modal aria-labels | Only `AIChatPanel.tsx:140` has `aria-label="Close modal"`. 6 other modals missing it: VersionHistoryModal, SecurityModal, PublishModal, SemanticSearchModal, TeamWorkspaceModal, PluginMarketplaceModal. | Multiple modal files | MEDIUM | Pending |
+| 25.2 | 20.1.3 Sidebar ARIA roles | Zero ARIA tree roles. No `role="tree"`, no `role="treeitem"`. Uses bare `<aside>` + `<div>`. | `Sidebar.tsx` | MEDIUM | Pending |
+| 25.3 | 20.1.5 Toast keyboard dismiss | Only `onClick` dismiss. No `onKeyDown` handler for Enter/Space. Toasts not focusable (no `tabIndex`). | `Toast.tsx:33-42` | LOW | Pending |
+| 25.4 | 20.2.1 Saving indicator | Editor.tsx has **zero** inline "Saving..."/"Saved" indicator. Silent debounced save with no UI feedback. | `Editor.tsx:323` | MEDIUM | Pending |
+| 25.5 | 20.2.4 Sync failure toast | All `syncDocument()` calls wrapped in `.catch(() => {})` — errors silently swallowed. No toast shown. | `useNoteStore.ts` | HIGH | Pending |
+| 25.6 | 20.2.5 Audit log confirmation | `clearAuditLog()` called directly with **zero confirmation dialog**. No `confirm()`, no modal prompt. | `SecurityModal.tsx:685` | MEDIUM | Pending |
+| 25.7 | 20.3.2 Zoom-scaled grid | Dot grid uses static `backgroundSize: "24px 24px"` — does NOT scale with zoomLevel. | `SpatialCanvas.tsx:179-180` | LOW | Pending |
+| 25.8 | 20.3.4 Link button guard | `TOGGLE_LINK_COMMAND` always dispatched with `"https://"` regardless of selection. No range/selection check. | `EditorToolbar.tsx:221` | MEDIUM | Pending |
+| 25.9 | 20.4.1 Escape key modals | Only AIChatPanel + SemanticSearchModal have Escape handlers. 4 other modals missing: SecurityModal, VersionHistoryModal, PublishModal, TeamWorkspaceModal. | Multiple modal files | MEDIUM | Pending |
+| 25.10 | 20.4.2 Focus trapping | Only AIChatPanel has `role="dialog"`/`aria-modal="true"`. 6 other modals lack these entirely. | Multiple modal files | MEDIUM | Pending |
+| 25.11 | 20.4.3 VersionHistory try-catch | `handleRestore` and `handleCreateSnapshot` have **zero try-catch** around async operations. | `VersionHistoryModal.tsx:37-51` | MEDIUM | Pending |
+| 25.12 | 20.5.1 Header overflow | No `overflow-x: auto` on header section. Buttons overflow on narrow viewports. | `App.tsx:164-252` | MEDIUM | Pending |
+| 25.13 | 20.5.2 Touch handlers | SpatialCanvas and GraphView have mouse-only handlers. No `onTouchStart/Move/End`. | `SpatialCanvas.tsx:170-172`, `GraphView.tsx:319-322` | HIGH | Pending |
+| 25.14 | 20.7.1 RAF early exit | RAF `simulate()` runs unconditionally every frame — no `if (nodes.length === 0) return;` guard. | `GraphView.tsx:137-207` | MEDIUM | Pending |
+| 25.15 | 20.7.2 Publish button styling | Publish button uses plain `.graphite-btn` with zero distinct styling. Visually indistinguishable from generic buttons. | `App.tsx:247-250` | LOW | Pending |
+
+### 🔴 Critical Bug Found (not in Phase 20 spec)
+
+| # | Bug | File:Line | Severity | Description | Status |
+|---|-----|-----------|----------|-------------|--------|
+| 25.16 | AIChatPanel key mismatch — **never opens** | `App.tsx:199` dispatches `"aiPanel"` but `ModalManager.tsx:51` checks `modals["ai"]` | CRITICAL | The AI Assistant button dispatches modal key `"aiPanel"` but the ModalManager reads `modals["ai"]` — key mismatch means the AI panel **never opens**. Feature is broken. | Pending |
+
+---
+
+## Phase 26: Phase 21 Design Polish Audit — 4/7 FAIL + 1 Critical Bug
+
+Independent audit of Phase 21 "Aesthetic & UI Design Polish". The plan claims ALL items are done. Audit found **4 FAIL**, **3 PASS**.
+
+| # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
+|---|-------------|---------------|-----------|----------|--------|
+| 26.1 | 21.1.1 Glass panels — sidebar | `.graphite-sidebar` uses solid `var(--bg-secondary)` background — **no backdrop-filter, no glass effect**. | `index.css:321-334` | MEDIUM | Pending |
+| 26.2 | 21.1.1 Glass panels — modal cards | Modals (PublishModal, SemanticSearch, VersionHistory, Security, TeamWorkspace, PluginMarketplace) all use solid `var(--bg-secondary)` — **no glassmorphism**. Only `AIChatPanel` has glass effect. | Multiple modal files | MEDIUM | Pending |
+| 26.3 | 21.1.1 Glass panels — border opacity & vendor prefix | `--glass-border` is `rgba(255,255,255,0.05)` not `0.08` as claimed. Zero `-webkit-backdrop-filter` for Safari <15. | `index.css:27` | LOW | Pending |
+| 26.4 | 21.3.1 Card hover -2px | Claimed `translateY(-2px)` does NOT exist. Actual hover uses `translateY(-1px)`. | `index.css:274` | LOW | Pending |
+| 26.5 | 21.3.2 Modal entrance animation | Only 1 of 6 modals (AIChatPanel) uses `.graphite-modal-card` with `modalScaleIn` keyframe. 5 other modals get zero entrance animation. | Multiple modal files | MEDIUM | Pending |
+| 26.6 | 21.4.1 Dual pane split view | Tab-based layout — **only ONE view at a time**. Never Editor+Canvas simultaneously. Single media query at 768px. No 1024px or 1440px breakpoints. | `App.tsx:338-503` | HIGH | Pending |
+
+### Additional CSS Bugs Found
+
+| # | Bug | File:Line | Severity | Description | Status |
+|---|-----|-----------|----------|-------------|--------|
+| 26.7 | `!important` on drag handle hover | `index.css:924` | LOW | `.graphite-block-drag-handle:hover { opacity: 1 !important; }` breaks CSS cascade | Pending |
+| 26.8 | z-index collision — modals behind bottom nav | `SecurityModal.tsx:183` (z-index 1200), `TeamWorkspaceModal.tsx:134` (z-index 1100) vs `.graphite-bottom-nav` (z-index 1100) | MEDIUM | SecurityModal barely above bottom nav; TeamWorkspaceModal sits AT the same z-index, risking overlap on mobile | Pending |
+
+---
+
+## Phase 27: New Vulnerabilities Found Across Phase 9/20/21 Audits
+
+Additional critical/high issues discovered during cross-phase audit not in previous phases.
+
+| # | Vulnerability | File:Line | Severity | Description | Status |
+|---|---------------|-----------|----------|-------------|--------|
+| 27.1 | AIChatPanel `"aiPanel"` vs `"ai"` key mismatch — FEATURE BROKEN | `App.tsx:199` vs `ModalManager.tsx:51` | CRITICAL | Dispatch uses `"aiPanel"` but ModalManager reads `modals["ai"]`. AI Assistant **never opens**. User-facing feature is completely broken. | Pending |
+| 27.2 | `PomodoroWidget.tsx` interval leak | `PomodoroWidget.tsx:8-18` | MEDIUM | `setInterval` with no cleanup `useEffect`. Timer continues after unmount, calling stale React state setters. | Pending |
+| 27.3 | `GraphView.tsx` RAF runs with 0 nodes | `GraphView.tsx:137-207` | MEDIUM | Force simulation runs at 60fps even when graph is empty — wasted CPU/battery. | Pending |
+| 27.4 | `Sidebar.tsx` no virtual scrolling | `Sidebar.tsx:82` renders ALL tree nodes at once | MEDIUM | With 1000+ documents, full tree render blocks main thread for seconds. No windowing/virtualization. | Pending |
+| 27.5 | `SpatialCanvas.tsx` bypasses store — direct storage access | `SpatialCanvas.tsx:4-8,29,73` | HIGH | Direct `loadSpatialCanvasData()`/`saveSpatialCanvasData()` calls in component break Zustand reactivity — other components reading from store get stale data. | Pending |
+| 27.6 | Modals missing Escape handlers (4 of 6) | `SecurityModal.tsx`, `VersionHistoryModal.tsx`, `PublishModal.tsx`, `TeamWorkspaceModal.tsx` | MEDIUM | User cannot close these modals via keyboard (Escape key). Desktop accessibility violation. | Pending |
+| 27.7 | No focus trapping in 6 of 7 modals | All modals except AIChatPanel | MEDIUM | Tab key cycles behind modal backdrop — user can interact with background page while modal is open. WCAG violation. | Pending |
+| 27.8 | Touch events absent on SpatialCanvas + GraphView | `SpatialCanvas.tsx:170-172`, `GraphView.tsx:319-322` | HIGH | Mobile touch interaction completely broken on both canvas views — only mouse events handled. Users on tablets/phones cannot pan or zoom. | Pending |
 

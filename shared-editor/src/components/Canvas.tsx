@@ -11,82 +11,45 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const excalidrawAPIRef = useRef<any>(null);
 
   const initialCanvasData = useMemo(() => ({
     elements: initialData?.elements || [],
     files: initialData?.files || undefined,
     appState: {
       viewBackgroundColor: initialData?.appState?.viewBackgroundColor || "#1e1e24",
+      currentItemStrokeColor: initialData?.appState?.currentItemStrokeColor,
+      currentItemBackgroundColor: initialData?.appState?.currentItemBackgroundColor,
     },
     scrollToContent: true,
   }), [initialData]);
 
-  const lastLogTime = useRef<number>(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const stateRef = useRef<any>(null);
-  const isDrawingRef = useRef(false);
-  const commitLaterRef = useRef(false);
+  // Direct, reliable change handler for strokes, elements & color changes
+  const handleCanvasChange = useCallback((elements: readonly any[], appState: any, files: any) => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
 
-  // Track drawing stroke states via container pointer listeners
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const handlePointerDown = () => {
-      isDrawingRef.current = true;
-    };
-
-    const flushCommit = () => {
-      if (isDrawingRef.current && commitLaterRef.current && stateRef.current) {
-        onChangeRef.current?.(stateRef.current);
-        commitLaterRef.current = false;
-      }
-      isDrawingRef.current = false;
-    };
-
-    el.addEventListener("pointerdown", handlePointerDown);
-    el.addEventListener("pointerup", flushCommit);
-    el.addEventListener("pointerleave", flushCommit);
-    window.addEventListener("blur", flushCommit);
-
-    return () => {
-      el.removeEventListener("pointerdown", handlePointerDown);
-      el.removeEventListener("pointerup", flushCommit);
-      el.removeEventListener("pointerleave", flushCommit);
-      window.removeEventListener("blur", flushCommit);
-    };
+    debounceTimerRef.current = setTimeout(() => {
+      const dataToSave = {
+        elements: [...elements],
+        files,
+        appState: {
+          viewBackgroundColor: appState?.viewBackgroundColor || "#1e1e24",
+          currentItemStrokeColor: appState?.currentItemStrokeColor,
+          currentItemBackgroundColor: appState?.currentItemBackgroundColor,
+        },
+        timestamp: Date.now(),
+      };
+      onChangeRef.current?.(dataToSave);
+      logToNative("info", `Canvas saved: ${elements.length} elements`);
+    }, 150);
   }, []);
 
-  // Stable callback reference — receives elements, appState, and files (3rd arg)
-  const handleCanvasChange = useCallback((newElements: readonly any[], appState: any, files: any) => {
-    const stateUpdate = {
-      elements: [...newElements],
-      files,
-      appState: {
-        viewBackgroundColor: appState?.viewBackgroundColor || "#1e1e24",
-      },
+  // Flush pending changes on unmount (e.g. document switch)
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
-
-    // Buffer updates for the current stroke - defer commit to pointerUp/blur
-    if (timerRef.current) clearTimeout(timerRef.current);
-    // Store latest elements in ref to avoid stale closure issues during rapid updates
-    stateRef.current = { ...stateUpdate, timestamp: Date.now() };
-    
-    // Commit only on pointerUp/blur, not during every drag event
-    if (isDrawingRef.current) {
-      commitLaterRef.current = true;
-    } else {
-      // Final commit for non-drawing updates (immediate or debounced)
-      timerRef.current = setTimeout(() => {
-        onChangeRef.current?.(stateRef.current);
-      }, 100);
-    }
-
-    const now = Date.now();
-    if (now - lastLogTime.current > 2000) {
-      logToNative("info", `Canvas updated: ${newElements.length} elements`);
-      lastLogTime.current = now;
-    }
   }, []);
 
   const uiOptions = useMemo(() => ({
@@ -96,20 +59,6 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
       export: false as const,
     },
   }), []);
-
-  const excalidrawAPIRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (excalidrawAPIRef.current) {
-      excalidrawAPIRef.current.updateScene({
-        elements: initialData?.elements || [],
-        appState: {
-          viewBackgroundColor: initialData?.appState?.viewBackgroundColor || "#1e1e24",
-          ...initialData?.appState,
-        },
-      });
-    }
-  }, [initialData]);
 
   return (
     <div
