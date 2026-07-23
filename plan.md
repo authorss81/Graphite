@@ -1,5 +1,53 @@
 # Graphite Studio — Implementation Plan
 
+## Implementation Priority Order
+
+Phases reordered by dependency and urgency. Critical security/data-integrity fixes first, then architecture, then features, then polish.
+
+### 🛑 Priority 0 — Stop the Bleeding (CRITICAL)
+Fix immediately — these cause data loss, lockout, or are exploitable.
+
+| Order | Phase | Focus | Severity |
+|-------|-------|-------|----------|
+| 1 | **Phase 22** | Post-Audit Round 3 — CRITICAL: runtime config bypass, encryption false success, origin validation bypass | 🔴 CRITICAL |
+| 2 | **Phase 23** | Deep Security Audit — 10 vulns: JS injection bypass, token exfiltration, no rate limiting, cryptoKey in React state | 🔴 CRITICAL |
+| 3 | **Phase 27** | New Vulns from audits: AIChatPanel broken (never opens), touch handlers absent, Pomodoro timer leak, RAF waste | 🔴 CRITICAL |
+| 4 | **Phase 14** | Security Hardening: RLS, httpOnly cookies, CSP, SRI, rate limiting, HMAC audit chain, Math.random→crypto.randomUUID | 🟠 HIGH |
+
+### 🟠 Priority 1 — Architecture & Audit Remediation
+Fix false "Done" claims before building on broken foundations.
+
+| Order | Phase | Focus | Severity |
+|-------|-------|-------|----------|
+| 5 | **Phase 24** | Phase 9 Audit Failures (8 items): monolithic store, 521-line App.tsx, unused ZoomControls, store bypass, 18 getState() calls, key={docId}, localStorage→IndexedDB incomplete, pagination unused | 🟠 HIGH |
+| 6 | **Phase 25** | Phase 20 Audit Failures (15 items): aria-labels missing, ARIA roles, toast keyboard, save indicator, sync errors swallowed, Escape key modals, focus trapping, touch handlers, RAF early exit | 🟡 MEDIUM |
+| 7 | **Phase 26** | Phase 21 Audit Failures (4 items): sidebar/modals missing glass, entrance animations on 5/6 modals, no dual-pane layout, !important drag handle | 🟡 MEDIUM |
+
+### 🟡 Priority 2 — Real Engine & Features
+Replace fake implementations and build competitive features.
+
+| Order | Phase | Focus | Est. Effort |
+|-------|-------|-------|-------------|
+| 8 | **Phase 10** | Real Engine Implementations: Yjs CRDT, transformers.js embeddings, LLM streaming, Git, Team Workspace, Plugin Marketplace, Kanban, Mermaid/KaTeX, Audio | 172h |
+| 9 | **Phase 11** | Competitive Feature Parity: block refs, databases, daily journal, PDF/HTML import, templates, web clipper, canvas format, metadata, full-text search, RTL, callouts, quick open | 140h |
+| 10 | **Phase 2** | Competitive (Match Notion/Obsidian): block editor, graph view, AI semantic search, publish/share, version history, tags, spatial canvas | Ongoing |
+| 11 | **Phase 3** | World-Class: real-time multiplayer (Yjs), AI writing assistant, plugin system, advanced blocks, team workspace, desktop/mobile native | Long-term |
+
+### 🟢 Priority 3 — Canvas, Graph, Testing, Polish
+
+| Order | Phase | Focus | Est. Effort |
+|-------|-------|-------|-------------|
+| 12 | **Phase 12** | Spatial Canvas: page-wise mode, rich cards, auto-layout, minimap, colors, multi-select, presentation, stylus, nested | 87h |
+| 13 | **Phase 13** | Graph View: d3-force, click popup, filter, cluster, edge weights, timeline, saved layouts, RAF fix | 36h |
+| 14 | **Phase 15** | Testing & CI: 18 test suites (encryption, auth, stores, Git, canvas, graph, sidebar, Kotlin), strict TS mode, E2E, visual regression | 85h |
+| 15 | **Phase 16** | UX Onboarding: walkthrough, templates, empty states, breadcrumbs, tabbed docs, keyboard nav, accessibility, screen readers | 50h |
+| 16 | **Phase 17** | Competitive Research: database block, canvas format, block linking, mobile perf, plugins, daily journal, slides, templates | 138h |
+
+### ✅ Completed Phases (Reference)
+Phases 0, 1, 4, 5, 6, 7, 8, 9, 18, 19, 20, 21 — see below for details.
+
+---
+
 ## Current State Assessment
 
 This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (React/TS) renders but has no persistence. The KMP `composeApp` compiles but every native feature (DB, git, Yjs sync) is a `println`-only placeholder. The `supabase/` migration is a well-designed schema with zero client code consuming it.
