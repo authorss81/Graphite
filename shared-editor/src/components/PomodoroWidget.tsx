@@ -18,7 +18,7 @@ export function PomodoroWidget() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isActive]);
+  }, [isActive, seconds]);
 
   const toggleTimer = () => setIsActive(!isActive);
   const resetTimer = () => {

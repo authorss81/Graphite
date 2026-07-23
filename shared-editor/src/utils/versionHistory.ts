@@ -188,10 +188,10 @@ export async function createDocCommit(docId: string, docTitle: string, editorSta
         },
       });
     } else {
-      realCommitHash = "git_" + Math.random().toString(36).substring(2, 10) + Date.now().toString(16);
+      realCommitHash = "git_" + crypto.randomUUID().replace(/-/g, "").substring(0, 16);
     }
   } catch {
-    realCommitHash = "git_" + Math.random().toString(36).substring(2, 10) + Date.now().toString(16);
+    realCommitHash = "git_" + crypto.randomUUID().replace(/-/g, "").substring(0, 16);
   }
 
   const commit: DocCommit = {

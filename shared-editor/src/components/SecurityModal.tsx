@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import { X, Shield, Lock, Unlock, Key, Eye, EyeOff, Download, Trash2, CheckCircle, AlertTriangle, FileText, RefreshCw } from "lucide-react";
 import {
@@ -74,6 +74,10 @@ export function SecurityModal({
   const [showRecovery, setShowRecovery] = useState(false);
   const [recoveryCodeInput, setRecoveryCodeInput] = useState("");
   const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+  const cryptoKeyRef = useRef<CryptoKey | null>(null);
+  const unlockAttemptsRef = useRef(0);
+  const lastUnlockAttemptRef = useRef(0);
+  const passphraseBufRef = useRef<Uint8Array | null>(null);
 
 
   // Audit state
@@ -104,6 +108,7 @@ export function SecurityModal({
     try {
       const salt = getOrCreateSalt();
       const key = await deriveKey(passphrase, salt);
+      cryptoKeyRef.current = key;
       setCryptoKey(key);
       const codes = await generateRecoveryCodes();
       setRecoveryCodes(codes);
@@ -120,6 +125,13 @@ export function SecurityModal({
 
   const handleUnlock = useCallback(async () => {
     if (!unlockPassphrase) return;
+    // Rate limiting: exponential backoff
+    const now = Date.now();
+    const elapsed = now - lastUnlockAttemptRef.current;
+    if (elapsed < 1000 * Math.pow(2, unlockAttemptsRef.current)) {
+      setError(`Too many attempts. Wait ${Math.ceil((1000 * Math.pow(2, unlockAttemptsRef.current) - elapsed) / 1000)}s.`);
+      return;
+    }
     setIsProcessing(true);
     setError("");
     try {
@@ -134,11 +146,16 @@ export function SecurityModal({
       }
       const plaintext = await decryptText(liveContent, key);
       onDecryptDoc(plaintext);
+      cryptoKeyRef.current = key;
       setCryptoKey(key);
+      unlockAttemptsRef.current = 0;
+      // Clear passphrase from memory
       setUnlockPassphrase("");
       setSuccess("Unlocked successfully.");
       logAuditEvent("encryption", "Document decrypted", { docId: currentDocId, docTitle: currentDocTitle });
     } catch {
+      unlockAttemptsRef.current++;
+      lastUnlockAttemptRef.current = Date.now();
       setError("Wrong passphrase or corrupted data.");
     }
     setIsProcessing(false);
@@ -166,6 +183,7 @@ export function SecurityModal({
         const plaintext = await decryptText(liveContent, key);
         onDecryptDoc(plaintext);
       }
+      cryptoKeyRef.current = key;
       setCryptoKey(key);
       setRecoveryCodeInput("");
       setSuccess("Recovery code accepted. Document unlocked.");
@@ -177,14 +195,15 @@ export function SecurityModal({
   }, [recoveryCodeInput, recoveryCodes, currentDocContent, currentDocId, onDecryptDoc]);
 
   const handleEncryptDoc = useCallback(async () => {
-    if (!cryptoKey) { setError("Set up or unlock encryption first."); return; }
+    const key = cryptoKeyRef.current;
+    if (!key) { setError("Set up or unlock encryption first."); return; }
     const liveDoc = useNoteStore.getState().documents[currentDocId];
     const liveContent = liveDoc?.editorState || currentDocContent;
     if (isEncrypted(liveContent)) { setError("Document is already encrypted."); return; }
     setIsProcessing(true);
     setError("");
     try {
-      const encrypted = await encryptText(liveContent, cryptoKey);
+      const encrypted = await encryptText(liveContent, key);
       onEncryptDoc(encrypted);
       setDocLocked(currentDocId, true);
       setSuccess("Document encrypted with AES-256-GCM.");
@@ -193,7 +212,7 @@ export function SecurityModal({
       setError("Encryption failed.");
     }
     setIsProcessing(false);
-  }, [cryptoKey, currentDocContent, currentDocId, currentDocTitle, onEncryptDoc]);
+  }, [currentDocContent, currentDocId, currentDocTitle, onEncryptDoc]);
 
   const handleDownloadAuditCSV = () => {
     const csv = exportAuditLogCSV();
@@ -688,10 +707,11 @@ export function SecurityModal({
                     {isDocEncrypted && (
                       <button
                         onClick={async () => {
-                          if (!cryptoKey) return;
+                          const k = cryptoKeyRef.current;
+                          if (!k) return;
                           setIsProcessing(true);
                           try {
-                            const decrypted = await decryptText(currentDocContent, cryptoKey);
+                            const decrypted = await decryptText(currentDocContent, k);
                             onDecryptDoc(decrypted);
                             setDocLocked(currentDocId, false);
                             setSuccess("Document decrypted.");

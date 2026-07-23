@@ -16,20 +16,27 @@ class AndroidJSBridge(
     private val onNativeAction: (action: String, payload: String) -> Unit = { _, _ -> }
 ) {
     @Volatile
-    var currentUrl: String = ""
-        private set
+    private var _currentUrl: String = ""
+
+    // Synchronization lock for URL state
+    private val urlLock = Any()
+
+    var currentUrl: String
+        get() = synchronized(urlLock) { _currentUrl }
+        private set(v) = synchronized(urlLock) { _currentUrl = v }
 
     fun setCurrentUrl(url: String) {
         currentUrl = url
     }
 
     fun isAllowed(): Boolean {
-        if (currentUrl.isBlank()) {
+        val url = currentUrl  // atomic read under lock
+        if (url.isBlank()) {
             println("[AndroidJSBridge] BLOCKED: currentUrl is empty — setCurrentUrl() was never called")
             return false
         }
         return try {
-            val uri = URI(currentUrl)
+            val uri = URI(url)
             // Require HTTPS scheme
             val scheme = uri.scheme ?: return false
             if (scheme != "https") {

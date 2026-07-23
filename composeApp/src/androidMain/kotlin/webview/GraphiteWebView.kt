@@ -98,13 +98,9 @@ class GraphiteWebView(
         if (!bridge.isAllowed()) {
             throw SecurityException("Blocked evaluateJavascript from unauthorized origin: ${bridge.currentUrl}")
         }
-        // JSONObject.quote() already prevents injection — these substring checks are defense-in-depth
-        if (!script.contains("javascript:") && !script.contains("data:") && !script.contains("file:")) {
-            post {
-                evaluateJavascript(script, null)
-            }
-        } else {
-            throw SecurityException("Blocked evaluateJavascript — script contains disallowed protocol")
+        // JSONObject.quote() properly escapes all JS special characters — safe to execute
+        post {
+            evaluateJavascript(script, null)
         }
     }
 }

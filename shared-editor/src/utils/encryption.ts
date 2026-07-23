@@ -10,32 +10,48 @@ const LOCK_STORAGE_KEY = "graphite_enc_locked_docs_v1";
 const STORAGE_VERSION_KEY = "graphite_enc_storage_version";
 const CURRENT_ENC_VERSION = 1;
 
-// ─── Utility: base64url ───────────────────────────────────────────────────────
+// ─── Utility: isomorphic base64 ──────────────────────────────────────────────
+
+const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 export function bufToBase64(buf: ArrayBuffer): string {
+  // Handle both ArrayBuffer and SharedArrayBuffer
   const bytes = new Uint8Array(buf);
-  let binary = "";
-  const chunkSize = 8192;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)));
+  let result = "";
+  for (let i = 0; i < bytes.length; i += 3) {
+    const b0 = bytes[i];
+    const b1 = i + 1 < bytes.length ? bytes[i + 1] : 0;
+    const b2 = i + 2 < bytes.length ? bytes[i + 2] : 0;
+    result += BASE64_CHARS[b0 >> 2];
+    result += BASE64_CHARS[((b0 & 3) << 4) | (b1 >> 4)];
+    result += i + 1 < bytes.length ? BASE64_CHARS[((b1 & 15) << 2) | (b2 >> 6)] : "=";
+    result += i + 2 < bytes.length ? BASE64_CHARS[b2 & 63] : "=";
   }
-  return btoa(binary);
+  return result;
 }
 
 export function base64ToBuf(b64: string): ArrayBuffer {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes.buffer;
+  const sanitized = b64.replace(/=+$/, "");
+  const bytes: number[] = [];
+  for (let i = 0; i < sanitized.length; i += 4) {
+    const c0 = BASE64_CHARS.indexOf(sanitized[i]);
+    const c1 = BASE64_CHARS.indexOf(sanitized[i + 1]);
+    const c2 = i + 2 < sanitized.length ? BASE64_CHARS.indexOf(sanitized[i + 2]) : -1;
+    const c3 = i + 3 < sanitized.length ? BASE64_CHARS.indexOf(sanitized[i + 3]) : -1;
+    bytes.push((c0 << 2) | (c1 >> 4));
+    if (c2 !== -1) bytes.push(((c1 & 15) << 4) | (c2 >> 2));
+    if (c3 !== -1) bytes.push(((c2 & 3) << 6) | c3);
+  }
+  return new Uint8Array(bytes).buffer;
 }
 
 // ─── Salt management ─────────────────────────────────────────────────────────
 
 export function getOrCreateSalt(): Uint8Array {
   const stored = localStorage.getItem(KEY_STORAGE_KEY);
-  if (stored) return new Uint8Array(Array.from(atob(stored), (c) => c.charCodeAt(0)));
+  if (stored) return new Uint8Array(base64ToBuf(stored));
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  localStorage.setItem(KEY_STORAGE_KEY, btoa(String.fromCharCode(...salt)));
+  localStorage.setItem(KEY_STORAGE_KEY, bufToBase64(salt.buffer));
   return salt;
 }
 
