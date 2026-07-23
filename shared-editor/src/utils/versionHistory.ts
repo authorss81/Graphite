@@ -184,29 +184,25 @@ export async function createDocCommit(docId: string, docTitle: string, editorSta
 
   const autoMessage = message || generateHumanCommitMessage(docTitle, prevCommit?.editorState || "", editorState, canvasData);
 
-  let realCommitHash = "";
-  try {
-    const fs = getGitFS();
-    if (fs) {
-      await ensureGitRepo();
-      const filePath = `${docId}.md`;
-      const noteText = extractHumanText(editorState);
-      await fs.promises.writeFile(`${GIT_DIR}/${filePath}`, noteText || editorState);
-      await git.add({ fs, dir: GIT_DIR, filepath: filePath });
-      realCommitHash = await git.commit({
-        fs,
-        dir: GIT_DIR,
-        message: autoMessage,
-        author: {
-          name: "Graphite User",
-          email: "user@graphite.local",
-        },
-      });
-    } else {
-      realCommitHash = "git_" + generateUUID().replace(/-/g, "").substring(0, 16);
-    }
-  } catch {
-    realCommitHash = "git_" + generateUUID().replace(/-/g, "").substring(0, 16);
+  const fs = getGitFS();
+  await ensureGitRepo();
+  const filePath = `${docId}.md`;
+  const noteText = extractHumanText(editorState);
+  await fs.promises.writeFile(`${GIT_DIR}/${filePath}`, noteText || editorState);
+  await git.add({ fs, dir: GIT_DIR, filepath: filePath });
+  const realCommitHash = await git.commit({
+    fs,
+    dir: GIT_DIR,
+    message: autoMessage,
+    author: {
+      name: "Graphite User",
+      email: "user@graphite.local",
+    },
+  });
+
+  // Deduplicate: skip save if no change
+  if (prevCommit && prevCommit.editorState === editorState && JSON.stringify(prevCommit.canvasData) === JSON.stringify(canvasData)) {
+    return prevCommit;
   }
 
   const commit: DocCommit = {
@@ -218,10 +214,6 @@ export async function createDocCommit(docId: string, docTitle: string, editorSta
     editorState,
     canvasData,
   };
-
-  if (prevCommit && prevCommit.editorState === editorState && JSON.stringify(prevCommit.canvasData) === JSON.stringify(canvasData)) {
-    return prevCommit;
-  }
 
   map[docId] = [commit, ...list].slice(0, 50);
   saveHistoryMap(map);
@@ -259,4 +251,10 @@ export function computeTextDiff(oldText: string, newText: string): { type: "add"
   }
 
   return diffs;
+}
+
+// Eagerly initialize git filesystem on module load in browser
+if (typeof window !== "undefined" && typeof indexedDB !== "undefined") {
+  getGitFS();
+  ensureGitRepo().catch(() => {});
 }

@@ -22,6 +22,7 @@ import { $createQuoteNode } from "@lexical/rich-text";
 import { $createCodeNode } from "@lexical/code";
 import { isPluginActive } from "../utils/pluginSystem";
 import { PomodoroWidget } from "./PomodoroWidget";
+import { AudioRecording } from "./AudioRecording";
 
 import {
   Bold,
@@ -244,6 +245,7 @@ export function EditorToolbar() {
       </ToolbarButton>
 
       {showPomodoro && <PomodoroWidget />}
+      <AudioRecording />
     </div>
   );
 }

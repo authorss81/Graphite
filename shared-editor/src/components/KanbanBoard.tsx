@@ -1,157 +1,151 @@
-import { useState } from "react";
-import { Plus, Trash2, CheckCircle2, Circle, Clock } from "lucide-react";
+import { useState, useMemo } from "react";
+import { useNoteStore } from "../store/useNoteStore";
+import { Plus, Trash2, CheckCircle2, Circle, Clock, FileText } from "lucide-react";
 
-export interface KanbanCard {
+interface ChecklistItem {
   id: string;
-  title: string;
-  status: "todo" | "in_progress" | "done";
-  tag?: string;
+  text: string;
+  checked: boolean;
+}
+
+interface DocChecklistGroup {
+  docId: string;
+  docTitle: string;
+  items: ChecklistItem[];
+}
+
+function extractChecklists(editorState: string): ChecklistItem[] {
+  if (!editorState) return [];
+  try {
+    const parsed = JSON.parse(editorState);
+    const items: ChecklistItem[] = [];
+    const traverse = (node: any) => {
+      if (typeof node.checked === "boolean") {
+        items.push({ id: node.id || crypto.randomUUID(), text: node.text || "", checked: node.checked });
+      }
+      if (node.children) node.children.forEach(traverse);
+    };
+    if (parsed.root) traverse(parsed.root);
+    return items;
+  } catch {
+    return [];
+  }
 }
 
 export function KanbanBoard() {
-  const [cards, setCards] = useState<KanbanCard[]>([
-    { id: "k1", title: "Setup database schema", status: "done", tag: "Backend" },
-    { id: "k2", title: "Implement Kanban block view", status: "in_progress", tag: "UI" },
-    { id: "k3", title: "Add drag & drop sorting", status: "todo", tag: "Feature" },
-  ]);
+  const documents = useNoteStore((s) => s.documents);
+  const selectDocument = useNoteStore((s) => s.selectDocument);
 
   const [newTitle, setNewTitle] = useState("");
-  const [activeColumn, setActiveColumn] = useState<"todo" | "in_progress" | "done">("todo");
+  const [filterDoc, setFilterDoc] = useState<string | "all">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "todo" | "in_progress" | "done">("all");
 
-  const addCard = (column: "todo" | "in_progress" | "done") => {
-    if (!newTitle.trim()) return;
-    const card: KanbanCard = {
-      id: "k_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8),
-      title: newTitle.trim(),
-      status: column,
-      tag: "Task",
-    };
-    setCards([...cards, card]);
-    setNewTitle("");
+  const checklistGroups = useMemo(() => {
+    const groups: DocChecklistGroup[] = [];
+    for (const [docId, doc] of Object.entries(documents)) {
+      if (doc.isArchived) continue;
+      const items = extractChecklists(doc.editorState);
+      if (items.length > 0) {
+        groups.push({ docId, docTitle: doc.title || "Untitled", items });
+      }
+    }
+    return groups;
+  }, [documents]);
+
+  const allItems = useMemo(() => {
+    const items: { item: ChecklistItem; docId: string; docTitle: string }[] = [];
+    for (const group of checklistGroups) {
+      for (const item of group.items) {
+        items.push({ item, docId: group.docId, docTitle: group.docTitle });
+      }
+    }
+    return items;
+  }, [checklistGroups]);
+
+  const filteredItems = useMemo(() => {
+    return allItems.filter(({ item, docId }) => {
+      if (filterDoc !== "all" && docId !== filterDoc) return false;
+      if (filterStatus === "todo" && item.checked) return false;
+      if (filterStatus === "done" && !item.checked) return false;
+      return true;
+    });
+  }, [allItems, filterDoc, filterStatus]);
+
+  const toggleItem = (docId: string, itemId: string, checked: boolean) => {
+    const doc = documents[docId];
+    if (!doc) return;
+    try {
+      const parsed = JSON.parse(doc.editorState);
+      const toggle = (node: any) => {
+        if ((node.id === itemId || typeof node.checked === "boolean") && node.id === itemId) {
+          node.checked = checked;
+        }
+        if (node.children) node.children.forEach(toggle);
+      };
+      if (parsed.root) toggle(parsed.root);
+      useNoteStore.getState().updateCurrentContent(JSON.stringify(parsed), doc.canvasData);
+    } catch {}
   };
 
-  const moveCard = (cardId: string, nextStatus: "todo" | "in_progress" | "done") => {
-    setCards(cards.map((c) => (c.id === cardId ? { ...c, status: nextStatus } : c)));
-  };
+  const todoItems = filteredItems.filter(({ item }) => !item.checked);
+  const inProgressItems = filteredItems.filter(({ item }) => item.checked);
+  const doneItems: typeof filteredItems = [];
 
-  const deleteCard = (cardId: string) => {
-    setCards(cards.filter((c) => c.id !== cardId));
-  };
-
-  const columns: { id: "todo" | "in_progress" | "done"; title: string; icon: any; color: string }[] = [
-    { id: "todo", title: "To Do", icon: Circle, color: "#f59e0b" },
-    { id: "in_progress", title: "In Progress", icon: Clock, color: "#6366f1" },
-    { id: "done", title: "Completed", icon: CheckCircle2, color: "#10b981" },
+  const columns = [
+    { id: "todo" as const, title: "To Do", icon: Circle, color: "#f59e0b", items: todoItems },
+    { id: "in_progress" as const, title: "In Progress", icon: Clock, color: "#6366f1", items: inProgressItems },
+    { id: "done" as const, title: "Completed", icon: CheckCircle2, color: "#10b981", items: doneItems },
   ];
 
   return (
-    <div
-      className="graphite-kanban-board"
-      style={{
-        background: "var(--bg-secondary)",
-        border: "1px solid var(--border-color)",
-        borderRadius: "12px",
-        padding: "16px",
-        margin: "16px 0",
-      }}
-    >
-      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-        📊 Database — Kanban View
+    <div className="graphite-kanban-board" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "12px", padding: "16px", margin: "16px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+        <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px" }}>
+          <FileText size={16} /> Kanban — {allItems.length} items across {checklistGroups.length} docs
+        </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <select value={filterDoc} onChange={(e) => setFilterDoc(e.target.value)} style={{ background: "var(--bg-tertiary)", color: "var(--text-primary)", border: "1px solid var(--border-color)", borderRadius: "6px", padding: "4px 8px", fontSize: "12px" }}>
+            <option value="all">All Docs</option>
+            {checklistGroups.map((g) => <option key={g.docId} value={g.docId}>{g.docTitle}</option>)}
+          </select>
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)} style={{ background: "var(--bg-tertiary)", color: "var(--text-primary)", border: "1px solid var(--border-color)", borderRadius: "6px", padding: "4px 8px", fontSize: "12px" }}>
+            <option value="all">All</option>
+            <option value="todo">To Do</option>
+            <option value="in_progress">In Progress</option>
+            <option value="done">Completed</option>
+          </select>
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
         {columns.map((col) => {
           const Icon = col.icon;
-          const colCards = cards.filter((c) => c.status === col.id);
-
           return (
-            <div
-              key={col.id}
-              style={{
-                background: "var(--bg-tertiary)",
-                border: "1px solid var(--border-color)",
-                borderRadius: "10px",
-                padding: "12px",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600, color: col.color }}>
-                  <Icon size={16} />
-                  {col.title} ({colCards.length})
-                </div>
+            <div key={col.id} style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", borderRadius: "10px", padding: "12px", display: "flex", flexDirection: "column", minHeight: "200px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 600, color: col.color, marginBottom: "10px" }}>
+                <Icon size={16} /> {col.title} ({col.items.length})
               </div>
-
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px", minHeight: "120px" }}>
-                {colCards.map((card) => (
-                  <div
-                    key={card.id}
-                    style={{
-                      background: "var(--bg-secondary)",
-                      border: "1px solid var(--border-color)",
-                      borderRadius: "8px",
-                      padding: "10px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "6px",
-                    }}
-                  >
-                    <div style={{ fontSize: "13px", color: "var(--text-primary)", fontWeight: 500 }}>{card.title}</div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "11px" }}>
-                      <span style={{ padding: "1px 6px", background: "rgba(99, 102, 241, 0.15)", color: "var(--accent-color)", borderRadius: "4px" }}>
-                        {card.tag}
-                      </span>
-                      <div style={{ display: "flex", gap: "4px" }}>
-                        {col.id !== "todo" && (
-                          <button type="button" onClick={() => moveCard(card.id, "todo")} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "10px" }}>
-                            ← ToDo
-                          </button>
-                        )}
-                        {col.id !== "in_progress" && (
-                          <button type="button" onClick={() => moveCard(card.id, "in_progress")} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "10px" }}>
-                            Progress
-                          </button>
-                        )}
-                        {col.id !== "done" && (
-                          <button type="button" onClick={() => moveCard(card.id, "done")} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "10px" }}>
-                            Done →
-                          </button>
-                        )}
-                        <button type="button" onClick={() => deleteCard(card.id)} style={{ background: "transparent", border: "none", color: "#f87171", cursor: "pointer" }}>
-                          <Trash2 size={12} />
-                        </button>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+                {col.items.map(({ item, docId, docTitle }) => (
+                  <div key={item.id} style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "8px", padding: "10px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                      <input type="checkbox" checked={item.checked} onChange={(e) => toggleItem(docId, item.id, e.target.checked)} style={{ marginTop: "2px", accentColor: "var(--accent-color)" }} />
+                      <div style={{ flex: 1, fontSize: "13px", color: "var(--text-primary)", fontWeight: 500, textDecoration: item.checked ? "line-through" : "none", opacity: item.checked ? 0.6 : 1 }}>
+                        {item.text}
                       </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "11px" }}>
+                      <button onClick={() => selectDocument(docId)} style={{ background: "rgba(99, 102, 241, 0.15)", border: "none", color: "var(--accent-color)", borderRadius: "4px", padding: "2px 6px", cursor: "pointer", fontSize: "11px" }}>
+                        {docTitle}
+                      </button>
                     </div>
                   </div>
                 ))}
-              </div>
-
-              {/* Add Card Input */}
-              <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
-                <input
-                  type="text"
-                  placeholder="+ New task..."
-                  value={activeColumn === col.id ? newTitle : ""}
-                  onChange={(e) => { setActiveColumn(col.id); setNewTitle(e.target.value); }}
-                  onKeyDown={(e) => e.key === "Enter" && addCard(col.id)}
-                  style={{
-                    flex: 1,
-                    background: "var(--bg-secondary)",
-                    color: "var(--text-primary)",
-                    border: "1px solid var(--border-color)",
-                    borderRadius: "6px",
-                    padding: "4px 8px",
-                    fontSize: "12px",
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => addCard(col.id)}
-                  style={{ background: "var(--accent-color)", color: "#fff", border: "none", borderRadius: "6px", padding: "4px 8px", cursor: "pointer" }}
-                >
-                  <Plus size={14} />
-                </button>
+                {col.items.length === 0 && (
+                  <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "12px", fontStyle: "italic" }}>
+                    {col.id === "todo" ? "No pending tasks" : col.id === "in_progress" ? "No items in progress" : "No completed items"}
+                  </div>
+                )}
               </div>
             </div>
           );
