@@ -79,6 +79,7 @@ export function PublishModal({ isOpen, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close modal"
             style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
           >
             <X size={18} />

@@ -35,19 +35,27 @@ export function VersionHistoryModal({ isOpen, onClose }: Props) {
   if (!isOpen || !currentDoc) return null;
 
   const handleCreateSnapshot = async () => {
-    const msg = customMsg.trim() || `Manual Snapshot (${new Date().toLocaleTimeString()})`;
-    const commit = await createDocCommit(docId, currentDoc.title, currentDoc.editorState, currentDoc.canvasData, msg);
-    toast("Git snapshot commit created!", "success");
-    setCustomMsg("");
-    refreshCommits();
-    setSelectedCommit(commit);
+    try {
+      const msg = customMsg.trim() || `Manual Snapshot (${new Date().toLocaleTimeString()})`;
+      const commit = await createDocCommit(docId, currentDoc.title, currentDoc.editorState, currentDoc.canvasData, msg);
+      toast("Git snapshot commit created!", "success");
+      setCustomMsg("");
+      refreshCommits();
+      setSelectedCommit(commit);
+    } catch {
+      toast("Failed to create snapshot", "error");
+    }
   };
 
   const handleRestore = async (commit: DocCommit) => {
-    await createDocCommit(docId, currentDoc.title, currentDoc.editorState, currentDoc.canvasData, `Before restoring to ${new Date(commit.timestamp).toLocaleTimeString()}`);
-    updateCurrentContent(commit.editorState, commit.canvasData);
-    toast(`Restored version from ${new Date(commit.timestamp).toLocaleString()}`, "success");
-    onClose();
+    try {
+      await createDocCommit(docId, currentDoc.title, currentDoc.editorState, currentDoc.canvasData, `Before restoring to ${new Date(commit.timestamp).toLocaleTimeString()}`);
+      updateCurrentContent(commit.editorState, commit.canvasData);
+      toast(`Restored version from ${new Date(commit.timestamp).toLocaleString()}`, "success");
+      onClose();
+    } catch {
+      toast("Failed to restore version", "error");
+    }
   };
 
   const currentPlainText = currentDoc.editorState || "";
@@ -105,6 +113,7 @@ export function VersionHistoryModal({ isOpen, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close modal"
             style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
           >
             <X size={18} />

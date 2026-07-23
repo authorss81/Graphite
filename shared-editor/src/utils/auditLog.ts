@@ -77,7 +77,7 @@ export async function verifyAuditChain(): Promise<boolean> {
   return true;
 }
 
-export function logAuditEvent(
+export async function logAuditEvent(
   category: AuditCategory,
   action: string,
   opts: {
@@ -87,7 +87,7 @@ export function logAuditEvent(
     userName?: string;
     metadata?: Record<string, string | number | boolean>;
   } = {}
-): void {
+): Promise<void> {
   const key = getHmacKey();
   const events = loadRaw();
   const prevHmac = events.length > 0 ? (events[events.length - 1] as any).hmac || "" : "";
@@ -97,22 +97,11 @@ export function logAuditEvent(
     category,
     action,
     ...opts,
-    hmac: "",
   };
-  // Store immediately (without HMAC for fire-and-forget)
+  const payload = prevHmac + JSON.stringify({ ...event, hmac: undefined });
+  event.hmac = await computeHmac(payload, key);
   events.push(event);
   saveRaw(events);
-  // Compute HMAC asynchronously and update stored event
-  const payload = prevHmac + JSON.stringify({ ...event, hmac: undefined });
-  computeHmac(payload, key).then((hmac) => {
-    event.hmac = hmac;
-    const stored = loadRaw();
-    const idx = stored.findIndex((e) => e.id === event.id);
-    if (idx !== -1) {
-      stored[idx] = event;
-      saveRaw(stored);
-    }
-  }).catch(() => {});
 }
 
 export function getAuditLog(filter?: { category?: AuditCategory; docId?: string }): AuditEvent[] {

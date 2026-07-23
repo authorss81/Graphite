@@ -56,6 +56,9 @@ export function PluginMarketplaceModal({ isOpen, onClose }: Props) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Plugin Marketplace"
       className="graphite-modal-backdrop"
       onClick={onClose}
       style={{
@@ -101,7 +104,7 @@ export function PluginMarketplaceModal({ isOpen, onClose }: Props) {
               Plugin Marketplace & Extensions
             </h3>
           </div>
-          <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+          <button type="button" onClick={onClose} aria-label="Close modal" style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
             <X size={18} />
           </button>
         </div>

@@ -35,6 +35,8 @@ export function ToastContainer() {
           key={t.id}
           className={`graphite-toast graphite-toast--${t.type}`}
           onClick={() => dismiss(t.id)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") dismiss(t.id); }}
+          tabIndex={0}
           role="alert"
         >
           {t.message}

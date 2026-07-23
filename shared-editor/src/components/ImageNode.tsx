@@ -47,9 +47,18 @@ export class ImageNode extends DecoratorNode<ReactElement> {
     height?: number,
   ) {
     super(key);
-    // Block javascript: URLs in image sources
-    if (typeof src === "string" && src.trim().toLowerCase().startsWith("javascript:")) {
-      throw new Error("Image source cannot be a javascript: URL");
+    // Block dangerous URL schemes in image sources
+    if (typeof src === "string") {
+      try {
+        const url = new URL(src.trim());
+        if (url.protocol !== "https:" && url.protocol !== "http:" && url.protocol !== "data:" && url.protocol !== "blob:") {
+          throw new Error("Image source uses a disallowed URL scheme");
+        }
+      } catch {
+        if (src.trim().toLowerCase().startsWith("javascript:")) {
+          throw new Error("Image source cannot be a javascript: URL");
+        }
+      }
     }
     this.__src = src;
     this.__alt = alt;

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, startTransition } from "react";
+import { useEffect, useCallback, useRef, useState, startTransition } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -309,6 +309,8 @@ export function Editor({ docId, initialState }: EditorProps) {
     }
   }, []);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleEditorChange = useCallback((editorState: EditorState) => {
     const targetDocId = docId;
     const currentDoc = useNoteStore.getState().documents[targetDocId];
@@ -316,12 +318,14 @@ export function Editor({ docId, initialState }: EditorProps) {
       return;
     }
 
+    setIsSaving(true);
     pendingSaveRef.current = { targetDocId, editorState };
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
       flushPendingSave();
+      setIsSaving(false);
     }, 300);
   }, [docId, flushPendingSave]);
 
@@ -338,6 +342,20 @@ export function Editor({ docId, initialState }: EditorProps) {
         <EditorStateLoader initialState={initialState} />
         <div className="editor-toolbar-wrap">
           <EditorToolbar />
+          {isSaving && (
+            <span
+              style={{
+                position: "absolute",
+                right: 8,
+                top: 6,
+                fontSize: 10,
+                color: "var(--text-muted)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              Saving...
+            </span>
+          )}
         </div>
         <TagManager />
         <TaskProgressHeader />

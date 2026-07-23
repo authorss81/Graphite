@@ -117,10 +117,12 @@ export function SecurityModal({
       setIsSetupMode(false);
       setRecoveryCodeInput("");
       setSuccess("Encryption key created! Save your recovery codes.");
-      logAuditEvent("encryption", "Encryption passphrase configured", { userId: "local" });
+      await logAuditEvent("encryption", "Encryption passphrase configured", { userId: "local" });
     } catch {
       setError("Failed to set up encryption. Your browser may not support Web Crypto.");
     }
+    setPassphrase("");
+    setConfirmPassphrase("");
     setIsProcessing(false);
   }, [passphrase, confirmPassphrase]);
 
@@ -153,7 +155,7 @@ export function SecurityModal({
       // Clear passphrase from memory
       setUnlockPassphrase("");
       setSuccess("Unlocked successfully.");
-      logAuditEvent("encryption", "Document decrypted", { docId: currentDocId, docTitle: currentDocTitle });
+      await logAuditEvent("encryption", "Document decrypted", { docId: currentDocId, docTitle: currentDocTitle });
     } catch {
       unlockAttemptsRef.current++;
       lastUnlockAttemptRef.current = Date.now();
@@ -188,7 +190,7 @@ export function SecurityModal({
       setCryptoKey(key);
       setRecoveryCodeInput("");
       setSuccess("Recovery code accepted. Document unlocked.");
-      logAuditEvent("encryption", "Document unlocked via recovery code", { docId: currentDocId });
+      await logAuditEvent("encryption", "Document unlocked via recovery code", { docId: currentDocId });
     } catch {
       setError("Recovery unlock failed.");
     }
@@ -210,7 +212,7 @@ export function SecurityModal({
       // Purge version history when encryption is toggled (old versions contain plaintext)
       clearDocCommits(currentDocId);
       setSuccess("Document encrypted with AES-256-GCM. Version history cleared.");
-      logAuditEvent("encryption", "Document encrypted", { docId: currentDocId, docTitle: currentDocTitle });
+      await logAuditEvent("encryption", "Document encrypted", { docId: currentDocId, docTitle: currentDocTitle });
     } catch {
       setError("Encryption failed.");
     }
@@ -237,6 +239,9 @@ export function SecurityModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Security & Encryption"
       style={{
         position: "fixed",
         inset: 0,
@@ -290,6 +295,7 @@ export function SecurityModal({
             </div>
             <button
               onClick={onClose}
+              aria-label="Close modal"
               style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "6px", borderRadius: "8px" }}
             >
               <X size={18} />
@@ -718,7 +724,7 @@ export function SecurityModal({
                             onDecryptDoc(decrypted);
                             setDocLocked(currentDocId, false);
                             setSuccess("Document decrypted.");
-                            logAuditEvent("encryption", "Document decrypted", { docId: currentDocId, docTitle: currentDocTitle });
+                            await logAuditEvent("encryption", "Document decrypted", { docId: currentDocId, docTitle: currentDocTitle });
                           } catch {
                             setError("Decryption failed — wrong key?");
                           }
@@ -785,7 +791,7 @@ export function SecurityModal({
                     <Download size={12} /> Export CSV
                   </button>
                   <button
-                    onClick={() => { clearAuditLog(); setAuditLog([]); }}
+                    onClick={() => { if (confirm("Clear entire audit log? This cannot be undone.")) { clearAuditLog(); setAuditLog([]); } }}
                     style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "6px", padding: "6px 10px", fontSize: "11px", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
                   >
                     <Trash2 size={12} /> Clear

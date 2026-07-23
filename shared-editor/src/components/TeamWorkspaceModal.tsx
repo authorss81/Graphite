@@ -190,6 +190,7 @@ export function TeamWorkspaceModal({
             </div>
             <button
               onClick={onClose}
+              aria-label="Close modal"
               style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", borderRadius: "8px", padding: "6px" }}
             >
               <X size={18} />

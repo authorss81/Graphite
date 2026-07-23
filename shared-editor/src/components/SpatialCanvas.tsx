@@ -195,7 +195,7 @@ export function SpatialCanvas() {
         minHeight: "500px",
         background: "#0f1015",
         backgroundImage: "radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px)",
-        backgroundSize: "24px 24px",
+        backgroundSize: `${24 * zoomLevel}px ${24 * zoomLevel}px`,
         borderRadius: "12px",
         border: "1px solid var(--border-color)",
         overflow: "hidden",

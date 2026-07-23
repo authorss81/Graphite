@@ -218,7 +218,15 @@ export function EditorToolbar() {
         <ListOrdered size={16} />
       </ToolbarButton>
       <ToolbarDivider />
-      <ToolbarButton onClick={() => editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://")} title="Insert Link">
+      <ToolbarButton
+        onClick={() => {
+          const selection = editor.getEditorState().read(() => $getSelection());
+          if (selection && !selection.isCollapsed()) {
+            editor.dispatchCommand(TOGGLE_LINK_COMMAND, "https://");
+          }
+        }}
+        title="Insert Link"
+      >
         <Link size={16} />
       </ToolbarButton>
       <ToolbarButton onClick={insertImage} title="Upload Image">

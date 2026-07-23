@@ -145,6 +145,8 @@ export function Sidebar() {
       <div key={doc.id}>
         <div
           className={`sidebar-row${isSelected ? " selected" : ""}${translateX !== 0 ? " swiping" : ""}`}
+          role="treeitem"
+          aria-selected={isSelected}
           style={{
             paddingLeft: 8 + depth * 16,
             transform: translateX ? `translateX(${translateX}px)` : undefined,
@@ -378,7 +380,7 @@ export function Sidebar() {
         </div>
       )}
 
-      <div className="sidebar-tree">
+      <div className="sidebar-tree" role="tree">
         {tree.length === 0 ? (
           <p className="sidebar-empty">
             {showArchived ? "No archived documents." : activeTagFilter ? `No notes with #${activeTagFilter}` : "No documents yet."}

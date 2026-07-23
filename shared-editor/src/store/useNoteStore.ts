@@ -224,7 +224,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         activeTab: "editor",
       })
     );
-    SupabaseSyncService.getInstance().syncDocument(id, doc).catch(() => {});
+    SupabaseSyncService.getInstance().syncDocument(id, doc).catch((err) => console.error("[Sync]", err));
     return id;
   },
 
@@ -241,7 +241,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     };
     const documents = { ...get().documents, [id]: doc };
     set(persistAndSet(documents));
-    SupabaseSyncService.getInstance().syncDocument(id, doc).catch(() => {});
+    SupabaseSyncService.getInstance().syncDocument(id, doc).catch((err) => console.error("[Sync]", err));
     return id;
   },
 
@@ -251,7 +251,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...documents[id], title: title.trim() || "Untitled", updatedAt: Date.now() };
     documents[id] = updated;
     set(persistAndSet(documents));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync]", err));
   },
 
   deleteDocument: (id) => {
@@ -326,7 +326,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       canvasData: nextCanvasData,
     });
     createDocCommit(docId, cur.title, nextEditorState, nextCanvasData);
-    SupabaseSyncService.getInstance().syncDocument(docId, next).catch(() => {});
+    SupabaseSyncService.getInstance().syncDocument(docId, next).catch((err) => console.error("[Sync] update failed:", err));
   },
 
   updateContentForDoc: (targetDocId, editorState, canvasData) => {
@@ -360,7 +360,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
 
     createDocCommit(targetDocId, next.title, nextEditorState, nextCanvasData);
-    SupabaseSyncService.getInstance().syncDocument(targetDocId, next).catch(() => {});
+    SupabaseSyncService.getInstance().syncDocument(targetDocId, next).catch((err) => console.error("[Sync] updateForDoc failed:", err));
   },
 
   togglePinDocument: (id) => {
@@ -370,7 +370,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, isPinned: !cur.isPinned, updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync]", err));
   },
 
   toggleArchiveDocument: (id) => {
@@ -380,7 +380,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, isArchived: !cur.isArchived, updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync] toggleArchive failed:", err));
   },
 
   addTagToDocument: (id, tag) => {
@@ -394,7 +394,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, tags: [...existing, cleanTag], updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync] addTag failed:", err));
   },
 
   removeTagFromDocument: (id, tag) => {
@@ -405,7 +405,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, tags: existing.filter((t) => t !== tag), updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync] removeTag failed:", err));
   },
 
   setSpatialData: (cards, edges) => set({ spatialCards: cards, spatialEdges: edges }),

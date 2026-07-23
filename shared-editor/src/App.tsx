@@ -168,6 +168,7 @@ export function App() {
             alignItems: "center",
             borderBottom: "1px solid var(--border-color)",
             paddingBottom: "16px",
+            overflowX: "auto",
           }}
         >
           <div>
@@ -244,7 +245,7 @@ export function App() {
               <ShieldCheck size={16} />
               Security
             </button>
-            <button className="graphite-btn" onClick={() => openModal("publish")}>
+            <button className="graphite-btn" onClick={() => openModal("publish")} style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", border: "none" }}>
               <Share2 size={16} />
               Publish
             </button>

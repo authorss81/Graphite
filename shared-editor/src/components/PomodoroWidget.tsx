@@ -1,16 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Clock, Play, Pause, RotateCcw } from "lucide-react";
 
 export function PomodoroWidget() {
   const [seconds, setSeconds] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
 
+  const targetRef = useRef(0);
+
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null;
     if (isActive && seconds > 0) {
-      const targetTime = Date.now() + seconds * 1000;
+      targetRef.current = Date.now() + seconds * 1000;
       timer = setInterval(() => {
-        const remaining = Math.max(0, Math.round((targetTime - Date.now()) / 1000));
+        const remaining = Math.max(0, Math.round((targetRef.current - Date.now()) / 1000));
         setSeconds(remaining);
         if (remaining === 0) setIsActive(false);
       }, 500);
@@ -18,7 +20,7 @@ export function PomodoroWidget() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isActive, seconds]);
+  }, [isActive]);
 
   const toggleTimer = () => setIsActive(!isActive);
   const resetTimer = () => {
