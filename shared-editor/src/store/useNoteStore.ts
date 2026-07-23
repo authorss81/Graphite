@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { GraphiteDoc } from "../utils/docStorage";
 import { newDocId, loadDocs, saveDocs } from "../utils/docStorage";
+import type { SpatialCard, SpatialEdge } from "../utils/spatialCanvasStorage";
 import { SupabaseSyncService } from "../utils/supabase";
 import { createDocCommit } from "../utils/versionHistory";
 
@@ -68,6 +69,8 @@ interface NoteStore {
   completedTodos: number;
   gitStatus: string;
   toasts: Toast[];
+  spatialCards: SpatialCard[];
+  spatialEdges: SpatialEdge[];
 
   setActiveTab: (tab: "editor" | "canvas" | "spatial" | "graph" | "kanban" | "meta") => void;
   setGitStatus: (status: string) => void;
@@ -87,6 +90,7 @@ interface NoteStore {
   toggleArchiveDocument: (id: string) => void;
   addTagToDocument: (id: string, tag: string) => void;
   removeTagFromDocument: (id: string, tag: string) => void;
+  setSpatialData: (cards: SpatialCard[], edges: SpatialEdge[]) => void;
 }
 
 function persistAndSet(documents: Record<string, GraphiteDoc>, extra: Partial<NoteStore> = {}) {
@@ -107,6 +111,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   completedTodos: 0,
   gitStatus: "",
   toasts: [],
+  spatialCards: [],
+  spatialEdges: [],
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setGitStatus: (status) => set({ gitStatus: status }),
@@ -394,4 +400,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     set(persistAndSet(nextDocs));
     SupabaseSyncService.getInstance().syncDocument(id, updated).catch(() => {});
   },
+
+  setSpatialData: (cards, edges) => set({ spatialCards: cards, spatialEdges: edges }),
 }));

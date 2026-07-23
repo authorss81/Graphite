@@ -127,6 +127,8 @@ export function TeamWorkspaceModal({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
       style={{
         position: "fixed",
         inset: 0,

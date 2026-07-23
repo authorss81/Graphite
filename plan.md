@@ -992,12 +992,12 @@ Additional critical/high issues discovered during cross-phase audit not in previ
 
 | # | Vulnerability | File:Line | Severity | Description | Status |
 |---|---------------|-----------|----------|-------------|--------|
-| 27.1 | AIChatPanel `"aiPanel"` vs `"ai"` key mismatch — FEATURE BROKEN | `App.tsx:199` vs `ModalManager.tsx:51` | CRITICAL | Dispatch uses `"aiPanel"` but ModalManager reads `modals["ai"]`. AI Assistant **never opens**. User-facing feature is completely broken. | Pending |
-| 27.2 | `PomodoroWidget.tsx` interval leak | `PomodoroWidget.tsx:8-18` | MEDIUM | `setInterval` with no cleanup `useEffect`. Timer continues after unmount, calling stale React state setters. | Pending |
-| 27.3 | `GraphView.tsx` RAF runs with 0 nodes | `GraphView.tsx:137-207` | MEDIUM | Force simulation runs at 60fps even when graph is empty — wasted CPU/battery. | Pending |
-| 27.4 | `Sidebar.tsx` no virtual scrolling | `Sidebar.tsx:82` renders ALL tree nodes at once | MEDIUM | With 1000+ documents, full tree render blocks main thread for seconds. No windowing/virtualization. | Pending |
-| 27.5 | `SpatialCanvas.tsx` bypasses store — direct storage access | `SpatialCanvas.tsx:4-8,29,73` | HIGH | Direct `loadSpatialCanvasData()`/`saveSpatialCanvasData()` calls in component break Zustand reactivity — other components reading from store get stale data. | Pending |
-| 27.6 | Modals missing Escape handlers (4 of 6) | `SecurityModal.tsx`, `VersionHistoryModal.tsx`, `PublishModal.tsx`, `TeamWorkspaceModal.tsx` | MEDIUM | User cannot close these modals via keyboard (Escape key). Desktop accessibility violation. | Pending |
-| 27.7 | No focus trapping in 6 of 7 modals | All modals except AIChatPanel | MEDIUM | Tab key cycles behind modal backdrop — user can interact with background page while modal is open. WCAG violation. | Pending |
-| 27.8 | Touch events absent on SpatialCanvas + GraphView | `SpatialCanvas.tsx:170-172`, `GraphView.tsx:319-322` | HIGH | Mobile touch interaction completely broken on both canvas views — only mouse events handled. Users on tablets/phones cannot pan or zoom. | Pending |
+| 27.1 | AIChatPanel `"aiPanel"` vs `"ai"` key mismatch — FEATURE BROKEN | `App.tsx:199` vs `ModalManager.tsx:51` | CRITICAL | Dispatch uses `"aiPanel"` but ModalManager reads `modals["ai"]`. AI Assistant **never opens**. User-facing feature is completely broken. | ✅ Done |
+| 27.2 | `PomodoroWidget.tsx` interval leak | `PomodoroWidget.tsx:8-18` | MEDIUM | `setInterval` with no cleanup `useEffect`. Timer continues after unmount, calling stale React state setters. | ✅ Done (23.8) |
+| 27.3 | `GraphView.tsx` RAF runs with 0 nodes | `GraphView.tsx:137-207` | MEDIUM | Force simulation runs at 60fps even when graph is empty — wasted CPU/battery. | ✅ Done |
+| 27.4 | `Sidebar.tsx` no virtual scrolling | `Sidebar.tsx:82` renders ALL tree nodes at once | MEDIUM | With 1000+ documents, full tree render blocks main thread for seconds. No windowing/virtualization. | Deferred (Phase 24.8) |
+| 27.5 | `SpatialCanvas.tsx` bypasses store — direct storage access | `SpatialCanvas.tsx:4-8,29,73` | HIGH | Direct `loadSpatialCanvasData()`/`saveSpatialCanvasData()` calls in component break Zustand reactivity — other components reading from store get stale data. | ✅ Done |
+| 27.6 | Modals missing Escape handlers (4 of 6) | `SecurityModal.tsx`, `VersionHistoryModal.tsx`, `PublishModal.tsx`, `TeamWorkspaceModal.tsx` | MEDIUM | User cannot close these modals via keyboard (Escape key). Desktop accessibility violation. | ✅ Done |
+| 27.7 | No focus trapping in 6 of 7 modals | All modals except AIChatPanel | MEDIUM | Tab key cycles behind modal backdrop — user can interact with background page while modal is open. WCAG violation. | ✅ Done |
+| 27.8 | Touch events absent on SpatialCanvas + GraphView | `SpatialCanvas.tsx:170-172`, `GraphView.tsx:319-322` | HIGH | Mobile touch interaction completely broken on both canvas views — only mouse events handled. Users on tablets/phones cannot pan or zoom. | ✅ Done |
 

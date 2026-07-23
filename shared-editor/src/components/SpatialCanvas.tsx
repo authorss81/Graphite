@@ -1,20 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import { useNoteStore } from "../store/useNoteStore";
-import {
-  loadSpatialCanvasData,
-  saveSpatialCanvasData,
-  type SpatialCard,
-  type SpatialEdge,
-} from "../utils/spatialCanvasStorage";
+import type { SpatialCard, SpatialEdge } from "../utils/spatialCanvasStorage";
 import { ZoomIn, ZoomOut, Maximize2, Move, ArrowUpRight, ExternalLink, Trash2 } from "lucide-react";
 
 export function SpatialCanvas() {
   const documents = useNoteStore((s) => s.documents);
   const selectDocument = useNoteStore((s) => s.selectDocument);
   const setActiveTab = useNoteStore((s) => s.setActiveTab);
+  const storeCards = useNoteStore((s) => s.spatialCards);
+  const storeEdges = useNoteStore((s) => s.spatialEdges);
+  const setSpatialData = useNoteStore((s) => s.setSpatialData);
 
-  const [cards, setCards] = useState<SpatialCard[]>([]);
-  const [edges, setEdges] = useState<SpatialEdge[]>([]);
+  const [cards, setCards] = useState<SpatialCard[]>(storeCards);
+  const [edges, setEdges] = useState<SpatialEdge[]>(storeEdges);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
@@ -26,29 +24,26 @@ export function SpatialCanvas() {
   const panStartRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    const data = loadSpatialCanvasData();
-    if (data.cards.length === 0) {
+    if (storeCards.length === 0 && Object.values(documents).some((d) => !d.isFolder)) {
       // Seed initial cards from existing documents
       const docs = Object.values(documents).filter((d) => !d.isFolder);
-      if (docs.length > 0) {
-        const seededCards: SpatialCard[] = docs.slice(0, 4).map((d, i) => ({
-          id: "card_" + d.id,
-          docId: d.id,
-          title: d.title,
-          x: (i % 2) * 320 + 100,
-          y: Math.floor(i / 2) * 240 + 100,
-          width: 280,
-          height: 180,
-        }));
-        setCards(seededCards);
-        setEdges([]);
-        saveSpatialCanvasData({ cards: seededCards, edges: [] });
-      }
-    } else {
-      setCards(data.cards);
-      setEdges(data.edges);
+      const seededCards: SpatialCard[] = docs.slice(0, 4).map((d, i) => ({
+        id: "card_" + d.id,
+        docId: d.id,
+        title: d.title,
+        x: (i % 2) * 320 + 100,
+        y: Math.floor(i / 2) * 240 + 100,
+        width: 280,
+        height: 180,
+      }));
+      setCards(seededCards);
+      setEdges([]);
+      setSpatialData(seededCards, []);
+    } else if (storeCards.length > 0) {
+      setCards(storeCards);
+      setEdges(storeEdges);
     }
-  }, [documents]);
+  }, [documents]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getSnippet = (raw?: string): string => {
     if (!raw) return "Empty note";
@@ -70,7 +65,7 @@ export function SpatialCanvas() {
   const persist = (nextCards: SpatialCard[], nextEdges: SpatialEdge[]) => {
     setCards(nextCards);
     setEdges(nextEdges);
-    saveSpatialCanvasData({ cards: nextCards, edges: nextEdges });
+    setSpatialData(nextCards, nextEdges);
   };
 
   const addNoteToCanvas = (docId: string) => {
@@ -164,12 +159,34 @@ export function SpatialCanvas() {
     persist(nextCards, nextEdges);
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    handleMouseDownCanvas({ ...e, clientX: touch.clientX, clientY: touch.clientY, target: e.target } as unknown as React.MouseEvent);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    handleMouseMoveCanvas({ ...e, clientX: touch.clientX, clientY: touch.clientY } as unknown as React.MouseEvent);
+  };
+
+  const handleTouchEnd = () => {
+    handleMouseUpCanvas();
+  };
+
+  const handleCardTouchStart = (e: React.TouchEvent, card: SpatialCard) => {
+    const touch = e.touches[0];
+    handleCardMouseDown({ ...e, clientX: touch.clientX, clientY: touch.clientY } as unknown as React.MouseEvent, card);
+  };
+
   return (
     <div
       className="graphite-spatial-canvas"
       onMouseDown={handleMouseDownCanvas}
       onMouseMove={handleMouseMoveCanvas}
       onMouseUp={handleMouseUpCanvas}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       style={{
         position: "relative",
         width: "100%",
@@ -295,6 +312,7 @@ export function SpatialCanvas() {
             <div
               key={card.id}
               onMouseDown={(e) => handleCardMouseDown(e, card)}
+              onTouchStart={(e) => handleCardTouchStart(e, card)}
               style={{
                 position: "absolute",
                 top: card.y,

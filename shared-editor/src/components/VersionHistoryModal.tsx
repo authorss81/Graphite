@@ -56,6 +56,8 @@ export function VersionHistoryModal({ isOpen, onClose }: Props) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
       className="graphite-modal-backdrop"
       onClick={onClose}
       style={{

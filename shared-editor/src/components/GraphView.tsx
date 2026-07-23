@@ -138,6 +138,10 @@ export function GraphView() {
       if (!mounted) return;
       updateDimensions();
       const currentNodes = nodesRef.current;
+      if (currentNodes.length === 0) {
+        if (mounted) animIdRef.current = requestAnimationFrame(simulate);
+        return;
+      }
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
 
@@ -267,6 +271,20 @@ export function GraphView() {
     isPanningRef.current = false;
   };
 
+  const handleTouchStartCanvas = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = e.touches[0];
+    handleMouseDown({ ...e, clientX: touch.clientX, clientY: touch.clientY } as unknown as React.MouseEvent<HTMLCanvasElement>);
+  };
+
+  const handleTouchMoveCanvas = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = e.touches[0];
+    handleMouseMove({ ...e, clientX: touch.clientX, clientY: touch.clientY } as unknown as React.MouseEvent<HTMLCanvasElement>);
+  };
+
+  const handleTouchEndCanvas = () => {
+    handleMouseUp();
+  };
+
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
@@ -320,8 +338,11 @@ export function GraphView() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStartCanvas}
+        onTouchMove={handleTouchMoveCanvas}
+        onTouchEnd={handleTouchEndCanvas}
         onWheel={handleWheel}
-        style={{ width: "100%", height: "100%", cursor: isPanningRef.current ? "grabbing" : "grab" }}
+        style={{ width: "100%", height: "100%", cursor: isPanningRef.current ? "grabbing" : "grab", touchAction: "none" }}
       />
     </div>
   );

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { PublishModal } from "./PublishModal";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 import { SecurityModal } from "./SecurityModal";
@@ -13,12 +14,30 @@ interface ModalManagerProps {
   onCloseModal: (modalName: string) => void;
 }
 
+const MODAL_ORDER = ["aiPanel", "search", "publish", "history", "security", "team"];
+
 export function ModalManager({ modals, onCloseModal }: ModalManagerProps) {
   const docId = useNoteStore((s) => s.docId);
   const documents = useNoteStore((s) => s.documents);
   const session = useAuthStore((s) => s.session);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const currentDoc = documents[docId];
+
+  // Global Escape key — closes the topmost open modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      for (const name of MODAL_ORDER) {
+        if (modals[name]) {
+          e.stopPropagation();
+          onCloseModal(name);
+          return;
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [modals, onCloseModal]);
 
   return (
     <>
@@ -48,8 +67,8 @@ export function ModalManager({ modals, onCloseModal }: ModalManagerProps) {
         onClose={() => onCloseModal("search")}
       />
       <AIChatPanel
-        isOpen={Boolean(modals["ai"])}
-        onClose={() => onCloseModal("ai")}
+        isOpen={Boolean(modals["aiPanel"])}
+        onClose={() => onCloseModal("aiPanel")}
       />
       <TeamWorkspaceModal
         isOpen={Boolean(modals["team"])}
