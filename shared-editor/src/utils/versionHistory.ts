@@ -220,6 +220,20 @@ export function getDocCommits(docId: string): DocCommit[] {
   return map[docId] || [];
 }
 
+export function clearDocCommits(docId: string): void {
+  const all = loadAllCommits();
+  const filtered = all.filter((c) => c.docId !== docId);
+  localStorage.setItem(COMMITS_KEY, JSON.stringify(filtered));
+}
+
+function loadAllCommits(): DocCommit[] {
+  try {
+    return JSON.parse(localStorage.getItem(COMMITS_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
 export function computeTextDiff(oldText: string, newText: string): { type: "add" | "del" | "same"; text: string }[] {
   const oldLines = extractHumanText(oldText).split("\n").filter((l) => l.trim() !== "");
   const newLines = extractHumanText(newText).split("\n").filter((l) => l.trim() !== "");

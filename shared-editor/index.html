@@ -20,6 +20,21 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Graphite" />
 
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.supabase.co;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co;
+      img-src 'self' data: blob: https:;
+      worker-src 'self' blob:;
+      frame-src 'none';
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+    ">
+
     <!-- SEO & Open Graph -->
     <title>Graphite — Notes, Canvas & AI</title>
     <meta name="description" content="Local-first note-taking with inline Excalidraw canvas, AI assistant, end-to-end encryption, and offline support." />

@@ -56,9 +56,10 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const session = await signIn(email, password);
           set({ session, isAuthenticated: true, authLoading: false });
-        } catch (err: unknown) {
-          set({ authError: err instanceof Error ? err.message : "Login failed", authLoading: false });
-          throw err;
+        } catch {
+          // Generic error to prevent account enumeration
+          set({ authError: "Invalid email or password. Please try again.", authLoading: false });
+          throw new Error("Authentication failed");
         }
       },
 
@@ -67,9 +68,9 @@ export const useAuthStore = create<AuthStore>()(
         try {
           const session = await signUp(email, password);
           set({ session, isAuthenticated: session !== null, authLoading: false });
-        } catch (err: unknown) {
-          set({ authError: err instanceof Error ? err.message : "Registration failed", authLoading: false });
-          throw err;
+        } catch {
+          set({ authError: "Registration failed. The email may already be in use.", authLoading: false });
+          throw new Error("Registration failed");
         }
       },
 

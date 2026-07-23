@@ -47,6 +47,10 @@ export class ImageNode extends DecoratorNode<ReactElement> {
     height?: number,
   ) {
     super(key);
+    // Block javascript: URLs in image sources
+    if (typeof src === "string" && src.trim().toLowerCase().startsWith("javascript:")) {
+      throw new Error("Image source cannot be a javascript: URL");
+    }
     this.__src = src;
     this.__alt = alt;
     this.__width = width;

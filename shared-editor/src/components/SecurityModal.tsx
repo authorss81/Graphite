@@ -19,6 +19,7 @@ import {
   formatAuditTimestamp,
   logAuditEvent,
 } from "../utils/auditLog";
+import { clearDocCommits } from "../utils/versionHistory";
 import type { AuditCategory } from "../utils/auditLog";
 
 interface Props {
@@ -206,7 +207,9 @@ export function SecurityModal({
       const encrypted = await encryptText(liveContent, key);
       onEncryptDoc(encrypted);
       setDocLocked(currentDocId, true);
-      setSuccess("Document encrypted with AES-256-GCM.");
+      // Purge version history when encryption is toggled (old versions contain plaintext)
+      clearDocCommits(currentDocId);
+      setSuccess("Document encrypted with AES-256-GCM. Version history cleared.");
       logAuditEvent("encryption", "Document encrypted", { docId: currentDocId, docTitle: currentDocTitle });
     } catch {
       setError("Encryption failed.");

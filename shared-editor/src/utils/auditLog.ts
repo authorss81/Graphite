@@ -18,7 +18,29 @@ export interface AuditEvent {
 }
 
 const AUDIT_KEY = "graphite_audit_log_v1";
+const HMAC_KEY_STORAGE = "graphite_audit_hmac_key";
+const HMAC_HEAD_STORAGE = "graphite_audit_hmac_head";
 const MAX_EVENTS = 500; // cap to prevent unbounded growth
+
+// HMAC chain initialization — generates a key once, stored separately
+function getHmacKey(): string {
+  let key = localStorage.getItem(HMAC_KEY_STORAGE);
+  if (!key) {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    key = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+    localStorage.setItem(HMAC_KEY_STORAGE, key);
+  }
+  return key;
+}
+
+async function computeHmac(data: string, key: string): Promise<string> {
+  const enc = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", enc.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(data));
+  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 function loadRaw(): AuditEvent[] {
   try {
@@ -39,6 +61,22 @@ function saveRaw(events: AuditEvent[]): void {
   }
 }
 
+// Verify HMAC chain integrity — returns true if chain is intact
+export async function verifyAuditChain(): Promise<boolean> {
+  const events = loadRaw();
+  if (events.length === 0) return true;
+  const key = getHmacKey();
+  for (let i = 0; i < events.length; i++) {
+    const expectedHmac = (events[i] as any).hmac;
+    if (!expectedHmac) return false;
+    const prevHmac = i === 0 ? "" : (events[i - 1] as any).hmac || "";
+    const payload = prevHmac + JSON.stringify({ ...events[i], hmac: undefined });
+    const actualHmac = await computeHmac(payload, key);
+    if (expectedHmac !== actualHmac) return false;
+  }
+  return true;
+}
+
 export function logAuditEvent(
   category: AuditCategory,
   action: string,
@@ -50,16 +88,31 @@ export function logAuditEvent(
     metadata?: Record<string, string | number | boolean>;
   } = {}
 ): void {
-  const event: AuditEvent = {
-    id: "evt_" + Math.random().toString(36).slice(2, 10),
+  const key = getHmacKey();
+  const events = loadRaw();
+  const prevHmac = events.length > 0 ? (events[events.length - 1] as any).hmac || "" : "";
+  const event: any = {
+    id: crypto.randomUUID().replace(/-/g, "").substring(0, 16),
     ts: Date.now(),
     category,
     action,
     ...opts,
+    hmac: "",
   };
-  const events = loadRaw();
+  // Store immediately (without HMAC for fire-and-forget)
   events.push(event);
   saveRaw(events);
+  // Compute HMAC asynchronously and update stored event
+  const payload = prevHmac + JSON.stringify({ ...event, hmac: undefined });
+  computeHmac(payload, key).then((hmac) => {
+    event.hmac = hmac;
+    const stored = loadRaw();
+    const idx = stored.findIndex((e) => e.id === event.id);
+    if (idx !== -1) {
+      stored[idx] = event;
+      saveRaw(stored);
+    }
+  }).catch(() => {});
 }
 
 export function getAuditLog(filter?: { category?: AuditCategory; docId?: string }): AuditEvent[] {

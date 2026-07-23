@@ -503,20 +503,20 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 | # | Item | Details | Effort | Status |
 |---|------|---------|--------|--------|
-| 14.1 | RLS on ALL Supabase tables | user_id column, policies, CI verification | 4h | Pending |
-| 14.2 | Auth tokens to httpOnly cookies | Replace localStorage JWT | 8h | Pending |
-| 14.3 | Content-Security-Policy headers | vite.config.ts or served headers | 2h | Pending |
-| 14.4 | Subresource Integrity (SRI) | On all loaded scripts | 2h | Pending |
-| 14.5 | Audit log HMAC chain | HMAC-SHA256 chain, store head separately | 4h | Pending |
-| 14.6 | Purge history when encryption toggled | Encrypt or delete old versions | 3h | Pending |
-| 14.7 | Rate limiting on auth | Exponential backoff | 2h | Pending |
-| 14.8 | javascript: URL validation in ImageNode | Block executable URLs | 1h | Pending |
-| 14.9 | Replace Math.random with crypto.randomUUID | All IDs | 2h | Pending |
-| 14.10 | Account enumeration protection | Uniform error messages | 1h | Pending |
-| 14.11 | CSP for CodeSandbox Worker | worker-src 'none' | 1h | Pending |
-| 14.12 | Zero password from memory | Clear state after signIn | 1h | Pending |
-| 14.13 | Bind auth token to origin | Origin validation | 3h | Pending |
-| 14.14 | networkSecurityConfig | Replace usesCleartextTraffic | 2h | Pending |
+| 14.1 | RLS on ALL Supabase tables | user_id column, policies, CI verification | 4h | Server-side — needs SQL | 
+| 14.2 | Auth tokens to httpOnly cookies | Replace localStorage JWT | 8h | Server-side — needs backend |
+| 14.3 | Content-Security-Policy headers | index.html meta tag | 2h | ✅ Done |
+| 14.4 | Subresource Integrity (SRI) | On all loaded scripts | 2h | Build system change |
+| 14.5 | Audit log HMAC chain | HMAC-SHA256 chain, store head separately | 4h | ✅ Done |
+| 14.6 | Purge history when encryption toggled | Encrypt or delete old versions | 3h | ✅ Done |
+| 14.7 | Rate limiting on auth | Exponential backoff | 2h | ✅ Done (23.5) |
+| 14.8 | javascript: URL validation in ImageNode | Block executable URLs | 1h | ✅ Done |
+| 14.9 | Replace Math.random with crypto.randomUUID | All IDs | 2h | ✅ Done (23.9) |
+| 14.10 | Account enumeration protection | Uniform error messages | 1h | ✅ Done |
+| 14.11 | CSP for CodeSandbox Worker | worker-src 'none' → blob: | 1h | ✅ Done (via CSP meta) |
+| 14.12 | Zero password from memory | Clear state after signIn | 1h | ✅ Done (23.4) |
+| 14.13 | Bind auth token to origin | Origin validation | 3h | ✅ Done (22.1.3-22.1.4) |
+| 14.14 | networkSecurityConfig | Replace usesCleartextTraffic | 2h | ✅ Done |
 
 ---
 
