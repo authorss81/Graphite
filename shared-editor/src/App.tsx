@@ -351,7 +351,6 @@ export function App() {
             >
               <ErrorBoundary name="Canvas">
                 <Canvas
-                  key={docId}
                   initialData={canvasData}
                   onChange={handleCanvasChange}
                 />

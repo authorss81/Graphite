@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { GraphiteDoc } from "../utils/docStorage";
-import { newDocId, loadDocs, saveDocs } from "../utils/docStorage";
+import { newDocId, loadDocs, saveDocs, loadDocsPaginated } from "../utils/docStorage";
 import type { SpatialCard, SpatialEdge } from "../utils/spatialCanvasStorage";
 import { SupabaseSyncService } from "../utils/supabase";
 import { createDocCommit } from "../utils/versionHistory";
@@ -71,6 +71,8 @@ interface NoteStore {
   toasts: Toast[];
   spatialCards: SpatialCard[];
   spatialEdges: SpatialEdge[];
+  docPage: number;
+  docTotal: number;
 
   setActiveTab: (tab: "editor" | "canvas" | "spatial" | "graph" | "kanban" | "meta") => void;
   setGitStatus: (status: string) => void;
@@ -91,6 +93,7 @@ interface NoteStore {
   addTagToDocument: (id: string, tag: string) => void;
   removeTagFromDocument: (id: string, tag: string) => void;
   setSpatialData: (cards: SpatialCard[], edges: SpatialEdge[]) => void;
+  loadNextPage: () => void;
 }
 
 function persistAndSet(documents: Record<string, GraphiteDoc>, extra: Partial<NoteStore> = {}) {
@@ -113,6 +116,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   toasts: [],
   spatialCards: [],
   spatialEdges: [],
+  docPage: 0,
+  docTotal: 0,
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setGitStatus: (status) => set({ gitStatus: status }),
@@ -145,6 +150,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       docId: current.id,
       editorState: current.editorState,
       canvasData: current.canvasData,
+      docPage: 0,
+      docTotal: Object.keys(documents).length,
       ...parseStats(current.editorState),
     });
 
@@ -402,4 +409,15 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   setSpatialData: (cards, edges) => set({ spatialCards: cards, spatialEdges: edges }),
+
+  loadNextPage: () => {
+    const { docPage } = get();
+    const nextPage = docPage + 1;
+    const { docs } = loadDocsPaginated(nextPage);
+    if (Object.keys(docs).length === 0) return;
+    set({
+      docPage: nextPage,
+      documents: { ...get().documents, ...docs },
+    });
+  },
 }));

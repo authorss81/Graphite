@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useNoteStore } from "../store/useNoteStore";
-import { Network, Filter, ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
+import { Network, Filter } from "lucide-react";
+import { ZoomControls } from "./ZoomControls";
 
 interface NodeItem {
   id: string;
@@ -320,16 +321,15 @@ export function GraphView() {
         />
       </div>
 
-      <div className="graph-zoom-bar" style={{ position: "absolute", bottom: 12, right: 12, zIndex: 10, display: "flex", gap: "6px", background: "var(--bg-secondary)", padding: "6px", borderRadius: "10px", border: "1px solid var(--border-color)" }}>
-        <button className="graphite-toolbar-btn" title="Zoom In" onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.2))}>
-          <ZoomIn size={16} />
-        </button>
-        <button className="graphite-toolbar-btn" title="Zoom Out" onClick={() => setZoomLevel((z) => Math.max(0.4, z - 0.2))}>
-          <ZoomOut size={16} />
-        </button>
-        <button className="graphite-toolbar-btn" title="Reset View" onClick={() => { setZoomLevel(1); setOffset({ x: 0, y: 0 }); }}>
-          <Maximize2 size={16} />
-        </button>
+      <div style={{ position: "absolute", bottom: 12, right: 12, zIndex: 10 }}>
+        <ZoomControls
+          zoomLevel={zoomLevel}
+          minZoom={0.4}
+          maxZoom={2.5}
+          onZoomIn={() => setZoomLevel((z) => Math.min(2.5, z + 0.2))}
+          onZoomOut={() => setZoomLevel((z) => Math.max(0.4, z - 0.2))}
+          onResetZoom={() => { setZoomLevel(1); setOffset({ x: 0, y: 0 }); }}
+        />
       </div>
 
       <canvas

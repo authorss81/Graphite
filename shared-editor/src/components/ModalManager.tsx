@@ -21,6 +21,7 @@ export function ModalManager({ modals, onCloseModal }: ModalManagerProps) {
   const documents = useNoteStore((s) => s.documents);
   const session = useAuthStore((s) => s.session);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const updateContent = useNoteStore((s) => s.updateContentForDoc);
   const currentDoc = documents[docId];
 
   // Global Escape key — closes the topmost open modal
@@ -55,12 +56,8 @@ export function ModalManager({ modals, onCloseModal }: ModalManagerProps) {
         currentDocId={docId}
         currentDocTitle={currentDoc?.title || "Untitled"}
         currentDocContent={currentDoc?.editorState || ""}
-        onEncryptDoc={(encState) => {
-          useNoteStore.getState().updateContentForDoc(docId, encState);
-        }}
-        onDecryptDoc={(plainText) => {
-          useNoteStore.getState().updateContentForDoc(docId, plainText);
-        }}
+        onEncryptDoc={(encState) => updateContent(docId, encState)}
+        onDecryptDoc={(plainText) => updateContent(docId, plainText)}
       />
       <SemanticSearchModal
         isOpen={Boolean(modals["search"])}

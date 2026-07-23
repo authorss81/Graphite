@@ -96,12 +96,22 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
 
   useEffect(() => {
     return () => {
-      // Flush any pending commit
       if (stateRef.current && commitLaterRef.current) {
         onChangeRef.current?.(stateRef.current);
       }
     };
   }, []);
+
+  // Update Excalidraw when initialData changes (document switch)
+  useEffect(() => {
+    if (excalidrawAPIRef.current && initialData?.elements?.length) {
+      excalidrawAPIRef.current.updateScene({
+        elements: initialData.elements,
+        files: initialData.files,
+        appState: initialData.appState,
+      });
+    }
+  }, [initialData]);
 
   const uiOptions = useMemo(() => ({
     canvasActions: {

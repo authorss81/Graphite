@@ -72,6 +72,10 @@ export function Sidebar() {
   const createFolder = useNoteStore((s) => s.createFolder);
   const renameDocument = useNoteStore((s) => s.renameDocument);
   const deleteDocument = useNoteStore((s) => s.deleteDocument);
+  const docPage = useNoteStore((s) => s.docPage);
+  const docTotal = useNoteStore((s) => s.docTotal);
+  const loadNextPage = useNoteStore((s) => s.loadNextPage);
+  const logout = useAuthStore((s) => s.logout);
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -121,7 +125,6 @@ export function Sidebar() {
   };
 
   const handleLogout = async () => {
-    const logout = useAuthStore.getState().logout;
     await logout();
     toast("Signed out", "info");
   };
@@ -381,7 +384,27 @@ export function Sidebar() {
             {showArchived ? "No archived documents." : activeTagFilter ? `No notes with #${activeTagFilter}` : "No documents yet."}
           </p>
         ) : (
-          tree.map(renderNode)
+          <>
+            {tree.map(renderNode)}
+            {docTotal > (docPage + 1) * 50 && (
+              <button
+                className="sidebar-load-more"
+                onClick={loadNextPage}
+                style={{
+                  width: "100%",
+                  padding: "6px",
+                  fontSize: "11px",
+                  color: "var(--text-muted)",
+                  background: "transparent",
+                  border: "none",
+                  borderTop: "1px solid var(--border-color)",
+                  cursor: "pointer",
+                }}
+              >
+                Load more...
+              </button>
+            )}
+          </>
         )}
       </div>
 
