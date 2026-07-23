@@ -94,14 +94,17 @@ class GraphiteWebView(
         val safeDocId = org.json.JSONObject.quote(docId)
         val safePayload = org.json.JSONObject.quote(payloadBase64)
         val script = "if(window.loadDocument){ window.loadDocument($safeDocId, $safePayload); }"
-        // Validate script to prevent javascript: injection
+        // Origin validation: only execute if bridge URL is from an allowed host
+        if (!bridge.isAllowed()) {
+            throw SecurityException("Blocked evaluateJavascript from unauthorized origin: ${bridge.currentUrl}")
+        }
+        // JSONObject.quote() already prevents injection — these substring checks are defense-in-depth
         if (!script.contains("javascript:") && !script.contains("data:") && !script.contains("file:")) {
             post {
                 evaluateJavascript(script, null)
             }
         } else {
-            // Reject potentially malicious script
-            throw IllegalArgumentException("Invalid script detected")
+            throw SecurityException("Blocked evaluateJavascript — script contains disallowed protocol")
         }
     }
 }

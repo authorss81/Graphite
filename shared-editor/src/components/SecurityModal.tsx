@@ -9,6 +9,7 @@ import {
   isEncrypted,
   setDocLocked,
   generateRecoveryCodes,
+  verifyRecoveryCode,
   hasEncryptionSetup,
 } from "../utils/encryption";
 import {
@@ -71,6 +72,8 @@ export function SecurityModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryCodeInput, setRecoveryCodeInput] = useState("");
+  const [useRecoveryCode, setUseRecoveryCode] = useState(false);
 
 
   // Audit state
@@ -106,6 +109,7 @@ export function SecurityModal({
       setRecoveryCodes(codes);
       setShowRecovery(true);
       setIsSetupMode(false);
+      setRecoveryCodeInput("");
       setSuccess("Encryption key created! Save your recovery codes.");
       logAuditEvent("encryption", "Encryption passphrase configured", { userId: "local" });
     } catch {
@@ -123,19 +127,54 @@ export function SecurityModal({
       const key = await deriveKey(unlockPassphrase, salt);
       const liveDoc = useNoteStore.getState().documents[currentDocId];
       const liveContent = liveDoc?.editorState || currentDocContent;
-      if (isEncrypted(liveContent)) {
-        const plaintext = await decryptText(liveContent, key);
-        onDecryptDoc(plaintext);
-        logAuditEvent("encryption", "Document decrypted", { docId: currentDocId, docTitle: currentDocTitle });
+      if (!isEncrypted(liveContent)) {
+        setError("Document is not encrypted. Nothing to unlock.");
+        setIsProcessing(false);
+        return;
       }
+      const plaintext = await decryptText(liveContent, key);
+      onDecryptDoc(plaintext);
       setCryptoKey(key);
       setUnlockPassphrase("");
       setSuccess("Unlocked successfully.");
+      logAuditEvent("encryption", "Document decrypted", { docId: currentDocId, docTitle: currentDocTitle });
     } catch {
       setError("Wrong passphrase or corrupted data.");
     }
     setIsProcessing(false);
   }, [unlockPassphrase, currentDocContent, currentDocId, currentDocTitle, onDecryptDoc]);
+
+  const handleRecoveryUnlock = useCallback(async () => {
+    if (!recoveryCodeInput.trim()) return;
+    setIsProcessing(true);
+    setError("");
+    try {
+      // Recovery codes were stored during setup; verify the entered code
+      // relies on in-memory recoveryCodes array (still populated from setup)
+      const valid = await verifyRecoveryCode(recoveryCodeInput.trim(), recoveryCodes);
+      if (!valid) {
+        setError("Invalid or already-used recovery code.");
+        setIsProcessing(false);
+        return;
+      }
+      // Recovery code verified — derive key and unlock
+      const salt = getOrCreateSalt();
+      const key = await deriveKey(recoveryCodeInput.trim(), salt);
+      const liveDoc = useNoteStore.getState().documents[currentDocId];
+      const liveContent = liveDoc?.editorState || currentDocContent;
+      if (isEncrypted(liveContent)) {
+        const plaintext = await decryptText(liveContent, key);
+        onDecryptDoc(plaintext);
+      }
+      setCryptoKey(key);
+      setRecoveryCodeInput("");
+      setSuccess("Recovery code accepted. Document unlocked.");
+      logAuditEvent("encryption", "Document unlocked via recovery code", { docId: currentDocId });
+    } catch {
+      setError("Recovery unlock failed.");
+    }
+    setIsProcessing(false);
+  }, [recoveryCodeInput, recoveryCodes, currentDocContent, currentDocId, onDecryptDoc]);
 
   const handleEncryptDoc = useCallback(async () => {
     if (!cryptoKey) { setError("Set up or unlock encryption first."); return; }
@@ -435,35 +474,58 @@ export function SecurityModal({
                   <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
                     Unlock Encryption
                   </div>
-                  <div style={{ position: "relative" }}>
+
+                  {useRecoveryCode ? (
                     <input
-                      type={showPass ? "text" : "password"}
-                      placeholder="Enter your passphrase..."
-                      value={unlockPassphrase}
-                      onChange={(e) => { setUnlockPassphrase(e.target.value); setError(""); }}
-                      onKeyDown={(e) => e.key === "Enter" && handleUnlock()}
+                      type="text"
+                      placeholder="Enter recovery code..."
+                      value={recoveryCodeInput}
+                      onChange={(e) => { setRecoveryCodeInput(e.target.value); setError(""); }}
+                      onKeyDown={(e) => e.key === "Enter" && handleRecoveryUnlock()}
                       style={{
                         width: "100%",
                         background: "var(--bg-tertiary)",
                         border: "1px solid var(--border-color)",
                         borderRadius: "8px",
-                        padding: "9px 40px 9px 12px",
+                        padding: "9px 12px",
                         color: "var(--text-primary)",
                         fontSize: "13px",
+                        fontFamily: "monospace",
                         boxSizing: "border-box",
                       }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPass((p) => !p)}
-                      style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
-                    >
-                      {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
+                  ) : (
+                    <div style={{ position: "relative" }}>
+                      <input
+                        type={showPass ? "text" : "password"}
+                        placeholder="Enter your passphrase..."
+                        value={unlockPassphrase}
+                        onChange={(e) => { setUnlockPassphrase(e.target.value); setError(""); }}
+                        onKeyDown={(e) => e.key === "Enter" && handleUnlock()}
+                        style={{
+                          width: "100%",
+                          background: "var(--bg-tertiary)",
+                          border: "1px solid var(--border-color)",
+                          borderRadius: "8px",
+                          padding: "9px 40px 9px 12px",
+                          color: "var(--text-primary)",
+                          fontSize: "13px",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPass((p) => !p)}
+                        style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer" }}
+                      >
+                        {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  )}
+
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button
-                      onClick={handleUnlock}
+                      onClick={useRecoveryCode ? handleRecoveryUnlock : handleUnlock}
                       disabled={isProcessing}
                       style={{
                         flex: 1,
@@ -484,6 +546,24 @@ export function SecurityModal({
                     >
                       {isProcessing ? <RefreshCw size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Unlock size={14} />}
                       {isProcessing ? "Deriving Key..." : "Unlock"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setUseRecoveryCode((p) => !p);
+                        setError("");
+                      }}
+                      style={{
+                        background: "transparent",
+                        color: "var(--text-muted)",
+                        border: "1px solid var(--border-color)",
+                        borderRadius: "8px",
+                        padding: "9px 14px",
+                        fontSize: "12px",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {useRecoveryCode ? "Use Passphrase" : "Use Code"}
                     </button>
                     <button
                       onClick={() => setIsSetupMode(true)}

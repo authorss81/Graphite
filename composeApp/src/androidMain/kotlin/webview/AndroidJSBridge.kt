@@ -15,19 +15,33 @@ class AndroidJSBridge(
     private val allowedHosts: Set<String> = setOf("trabkkiursawlwavtsdv.supabase.co"),
     private val onNativeAction: (action: String, payload: String) -> Unit = { _, _ -> }
 ) {
-    private var currentUrl: String = ""
+    @Volatile
+    var currentUrl: String = ""
+        private set
 
     fun setCurrentUrl(url: String) {
         currentUrl = url
     }
 
-    private fun isAllowed(): Boolean {
+    fun isAllowed(): Boolean {
         if (currentUrl.isBlank()) {
             println("[AndroidJSBridge] BLOCKED: currentUrl is empty — setCurrentUrl() was never called")
             return false
         }
         return try {
             val uri = URI(currentUrl)
+            // Require HTTPS scheme
+            val scheme = uri.scheme ?: return false
+            if (scheme != "https") {
+                println("[AndroidJSBridge] BLOCKED: scheme must be https, got $scheme")
+                return false
+            }
+            // Reject non-standard ports (only 443 or default allowed)
+            val port = uri.port
+            if (port != -1 && port != 443) {
+                println("[AndroidJSBridge] BLOCKED: port $port not allowed")
+                return false
+            }
             val host = uri.host ?: return false
             allowedHosts.any { host == it || host.endsWith(".$it") }
         } catch (_: Exception) {

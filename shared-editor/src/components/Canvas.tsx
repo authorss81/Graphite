@@ -11,8 +11,17 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const excalidrawAPIRef = useRef<any>(null);
+
+  // Stroke buffering state
+  const stateRef = useRef<{
+    elements: any[];
+    files: any;
+    appState: { viewBackgroundColor: string; currentItemStrokeColor?: string; currentItemBackgroundColor?: string };
+    timestamp: number;
+  } | null>(null);
+  const isDrawingRef = useRef(false);
+  const commitLaterRef = useRef(false);
 
   const initialCanvasData = useMemo(() => ({
     elements: initialData?.elements || [],
@@ -25,30 +34,72 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
     scrollToContent: true,
   }), [initialData]);
 
-  // Direct, reliable change handler for strokes, elements & color changes
-  const handleCanvasChange = useCallback((elements: readonly any[], appState: any, files: any) => {
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+  // Track drawing state via pointer events
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-    debounceTimerRef.current = setTimeout(() => {
-      const dataToSave = {
-        elements: [...elements],
-        files,
-        appState: {
-          viewBackgroundColor: appState?.viewBackgroundColor || "#1e1e24",
-          currentItemStrokeColor: appState?.currentItemStrokeColor,
-          currentItemBackgroundColor: appState?.currentItemBackgroundColor,
-        },
-        timestamp: Date.now(),
-      };
-      onChangeRef.current?.(dataToSave);
-      logToNative("info", `Canvas saved: ${elements.length} elements`);
-    }, 150);
+    const handlePointerDown = () => {
+      isDrawingRef.current = true;
+    };
+
+    const handlePointerUp = () => {
+      if (isDrawingRef.current && commitLaterRef.current) {
+        if (stateRef.current) {
+          onChangeRef.current?.(stateRef.current);
+        }
+        commitLaterRef.current = false;
+      }
+      isDrawingRef.current = false;
+    };
+
+    const handlePointerLeave = () => {
+      if (isDrawingRef.current && commitLaterRef.current) {
+        if (stateRef.current) {
+          onChangeRef.current?.(stateRef.current);
+        }
+        commitLaterRef.current = false;
+      }
+      isDrawingRef.current = false;
+    };
+
+    el.addEventListener("pointerdown", handlePointerDown);
+    el.addEventListener("pointerup", handlePointerUp);
+    el.addEventListener("pointerleave", handlePointerLeave);
+    return () => {
+      el.removeEventListener("pointerdown", handlePointerDown);
+      el.removeEventListener("pointerup", handlePointerUp);
+      el.removeEventListener("pointerleave", handlePointerLeave);
+    };
   }, []);
 
-  // Flush pending changes on unmount (e.g. document switch)
+  // Buffer strokes on change, commit on pointer up instead of during drag
+  const handleCanvasChange = useCallback((elements: readonly any[], appState: any, files: any) => {
+    stateRef.current = {
+      elements: [...elements],
+      files,
+      appState: {
+        viewBackgroundColor: appState?.viewBackgroundColor || "#1e1e24",
+        currentItemStrokeColor: appState?.currentItemStrokeColor,
+        currentItemBackgroundColor: appState?.currentItemBackgroundColor,
+      },
+      timestamp: Date.now(),
+    };
+
+    if (isDrawingRef.current) {
+      commitLaterRef.current = true;
+    } else {
+      onChangeRef.current?.(stateRef.current);
+      logToNative("info", `Canvas saved: ${elements.length} elements`);
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      // Flush any pending commit
+      if (stateRef.current && commitLaterRef.current) {
+        onChangeRef.current?.(stateRef.current);
+      }
     };
   }, []);
 

@@ -84,6 +84,13 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
     };
   }, [editor]);
 
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   const initialCanvasData = useMemo(() => ({
     elements: data?.elements || [],
     files: data?.files || undefined,

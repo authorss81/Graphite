@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { toast } from "./Toast";
@@ -126,17 +126,61 @@ export function Sidebar() {
     toast("Signed out", "info");
   };
 
+  // Swipe-to-dismiss state (tracked per row via doc.id)
+  const swipeState = useMemo<{ [key: string]: number }>(() => ({}), []);
+  // We store swipe offsets in a ref to avoid re-renders during drag
+  const swipeOffsets = useRef<{ [key: string]: number }>({});
+
   const renderNode = (node: TreeNode) => {
     const { doc, children, depth } = node;
     const isExpanded = expanded.has(doc.id);
     const isSelected = doc.id === docId && !doc.isFolder;
     const isRenaming = renamingId === doc.id;
+    const translateX = swipeOffsets.current[doc.id] || 0;
 
     return (
       <div key={doc.id}>
         <div
-          className={`sidebar-row${isSelected ? " selected" : ""}`}
-          style={{ paddingLeft: 8 + depth * 16 }}
+          className={`sidebar-row${isSelected ? " selected" : ""}${translateX !== 0 ? " swiping" : ""}`}
+          style={{
+            paddingLeft: 8 + depth * 16,
+            transform: translateX ? `translateX(${translateX}px)` : undefined,
+            transition: swipeOffsets.current[doc.id] === undefined ? "transform 0.2s ease" : undefined,
+            touchAction: "pan-y",
+            position: "relative",
+            overflow: "hidden",
+          }}
+          onTouchStart={(e) => {
+            const touch = e.touches[0];
+            swipeState[doc.id] = touch.clientX;
+            swipeOffsets.current[doc.id] = 0;
+          }}
+          onTouchMove={(e) => {
+            if (swipeState[doc.id] === undefined) return;
+            const touch = e.touches[0];
+            const diff = touch.clientX - swipeState[doc.id];
+            if (diff < 0) {
+              swipeOffsets.current[doc.id] = Math.max(diff, -100);
+              // Force re-render by updating a state that causes re-render
+              setRenamingId(renamingId); // cheap re-render trigger
+            }
+          }}
+          onTouchEnd={() => {
+            const offset = swipeOffsets.current[doc.id] || 0;
+            if (offset < -50) {
+              // Swiped far enough — delete the document
+              const confirmed = confirm(
+                `Delete "${doc.title}"${doc.isFolder ? " and all its contents" : ""}?`
+              );
+              if (confirmed) {
+                deleteDocument(doc.id);
+                if (navigator.vibrate) navigator.vibrate(20);
+              }
+            }
+            delete swipeState[doc.id];
+            delete swipeOffsets.current[doc.id];
+            setRenamingId(renamingId); // trigger re-render
+          }}
         >
           {doc.isFolder ? (
             <button
@@ -191,6 +235,7 @@ export function Sidebar() {
                     e.stopPropagation();
                     createDocument(undefined, doc.id);
                     setExpanded((prev) => new Set(prev).add(doc.id));
+                    if (navigator.vibrate) navigator.vibrate(10);
                   }}
                 >
                   <FilePlus size={13} />
@@ -202,6 +247,7 @@ export function Sidebar() {
                     e.stopPropagation();
                     createFolder(undefined, doc.id);
                     setExpanded((prev) => new Set(prev).add(doc.id));
+                    if (navigator.vibrate) navigator.vibrate(10);
                   }}
                 >
                   <FolderPlus size={13} />
@@ -216,7 +262,7 @@ export function Sidebar() {
               <Pencil size={13} />
             </button>
             <button
-              className="sidebar-action-btn danger"
+              className="sidebar-action-btn"
               title="Delete"
               onClick={() => {
                 if (
@@ -227,6 +273,7 @@ export function Sidebar() {
                   )
                 ) {
                   deleteDocument(doc.id);
+                  if (navigator.vibrate) navigator.vibrate(20);
                 }
               }}
             >

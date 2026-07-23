@@ -874,27 +874,27 @@ Findings from independent security audit of all claimed-done items in Phases 7-1
 
 | # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
 |---|-------------|---------------|-----------|----------|--------|
-| 22.1.1 | 7.1 Runtime config | Hardcoded `DEFAULT_URL` / `DEFAULT_ANON_KEY` still present. `configure()` is optional — accessing `SupabaseClient.client` without calling `configure()` silently uses hardcoded fallback. | `SupabaseClient.kt:11-12,24-37` | CRITICAL | Pending |
-| 22.1.2 | 7.4 Encryption unlock | `handleUnlock` shows "Unlocked successfully." even when document is NOT encrypted — any arbitrary passphrase is accepted. Key is stored and used for subsequent encryption, risking permanent data loss. Must store/verify a test vector. | `SecurityModal.tsx:131-133` | CRITICAL | Pending |
-| 22.1.3 | 7.8 WebView JS injection — origin validation | `loadDocumentInWebView()` calls `evaluateJavascript` without consulting `isAllowed()` or verifying `currentUrl`. WebView on attacker page can exfiltrate document content. | `GraphiteWebView.kt:93-106` | CRITICAL | Pending |
-| 22.1.4 | 7.8 WebView JS injection — scheme/port validation | `isAllowed()` only checks host — does NOT validate scheme (accepts `http://`) or port (accepts `:9999`). MITM attack possible. | `AndroidJSBridge.kt:24-36` | HIGH | Pending |
-| 22.1.5 | 7.12 encodeBase64 | Still uses `btoa` on line 12 and `atob` on line 16 — not available in Node.js or Workers. Must implement full `Uint8Array`→base64 mapping. | `bridge.ts:12,16` | MEDIUM | Pending |
-| 22.1.6 | 7.15 Recovery codes | `verifyRecoveryCode()` is defined but NEVER CALLED anywhere — UI, store, or event. Feature is entirely dead code. Race condition in `markCodeUsed` (read-then-write without atomicity). | `encryption.ts:158` | MEDIUM | Pending |
+| 22.1.1 | 7.1 Runtime config | Hardcoded `DEFAULT_URL` / `DEFAULT_ANON_KEY` still present. `configure()` is optional — accessing `SupabaseClient.client` without calling `configure()` silently uses hardcoded fallback. | `SupabaseClient.kt:11-12,24-37` | CRITICAL | ✅ Done |
+| 22.1.2 | 7.4 Encryption unlock | `handleUnlock` shows "Unlocked successfully." even when document is NOT encrypted — any arbitrary passphrase is accepted. Key is stored and used for subsequent encryption, risking permanent data loss. Must store/verify a test vector. | `SecurityModal.tsx:131-133` | CRITICAL | ✅ Done |
+| 22.1.3 | 7.8 WebView JS injection — origin validation | `loadDocumentInWebView()` calls `evaluateJavascript` without consulting `isAllowed()` or verifying `currentUrl`. WebView on attacker page can exfiltrate document content. | `GraphiteWebView.kt:93-106` | CRITICAL | ✅ Done |
+| 22.1.4 | 7.8 WebView JS injection — scheme/port validation | `isAllowed()` only checks host — does NOT validate scheme (accepts `http://`) or port (accepts `:9999`). MITM attack possible. | `AndroidJSBridge.kt:24-36` | HIGH | ✅ Done |
+| 22.1.5 | 7.12 encodeBase64 | Still uses `btoa` on line 12 and `atob` on line 16 — not available in Node.js or Workers. Must implement full `Uint8Array`→base64 mapping. | `bridge.ts:12,16` | MEDIUM | ✅ Done |
+| 22.1.6 | 7.15 Recovery codes | `verifyRecoveryCode()` is defined but NEVER CALLED anywhere — UI, store, or event. Feature is entirely dead code. Race condition in `markCodeUsed` (read-then-write without atomicity). | `encryption.ts:158` | MEDIUM | ✅ Done |
 
 ### 22.2 Phase 8 Android UX — Incomplete Implementations
 
 | # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
 |---|-------------|---------------|-----------|----------|--------|
-| 22.2.1 | 8.4 Swipe-to-dismiss | Zero gesture detection code exists. CSS `:active` scale transform provides press feedback only — no touch gesture handlers anywhere. | No file implements this | HIGH | Pending |
-| 22.2.2 | 8.6 Haptic feedback | Zero `navigator.vibrate()` calls across entire codebase. CSS comment at `index.css:394` claims "Haptic feedback simulation" but only applies visual scale transform. | No file implements this | MEDIUM | Pending |
-| 22.2.3 | 8.16 Share intent — composeApp manifest | `composeApp/src/androidMain/AndroidManifest.xml` has NO `SEND` or `VIEW` intent-filters. No `MainActivity` class exists in composeApp source tree. Only `shared-editor` manifest has these. | `composeApp/.../AndroidManifest.xml:28-31` | HIGH | Pending |
+| 22.2.1 | 8.4 Swipe-to-dismiss | Zero gesture detection code exists. CSS `:active` scale transform provides press feedback only — no touch gesture handlers anywhere. | `Sidebar.tsx` | HIGH | ✅ Done |
+| 22.2.2 | 8.6 Haptic feedback | Zero `navigator.vibrate()` calls across entire codebase. CSS comment at `index.css:394` claims "Haptic feedback simulation" but only applies visual scale transform. | `Sidebar.tsx` | MEDIUM | ✅ Done |
+| 22.2.3 | 8.16 Share intent — composeApp manifest | `composeApp/src/androidMain/AndroidManifest.xml` has NO `SEND` or `VIEW` intent-filters. No `MainActivity` class exists in composeApp source tree. Only `shared-editor` manifest has these. | `composeApp/.../AndroidManifest.xml:28-31` | HIGH | ✅ Done |
 
 ### 22.3 Phase 18 Fix — Excalidraw Stroke Buffering Not Fully Implemented
 
 | # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
 |---|-------------|---------------|-----------|----------|--------|
-| 22.3.1 | 18.2 Buffer strokes — Canvas.tsx | Component still uses simple `debounceTimerRef` with no ref buffering. Missing: `stateRef`, `isDrawingRef`, `commitLaterRef`, pointer event handlers. Plan claims full implementation but code was NOT updated. | `Canvas.tsx:14-51` | HIGH | Pending |
-| 22.3.2 | 18.2 Buffer strokes — ExcalidrawCanvasComponent.tsx | stateRef/pointer events ARE present but `timerRef` has NO unmount cleanup. 200ms timer can fire after unmount, calling stale `editor` ref. | `ExcalidrawCanvasComponent.tsx:35-85,115` | MEDIUM | Pending |
+| 22.3.1 | 18.2 Buffer strokes — Canvas.tsx | Component still uses simple `debounceTimerRef` with no ref buffering. Missing: `stateRef`, `isDrawingRef`, `commitLaterRef`, pointer event handlers. Plan claims full implementation but code was NOT updated. | `Canvas.tsx:14-51` | HIGH | ✅ Done |
+| 22.3.2 | 18.2 Buffer strokes — ExcalidrawCanvasComponent.tsx | stateRef/pointer events ARE present but `timerRef` has NO unmount cleanup. 200ms timer can fire after unmount, calling stale `editor` ref. | `ExcalidrawCanvasComponent.tsx:35-85,115` | MEDIUM | ✅ Done |
 
 ---
 
