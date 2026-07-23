@@ -246,7 +246,7 @@ export function SecurityModal({
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.65)",
-        zIndex: 1200,
+        zIndex: 2000,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -255,11 +255,14 @@ export function SecurityModal({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
+        className="graphite-modal-card"
         style={{
           width: "min(800px, 98vw)",
           height: "min(660px, 95vh)",
-          background: "var(--bg-primary)",
-          border: "1px solid var(--border-color)",
+          background: "var(--glass-bg)",
+          backdropFilter: "var(--glass-blur)",
+          WebkitBackdropFilter: "var(--glass-blur)",
+          border: "1px solid var(--glass-border)",
           borderRadius: "16px",
           display: "flex",
           flexDirection: "column",

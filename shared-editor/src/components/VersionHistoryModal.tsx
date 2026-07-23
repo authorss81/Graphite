@@ -80,19 +80,21 @@ export function VersionHistoryModal({ isOpen, onClose }: Props) {
       }}
     >
       <div
-        className="graphite-history-modal"
+        className="graphite-history-modal graphite-modal-card"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
-          maxWidth: "800px",
-          height: "600px",
-          background: "var(--bg-secondary)",
-          border: "1px solid var(--border-color)",
+          maxWidth: "620px",
+          height: "min(560px, 90vh)",
+          background: "var(--glass-bg)",
+          backdropFilter: "var(--glass-blur)",
+          WebkitBackdropFilter: "var(--glass-blur)",
+          border: "1px solid var(--glass-border)",
           borderRadius: "16px",
           boxShadow: "0 24px 64px rgba(0, 0, 0, 0.5)",
-          overflow: "hidden",
           display: "flex",
           flexDirection: "column",
+          overflow: "hidden",
         }}
       >
         <div

@@ -24,7 +24,8 @@
   
   --glass-bg: rgba(18, 19, 26, 0.7);
   --glass-blur: blur(16px);
-  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-safari: rgba(255,255,255,0.08);
 
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.5);
@@ -271,7 +272,7 @@ body {
   border-color: var(--accent-color);
   color: #fff;
   box-shadow: 0 0 10px var(--accent-color-glow);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .graphite-btn.danger:hover {
@@ -305,6 +306,30 @@ body {
   animation: modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.graphite-modal-card-no-anim {
+  animation: none !important;
+}
+
+/* Dual pane layout */
+.app-dual-pane {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  min-height: 450px;
+  margin-top: 16px;
+}
+
+.app-dual-pane > * {
+  min-width: 0;
+  overflow: auto;
+}
+
+@media (max-width: 1024px) {
+  .app-dual-pane {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* App layout (sidebar + detail) */
 .app-layout {
   display: flex;
@@ -327,8 +352,10 @@ body {
   align-self: flex-start;
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-right: 1px solid var(--glass-border);
   padding: 16px 12px;
   overflow-y: auto;
 }
@@ -921,7 +948,7 @@ a {
 }
 
 .graphite-block-drag-handle:hover {
-  opacity: 1 !important;
+  opacity: 1;
   background: var(--bg-tertiary);
 }
 

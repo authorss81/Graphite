@@ -294,6 +294,21 @@ export function App() {
             className="graphite-btn"
             style={{
               background:
+                activeTab === "split"
+                  ? "var(--accent-color)"
+                  : "rgba(255,255,255,0.03)",
+              color:
+                activeTab === "split" ? "#fff" : "var(--text-secondary)",
+            }}
+            onClick={() => setActiveTab("split")}
+          >
+            <Columns3 size={18} />
+            Split
+          </button>
+          <button
+            className="graphite-btn"
+            style={{
+              background:
                 activeTab === "spatial"
                   ? "var(--accent-color)"
                   : "rgba(255,255,255,0.03)",
@@ -357,6 +372,28 @@ export function App() {
                 />
               </ErrorBoundary>
             </Suspense>
+          )}
+
+          {activeTab === "split" && (
+            <div className="app-dual-pane">
+              <ErrorBoundary name="Editor">
+                <Editor docId={docId} initialState={editorState} />
+              </ErrorBoundary>
+              <Suspense
+                fallback={
+                  <div className="graphite-canvas-block-loading">
+                    Loading canvas…
+                  </div>
+                }
+              >
+                <ErrorBoundary name="Canvas">
+                  <Canvas
+                    initialData={canvasData}
+                    onChange={handleCanvasChange}
+                  />
+                </ErrorBoundary>
+              </Suspense>
+            </div>
           )}
 
           {activeTab === "graph" && (
@@ -505,6 +542,7 @@ export function App() {
       </div>
       <nav className="graphite-bottom-nav">
         <button className={`graphite-bottom-nav-btn${activeTab === "editor" ? " active" : ""}`} onClick={() => setActiveTab("editor")}><BookOpen size={20} /><span>Editor</span></button>
+        <button className={`graphite-bottom-nav-btn${activeTab === "split" ? " active" : ""}`} onClick={() => setActiveTab("split")}><Columns3 size={20} /><span>Split</span></button>
         <button className={`graphite-bottom-nav-btn${activeTab === "canvas" ? " active" : ""}`} onClick={() => setActiveTab("canvas")}><Palette size={20} /><span>Canvas</span></button>
         <button className={`graphite-bottom-nav-btn${activeTab === "spatial" ? " active" : ""}`} onClick={() => setActiveTab("spatial")}><LayoutGrid size={20} /><span>Spatial</span></button>
         <button className={`graphite-bottom-nav-btn${activeTab === "graph" ? " active" : ""}`} onClick={() => setActiveTab("graph")}><Network size={20} /><span>Graph</span></button>

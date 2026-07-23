@@ -73,14 +73,16 @@ export function PluginMarketplaceModal({ isOpen, onClose }: Props) {
       }}
     >
       <div
-        className="graphite-plugin-modal"
+        className="graphite-plugin-modal graphite-modal-card"
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
           maxWidth: "760px",
           height: "560px",
-          background: "var(--bg-secondary)",
-          border: "1px solid var(--border-color)",
+          background: "var(--glass-bg)",
+          backdropFilter: "var(--glass-blur)",
+          WebkitBackdropFilter: "var(--glass-blur)",
+          border: "1px solid var(--glass-border)",
           borderRadius: "16px",
           boxShadow: "0 24px 64px rgba(0, 0, 0, 0.5)",
           overflow: "hidden",

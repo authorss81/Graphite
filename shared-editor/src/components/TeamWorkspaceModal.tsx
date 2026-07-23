@@ -133,7 +133,7 @@ export function TeamWorkspaceModal({
         position: "fixed",
         inset: 0,
         background: "rgba(0,0,0,0.6)",
-        zIndex: 1100,
+        zIndex: 2000,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -142,11 +142,14 @@ export function TeamWorkspaceModal({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
+        className="graphite-modal-card"
         style={{
           width: "min(820px, 98vw)",
           height: "min(680px, 95vh)",
-          background: "var(--bg-primary)",
-          border: "1px solid var(--border-color)",
+          background: "var(--glass-bg)",
+          backdropFilter: "var(--glass-blur)",
+          WebkitBackdropFilter: "var(--glass-blur)",
+          border: "1px solid var(--glass-border)",
           borderRadius: "16px",
           display: "flex",
           flexDirection: "column",
