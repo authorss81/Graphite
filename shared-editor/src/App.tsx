@@ -18,6 +18,9 @@ import { QuickOpenModal } from "./components/QuickOpenModal";
 import { KeyboardCheatsheetModal } from "./components/KeyboardCheatsheetModal";
 import { TableOfContents } from "./components/TableOfContents";
 import { DailyJournal } from "./components/DailyJournal";
+import { SearchDialog } from "./components/SearchDialog";
+import { MetadataEditor } from "./components/MetadataEditor";
+import { indexDocument } from "./utils/searchIndex";
 
 import { applyPluginEffects } from "./utils/pluginSystem";
 
@@ -155,6 +158,18 @@ export function App() {
   const handleCanvasChange = (data: any) => {
     useNoteStore.getState().updateCurrentContent(undefined, data);
   };
+
+  // Auto-index documents for full-text search
+  useEffect(() => {
+    const docs = documents;
+    for (const doc of Object.values(docs)) {
+      if (doc.isFolder || doc.isArchived) continue;
+      const plain = doc.editorState
+        ? doc.editorState.replace(/<[^>]*>/g, "").replace(/\\n/g, " ")
+        : "";
+      indexDocument(doc.id, doc.title || "Untitled", plain, doc.tags || []);
+    }
+  }, [documents]);
 
   if (isInitializing) {
     return (
@@ -552,6 +567,7 @@ export function App() {
               </div>
               <TableOfContents editorState={editorState} />
               <DailyJournal />
+              <MetadataEditor docId={docId} />
             </div>
           )}
           {activeTab === "kanban" && <KanbanBoard />}
@@ -571,6 +587,7 @@ export function App() {
       <PluginMarketplaceModal isOpen={isPluginModalOpen} onClose={() => closeModal("plugins")} />
       <QuickOpenModal isOpen={modals.quickOpen} onClose={() => closeModal("quickOpen")} />
       <KeyboardCheatsheetModal isOpen={modals.cheatsheet} onClose={() => closeModal("cheatsheet")} />
+      <SearchDialog open={modals.search} onClose={() => closeModal("search")} />
     </div>
   );
 }

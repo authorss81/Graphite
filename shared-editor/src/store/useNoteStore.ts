@@ -92,6 +92,7 @@ interface NoteStore {
   toggleArchiveDocument: (id: string) => void;
   addTagToDocument: (id: string, tag: string) => void;
   removeTagFromDocument: (id: string, tag: string) => void;
+  updateDocMetadata: (id: string, updates: Partial<Pick<GraphiteDoc, "tags" | "properties">>) => void;
   setSpatialData: (cards: SpatialCard[], edges: SpatialEdge[]) => void;
   loadNextPage: () => void;
 }
@@ -406,6 +407,16 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
     SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync] removeTag failed:", err));
+  },
+
+  updateDocMetadata: (id, updates) => {
+    const { documents } = get();
+    if (!documents[id]) return;
+    const cur = documents[id];
+    const updated = { ...cur, ...updates, updatedAt: Date.now() };
+    const nextDocs = { ...documents, [id]: updated };
+    set(persistAndSet(nextDocs));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync] updateMetadata failed:", err));
   },
 
   setSpatialData: (cards, edges) => set({ spatialCards: cards, spatialEdges: edges }),

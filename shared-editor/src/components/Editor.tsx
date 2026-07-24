@@ -22,6 +22,7 @@ import { EditorToolbar } from "./EditorToolbar";
 import { SlashMenuPlugin } from "./SlashMenuPlugin";
 import { WikiLinkPlugin } from "./WikiLinkPlugin";
 import { BlockDragHandlePlugin } from "./BlockDragHandlePlugin";
+import { HtmlImportPlugin } from "../plugins/HtmlImportPlugin";
 import { TaskProgressHeader } from "./TaskProgressHeader";
 import { TagManager } from "./TagManager";
 import { sendUpdateToNative, logToNative, encodeBase64 } from "../utils/bridge";
@@ -455,6 +456,7 @@ export function Editor({ docId, initialState }: EditorProps) {
           <WikiLinkPlugin />
           <BlockDragHandlePlugin />
           <FileDropPlugin />
+          <HtmlImportPlugin />
         </div>
         {isPluginActive("word-counter-pro") && <WordStatsBar />}
       </LexicalComposer>

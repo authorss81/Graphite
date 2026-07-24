@@ -11,6 +11,7 @@ export interface GraphiteDoc {
   tags?: string[];
   isPinned?: boolean;
   isArchived?: boolean;
+  properties?: Record<string, string>;
 }
 
 const STORAGE_KEY = "graphite_docs_v1";

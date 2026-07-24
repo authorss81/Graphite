@@ -1079,6 +1079,10 @@ a {
   }
 }
 
+.spin {
+  animation: spin 1s linear infinite;
+}
+
 .graphite-modal-backdrop {
   animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
