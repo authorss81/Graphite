@@ -30,6 +30,7 @@ import { TagManager } from "./TagManager";
 import { sendUpdateToNative, logToNative, encodeBase64 } from "../utils/bridge";
 import { useNoteStore } from "../store/useNoteStore";
 import { uploadFromClipboard } from "../utils/upload";
+import { extractTextFromPdf, pdfToMarkdown } from "../utils/pdfImport";
 import { toast } from "./Toast";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { isPluginActive } from "../utils/pluginSystem";
@@ -103,6 +104,21 @@ function FileDropPlugin() {
             sel.insertRawText(text);
           }
         });
+      }
+      if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+        try {
+          const text = await extractTextFromPdf(file);
+          const markdown = pdfToMarkdown(text, file.name);
+          editor.update(() => {
+            const sel = $getSelection();
+            if ($isRangeSelection(sel)) {
+              sel.insertRawText(markdown);
+            }
+          });
+          toast(`Imported PDF: ${file.name}`, "success");
+        } catch (err) {
+          toast(`Failed to import PDF: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
+        }
       }
     };
     el.addEventListener("dragover", handleDragOver);
