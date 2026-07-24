@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { X, Users, Plus, Trash2, MessageCircle, CheckCircle, Send, AtSign, Shield } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { X, Users, Plus, Trash2, MessageCircle, CheckCircle, Send, AtSign, Shield, Loader2 } from "lucide-react";
 import type { Workspace, WorkspaceRole, Comment } from "../utils/teamWorkspace";
 import {
   loadWorkspaces,
@@ -14,6 +14,7 @@ import {
   deleteComment,
   getInitials,
   randomAvatarColor,
+  subscribeToComments,
 } from "../utils/teamWorkspace";
 
 interface Props {
@@ -50,13 +51,27 @@ export function TeamWorkspaceModal({
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<WorkspaceRole>("editor");
+  const [loading, setLoading] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    const [ws, cmts] = await Promise.all([loadWorkspaces(), getDocComments(currentDocId)]);
+    setWorkspaces(ws);
+    setComments(cmts);
+    setLoading(false);
+  }, [currentDocId]);
+
   useEffect(() => {
-    if (isOpen) {
-      setWorkspaces(loadWorkspaces());
-      setComments(getDocComments(currentDocId));
-    }
+    if (isOpen) loadData();
+  }, [isOpen, loadData]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const unsub = subscribeToComments((cmts) => {
+      setComments(cmts.filter((c) => c.docId === currentDocId).sort((a, b) => a.createdAt - b.createdAt));
+    });
+    return unsub;
   }, [isOpen, currentDocId]);
 
   useEffect(() => {
@@ -65,22 +80,23 @@ export function TeamWorkspaceModal({
 
   if (!isOpen) return null;
 
-  const refresh = () => {
-    setWorkspaces(loadWorkspaces());
-    setComments(getDocComments(currentDocId));
+  const refresh = async () => {
+    const [ws, cmts] = await Promise.all([loadWorkspaces(), getDocComments(currentDocId)]);
+    setWorkspaces(ws);
+    setComments(cmts);
   };
 
-  const handleCreateWs = () => {
+  const handleCreateWs = async () => {
     if (!newWsName.trim()) return;
-    createWorkspace(newWsName.trim(), currentUserId, currentUserName, currentUserEmail);
+    await createWorkspace(newWsName.trim(), currentUserId, currentUserName, currentUserEmail);
     setNewWsName("");
-    refresh();
+    await refresh();
   };
 
-  const handleInvite = () => {
+  const handleInvite = async () => {
     if (!selectedWs || !inviteEmail.trim()) return;
     const displayName = inviteEmail.split("@")[0];
-    addMemberToWorkspace(selectedWs.id, {
+    await addMemberToWorkspace(selectedWs.id, {
       userId: "user_" + Math.random().toString(36).slice(2, 8),
       displayName,
       email: inviteEmail.trim(),
@@ -88,38 +104,41 @@ export function TeamWorkspaceModal({
       role: inviteRole,
     });
     setInviteEmail("");
-    refresh();
-    setSelectedWs(loadWorkspaces().find((w) => w.id === selectedWs.id) ?? null);
+    await refresh();
+    const all = await loadWorkspaces();
+    setSelectedWs(all.find((w) => w.id === selectedWs.id) ?? null);
   };
 
-  const handleRoleChange = (wsId: string, userId: string, role: WorkspaceRole) => {
-    updateMemberRole(wsId, userId, role);
-    refresh();
-    setSelectedWs(loadWorkspaces().find((w) => w.id === wsId) ?? null);
+  const handleRoleChange = async (wsId: string, userId: string, role: WorkspaceRole) => {
+    await updateMemberRole(wsId, userId, role);
+    const all = await loadWorkspaces();
+    setWorkspaces(all);
+    setSelectedWs(all.find((w) => w.id === wsId) ?? null);
   };
 
-  const handleRemoveMember = (wsId: string, userId: string) => {
-    removeMemberFromWorkspace(wsId, userId);
-    refresh();
-    setSelectedWs(loadWorkspaces().find((w) => w.id === wsId) ?? null);
+  const handleRemoveMember = async (wsId: string, userId: string) => {
+    await removeMemberFromWorkspace(wsId, userId);
+    const all = await loadWorkspaces();
+    setWorkspaces(all);
+    setSelectedWs(all.find((w) => w.id === wsId) ?? null);
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!newComment.trim()) return;
-    addComment(currentDocId, currentUserId, currentUserName, newComment.trim(), replyTo?.id);
+    await addComment(currentDocId, currentUserId, currentUserName, newComment.trim(), replyTo?.id);
     setNewComment("");
     setReplyTo(null);
-    setComments(getDocComments(currentDocId));
+    setComments(await getDocComments(currentDocId));
   };
 
-  const handleResolve = (id: string) => {
-    resolveComment(id);
-    setComments(getDocComments(currentDocId));
+  const handleResolve = async (id: string) => {
+    await resolveComment(id);
+    setComments(await getDocComments(currentDocId));
   };
 
-  const handleDeleteComment = (id: string) => {
-    deleteComment(id);
-    setComments(getDocComments(currentDocId));
+  const handleDeleteComment = async (id: string) => {
+    await deleteComment(id);
+    setComments(await getDocComments(currentDocId));
   };
 
   const rootComments = comments.filter((c) => !c.parentId);
@@ -262,7 +281,12 @@ export function TeamWorkspaceModal({
                 <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "4px" }}>
                   My Workspaces
                 </div>
-                {workspaces.length === 0 && (
+                {loading && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 0", color: "var(--text-muted)" }}>
+                    <Loader2 size={16} />
+                  </div>
+                )}
+                {!loading && workspaces.length === 0 && (
                   <div style={{ color: "var(--text-muted)", fontSize: "12px", padding: "8px 0" }}>
                     No workspaces yet.
                   </div>
@@ -358,7 +382,7 @@ export function TeamWorkspaceModal({
                         </p>
                       </div>
                       <button
-                        onClick={() => { deleteWorkspace(selectedWs.id); setSelectedWs(null); refresh(); }}
+                        onClick={async () => { await deleteWorkspace(selectedWs.id); setSelectedWs(null); await refresh(); }}
                         style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "6px", color: "#ef4444", cursor: "pointer", padding: "6px 10px", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}
                       >
                         <Trash2 size={12} /> Delete

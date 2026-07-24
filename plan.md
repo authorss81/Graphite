@@ -259,10 +259,10 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 | # | Item | Details |
 |---|------|---------|
-| 3.5.1 | **Shared workspaces** | Workspace membership table → scope documents to workspace. |
-| 3.5.2 | **Permissions** | Read/edit/admin roles per workspace. |
-| 3.5.3 | **Comments & mentions** | Threaded comments on blocks. `@mention` users. Notifications. |
-| 3.5.4 | **Change requests** | Like Notion's updates — review + approve/reject before merge. |
+| 3.5.1 | **Shared workspaces** | Workspace membership table → scope documents to workspace. IndexedDB persistence. | ✅ Done |
+| 3.5.2 | **Permissions** | Read/edit/admin roles per workspace. | ✅ Done |
+| 3.5.3 | **Comments & mentions** | Threaded comments on blocks. `@mention` users. BroadcastChannel real-time. IndexedDB persistence. | ✅ Done |
+| 3.5.4 | **Change requests** | Like Notion's updates — review + approve/reject before merge. (Needs server) | |
 
 ### 3.6 Security & Privacy
 
