@@ -34,6 +34,7 @@ import {
   Sparkles,
   Lightbulb,
   FileText,
+  Puzzle,
 } from "lucide-react";
 
 interface SlashOption {
@@ -330,23 +331,32 @@ export function SlashMenuPlugin() {
         keywords: ["code", "run", "sandbox", "javascript", "exec"],
         icon: Play,
         badge: "Run",
-        action: (ed) => {
-          ed.update(() => {
-            const sel = $getSelection();
-            if ($isRangeSelection(sel)) {
-              const node = sel.anchor.getNode().getTopLevelElementOrThrow();
-              const codeNode = $createCodeNode();
-              const textNode = $createTextNode("// JS Code Sandbox\nconsole.log('Running code sandbox!');");
-              codeNode.append(textNode);
-              node.replace(codeNode);
-              codeNode.select();
-            }
-          });
+          action: (ed) => {
+            ed.update(() => {
+              const sel = $getSelection();
+              if ($isRangeSelection(sel)) {
+                const node = sel.anchor.getNode().getTopLevelElementOrThrow();
+                const codeNode = $createCodeNode();
+                const textNode = $createTextNode("// JS Code Sandbox\nconsole.log('Running code sandbox!');");
+                codeNode.append(textNode);
+                node.replace(codeNode);
+                codeNode.select();
+              }
+            });
+          },
         },
-      },
-    ],
-    [],
-  );
+        // Plugin-registered slash commands
+        ...getPluginCommands().map((cmd) => ({
+          title: cmd.title,
+          description: cmd.description,
+          keywords: [cmd.title.toLowerCase(), cmd.pluginId, "plugin"],
+          icon: Puzzle,
+          badge: cmd.pluginId,
+          action: (ed: any) => cmd.action(),
+        })),
+      ],
+      [],
+    );
 
   const filteredOptions = useMemo(() => {
     if (!queryString) return options;

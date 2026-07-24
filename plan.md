@@ -241,9 +241,9 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 | # | Item | Details |
 |---|------|---------|
-| 3.3.1 | **Plugin API** | Sandboxed iframe or Web Worker for plugins. Declare slash commands, toolbar items, custom block renderers, event hooks. |
-| 3.3.2 | **Plugin marketplace** | In-app browser for community plugins. One-click install. |
-| 3.3.3 | **Theme API** | CSS variable overrides. Allow community themes. |
+| 3.3.1 | **Plugin API** | Sandboxed iframe for plugins. postMessage-based API with insertText, openUrl, getState, onHostMessage. Plugin slash commands, toolbar items, block renderers. | ✅ Done |
+| 3.3.2 | **Plugin marketplace** | In-app browser for community plugins. One-click install/enable/disable. 5 builtin + 3 community plugins. | ✅ Done |
+| 3.3.3 | **Theme API** | CSS variable overrides. Solarized theme, Zen mode toggle. | ✅ Done |
 
 ### 3.4 Advanced Block Types
 

@@ -24,6 +24,7 @@ import { GhostTextPlugin } from "./GhostTextPlugin";
 import { CodeHighlightPlugin } from "./CodeHighlightPlugin";
 import { MultiplayerPlugin } from "./MultiplayerPlugin";
 import { AwarenessCursorsPlugin } from "./AwarenessCursorsPlugin";
+import { PluginContainer } from "./PluginContainer";
 import { EditorToolbar } from "./EditorToolbar";
 import { SlashMenuPlugin } from "./SlashMenuPlugin";
 import { WikiLinkPlugin } from "./WikiLinkPlugin";
@@ -522,6 +523,7 @@ export function Editor({ docId, initialState }: EditorProps) {
         {isPluginActive("word-counter-pro") && <WordStatsBar />}
       </LexicalComposer>
       <SmartBacklinks />
+      <PluginContainer />
       </ErrorBoundary>
     </div>
   );
