@@ -57,6 +57,12 @@ export function App() {
   const closeModal = (modal: string) => dispatch({ modal, open: false });
   const [showExportMenu, setShowExportMenu] = useState(false);
 
+  useEffect(() => {
+    const handler = () => openModal("aiPanel");
+    window.addEventListener("graphite:open-ai-panel", handler);
+    return () => window.removeEventListener("graphite:open-ai-panel", handler);
+  }, []);
+
   const handleExport = (format: "markdown" | "html" | "html-print") => {
     setShowExportMenu(false);
     if (!editorState) return;

@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { useNoteStore } from "../store/useNoteStore";
 import {
   $getSelection,
   $isRangeSelection,
   $createTextNode,
+  $createParagraphNode,
   COMMAND_PRIORITY_HIGH,
   KEY_DOWN_COMMAND,
   type TextNode,
@@ -29,6 +31,9 @@ import {
   Network,
   Sigma,
   Play,
+  Sparkles,
+  Lightbulb,
+  FileText,
 } from "lucide-react";
 
 interface SlashOption {
@@ -50,6 +55,75 @@ export function SlashMenuPlugin() {
 
   const options: SlashOption[] = useMemo(
     () => [
+      {
+        title: "Generate Meeting Notes",
+        description: "AI generates meeting notes template",
+        keywords: ["ai", "generate", "meeting", "template"],
+        icon: Sparkles,
+        badge: "AI",
+        action: async (ed) => {
+          const { generateFromPrompt } = await import("../utils/aiService");
+          const noteText = useNoteStore.getState().documents[useNoteStore.getState().docId]?.editorState || "";
+          const result = await generateFromPrompt("Generate meeting notes", noteText);
+          ed.update(() => {
+            const sel = $getSelection();
+            if ($isRangeSelection(sel)) {
+              const node = sel.anchor.getNode().getTopLevelElementOrThrow();
+              const p = $createParagraphNode();
+              const textNode = $createTextNode(result);
+              p.append(textNode);
+              node.replace(p);
+              p.select();
+            }
+          });
+        },
+      },
+      {
+        title: "Brainstorm",
+        description: "AI generates brainstorming template",
+        keywords: ["ai", "brainstorm", "idea", "generate"],
+        icon: Lightbulb,
+        badge: "AI",
+        action: async (ed) => {
+          const { generateFromPrompt } = await import("../utils/aiService");
+          const result = await generateFromPrompt("Brainstorm ideas", "");
+          ed.update(() => {
+            const sel = $getSelection();
+            if ($isRangeSelection(sel)) {
+              const node = sel.anchor.getNode().getTopLevelElementOrThrow();
+              const p = $createParagraphNode();
+              const textNode = $createTextNode(result);
+              p.append(textNode);
+              node.replace(p);
+              p.select();
+            }
+          });
+        },
+      },
+      {
+        title: "Generate from Prompt",
+        description: "AI generates content from your description",
+        keywords: ["ai", "generate", "write", "create", "draft"],
+        icon: Sparkles,
+        badge: "AI",
+        action: async (ed) => {
+          const prompt = window.prompt("Describe what you want to generate:");
+          if (!prompt) return;
+          const { generateFromPrompt } = await import("../utils/aiService");
+          const result = await generateFromPrompt(prompt, "");
+          ed.update(() => {
+            const sel = $getSelection();
+            if ($isRangeSelection(sel)) {
+              const node = sel.anchor.getNode().getTopLevelElementOrThrow();
+              const p = $createParagraphNode();
+              const textNode = $createTextNode(result);
+              p.append(textNode);
+              node.replace(p);
+              p.select();
+            }
+          });
+        },
+      },
       {
         title: "Heading 1",
         description: "Large section heading",

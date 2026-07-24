@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import { generateEmbedding, cosineSimilarity, storeDocumentEmbedding, getCachedEmbedding } from "../utils/embedding";
-import { Sparkles, FileText, X, ArrowRight } from "lucide-react";
+import { loadAIConfig } from "../utils/aiConfig";
+import { Sparkles, FileText, X, ArrowRight, Brain } from "lucide-react";
+import { toast } from "./Toast";
 
 interface SearchResult {
   docId: string;
@@ -23,8 +25,13 @@ export function SemanticSearchModal({ isOpen, onClose }: Props) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [reranking, setReranking] = useState(false);
+  const [rerankedIds, setRerankedIds] = useState<string[] | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const computeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resultsRef = useRef<SearchResult[]>([]);
+
+  useEffect(() => { resultsRef.current = results; }, [results]);
 
   useEffect(() => {
     if (isOpen) {
@@ -88,6 +95,55 @@ export function SemanticSearchModal({ isOpen, onClose }: Props) {
       }
     } else if (e.key === "Escape") {
       onClose();
+    }
+  };
+
+  const handleRerank = async () => {
+    const current = resultsRef.current;
+    if (current.length === 0) return;
+    const config = loadAIConfig();
+    if (config.provider === "openai" && !config.openaiKey) { toast("Configure OpenAI API key in AI Settings for LLM reranking", "error"); return; }
+    if (config.provider === "anthropic" && !config.anthropicKey) { toast("Configure Anthropic API key in AI Settings for LLM reranking", "error"); return; }
+
+    setReranking(true);
+    try {
+      const topDocs = current.slice(0, 10);
+      const docsText = topDocs.map((d, i) => `${i + 1}. "${d.title}": ${d.snippet.slice(0, 200)}`).join("\n\n");
+      const systemMsg = "You are a search relevance reranker. Given a query and a list of documents, re-rank the documents by relevance. Return ONLY the ranked list of document indices as comma-separated numbers (e.g., '3,1,4,2'). Most relevant first.";
+      const prompt = `Query: "${query}"\n\nDocuments:\n${docsText}`;
+
+      let rankedText = "";
+      if (config.provider === "openai") {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.openaiKey}` },
+          body: JSON.stringify({ model: config.openaiModel, messages: [{ role: "system", content: systemMsg }, { role: "user", content: prompt }], max_tokens: 50, temperature: 0.1 }),
+        });
+        if (res.ok) { const data = await res.json(); rankedText = data.choices?.[0]?.message?.content || ""; }
+      } else if (config.provider === "anthropic") {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-api-key": config.anthropicKey, "anthropic-version": "2023-06-01" },
+          body: JSON.stringify({ model: config.anthropicModel, system: systemMsg, messages: [{ role: "user", content: prompt }], max_tokens: 50 }),
+        });
+        if (res.ok) { const data = await res.json(); rankedText = data.content?.[0]?.text || ""; }
+      } else {
+        toast("LLM reranking requires OpenAI or Anthropic provider", "error");
+        setReranking(false);
+        return;
+      }
+
+      const indices = rankedText.split(",").map((s) => parseInt(s.trim()) - 1).filter((n) => !isNaN(n) && n >= 0 && n < topDocs.length);
+      if (indices.length > 0) {
+        const newOrder = [...indices.map((i) => topDocs[i]), ...current.slice(10)];
+        setResults(newOrder);
+        setRerankedIds(newOrder.map((r) => r.docId));
+        toast("Results reranked by AI!", "success");
+      }
+    } catch {
+      toast("LLM reranking failed", "error");
+    } finally {
+      setReranking(false);
     }
   };
 
@@ -238,10 +294,24 @@ export function SemanticSearchModal({ isOpen, onClose }: Props) {
             color: "var(--text-muted)",
             display: "flex",
             justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
           <span>↑↓ Navigate · Enter Select · Esc Close</span>
-          <span>pgvector Cosine Similarity</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {results.length > 0 && (
+              <button
+                type="button"
+                onClick={handleRerank}
+                disabled={reranking}
+                style={{ background: "transparent", border: "none", color: "var(--accent-color)", cursor: "pointer", fontSize: "11px", display: "flex", alignItems: "center", gap: "4px" }}
+              >
+                <Brain size={12} />
+                {reranking ? "Reranking..." : "Rerank with AI"}
+              </button>
+            )}
+            {rerankedIds ? <span style={{ color: "var(--accent-color)" }}>AI Reranked</span> : <span>384D Vector + Full-Text</span>}
+          </div>
         </div>
       </div>
     </div>

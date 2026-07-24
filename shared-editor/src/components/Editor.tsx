@@ -20,6 +20,7 @@ import { CanvasNode, $createCanvasNode, INSERT_CANVAS_COMMAND } from "./CanvasNo
 import { ImageNode, $createImageNode, INSERT_IMAGE_COMMAND } from "./ImageNode";
 import { BlockRefNode } from "./BlockRefNode";
 import { BlockRefPlugin } from "./BlockRefPlugin";
+import { GhostTextPlugin } from "./GhostTextPlugin";
 import { EditorToolbar } from "./EditorToolbar";
 import { SlashMenuPlugin } from "./SlashMenuPlugin";
 import { WikiLinkPlugin } from "./WikiLinkPlugin";
@@ -27,10 +28,12 @@ import { BlockDragHandlePlugin } from "./BlockDragHandlePlugin";
 import { HtmlImportPlugin } from "../plugins/HtmlImportPlugin";
 import { TaskProgressHeader } from "./TaskProgressHeader";
 import { TagManager } from "./TagManager";
+import { SmartBacklinks } from "./SmartBacklinks";
 import { sendUpdateToNative, logToNative, encodeBase64 } from "../utils/bridge";
 import { useNoteStore } from "../store/useNoteStore";
 import { uploadFromClipboard } from "../utils/upload";
 import { extractTextFromPdf, pdfToMarkdown } from "../utils/pdfImport";
+import { autoSuggestTags } from "../utils/aiService";
 import { toast } from "./Toast";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { isPluginActive } from "../utils/pluginSystem";
@@ -372,6 +375,19 @@ export function Editor({ docId, initialState }: EditorProps) {
     } catch (err: unknown) {
       toast(`Failed to save: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
     }
+
+    const currentDoc = useNoteStore.getState().documents[targetDocId];
+    if (currentDoc && !currentDoc.editorState?.trim().startsWith("enc:")) {
+      const tags = useNoteStore.getState().documents[targetDocId]?.tags;
+      if (!tags || tags.length === 0) {
+        autoSuggestTags("", currentDoc.editorState || "").then((suggestedTags) => {
+          if (suggestedTags.length > 0) {
+            const store = useNoteStore.getState();
+            suggestedTags.forEach((t) => store.addTagToDocument(targetDocId, t));
+          }
+        }).catch(() => {});
+      }
+    }
   }, []);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -476,9 +492,11 @@ export function Editor({ docId, initialState }: EditorProps) {
           <FileDropPlugin />
           <HtmlImportPlugin />
           <BlockRefPlugin />
+          <GhostTextPlugin />
         </div>
         {isPluginActive("word-counter-pro") && <WordStatsBar />}
       </LexicalComposer>
+      <SmartBacklinks />
       </ErrorBoundary>
     </div>
   );

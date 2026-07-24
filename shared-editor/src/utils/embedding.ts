@@ -53,7 +53,7 @@ export function cosineSimilarity(vecA: number[], vecB: number[]): number {
   return Math.max(0, Math.min(1, (dot + 1) / 2)); // Map [-1, 1] -> [0, 1]
 }
 
-const embeddingCache = new Map<string, { vector: number[]; updatedAt: number }>();
+export const embeddingCache = new Map<string, { vector: number[]; updatedAt: number }>();
 
 export async function storeDocumentEmbedding(docId: string, title: string, content: string): Promise<number[]> {
   const combinedText = `${title}\n${content}`;

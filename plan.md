@@ -31,7 +31,7 @@ Replace fake implementations and build competitive features.
 | 8 | **Phase 10** | Real Engine Implementations: Yjs CRDT, transformers.js embeddings, LLM streaming, Git, Team Workspace, Plugin Marketplace, Kanban, Mermaid/KaTeX, Audio | 172h | ✅ 8/12 Done |
 | 9 | **Phase 11** | Competitive Feature Parity: block refs, daily journal, PDF/HTML import, templates, canvas format, metadata, full-text search, RTL, callouts, quick open | 140h | ✅ 16/18 Done |
 | 10 | **Phase 2** | Competitive (Match Notion/Obsidian): block editor, graph view, AI semantic search, publish/share, version history, tags, spatial canvas | Ongoing | ✅ Mostly complete |
-| 11 | **Phase 3** | World-Class: real-time multiplayer (Yjs), AI writing assistant, plugin system, advanced blocks, team workspace, desktop/mobile native | Long-term |
+| 11 | **Phase 3** | World-Class: real-time multiplayer (Yjs), AI writing assistant, plugin system, advanced blocks, team workspace, desktop/mobile native | Long-term | ✅ 3.2 AI done, 3.4 advanced blocks mostly done, 3.6 encryption done |
 
 ### 🟢 Priority 3 — Canvas, Graph, Testing, Polish
 
@@ -227,15 +227,15 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 | 3.1.3 | **Presence indicators** | Show who's viewing/editing each document. Avatar list in header. |
 | 3.1.4 | **Supabase Realtime relay** | Use Supabase Realtime as Yjs sync backend (broadcast Yjs updates via Realtime channels). |
 
-### 3.2 AI Features
+### 3.2 AI Features ✅ Completed
 
-| # | Item | Details |
-|---|------|---------|
-| 3.2.1 | **AI writing assistant** | OpenAI/Anthropic integration. Ghost text completion, rewrite, expand, summarize, change tone. |
-| 3.2.2 | **AI generation** | `/generate meeting notes`, `/generate table from prompt`, `/brainstorm`. |
-| 3.2.3 | **Auto-tagging** | AI suggests tags based on document content on save. |
-| 3.2.4 | **Smart backlinks** | AI suggests related documents to link. "You might want to connect this to..." |
-| 3.2.5 | **Natural language search** | "Find my notes about the server migration from last month" → hybrid search + LLM reranking. |
+| # | Item | Details | Status |
+|---|------|---------|--------|
+| 3.2.1 | **AI writing assistant** | OpenAI/Anthropic/Ollama integration. Ghost text completion, rewrite, expand, summarize, change tone. | ✅ Done |
+| 3.2.2 | **AI generation** | `/generate meeting notes`, `/generate from prompt`, `/brainstorm` slash commands. | ✅ Done |
+| 3.2.3 | **Auto-tagging** | AI suggests tags via LLM on save (for untagged docs), auto-tag button in AI panel. | ✅ Done |
+| 3.2.4 | **Smart backlinks** | AI suggests related documents via embedding similarity + title matching. | ✅ Done |
+| 3.2.5 | **Natural language search** | Hybrid search (65% vector + 35% full-text) + LLM reranking button in search modal. | ✅ Done |
 
 ### 3.3 Plugin System
 

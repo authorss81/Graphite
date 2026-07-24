@@ -28,6 +28,7 @@ import {
   Bold,
   Italic,
   Underline,
+  Sparkles,
   Strikethrough,
   Heading1,
   Heading2,
@@ -242,6 +243,14 @@ export function EditorToolbar() {
       <ToolbarDivider />
       <ToolbarButton onClick={() => editor.dispatchCommand(INSERT_CANVAS_COMMAND, undefined)} title="Insert Drawing Canvas">
         <Shapes size={16} />
+      </ToolbarButton>
+      <ToolbarDivider />
+      <ToolbarButton
+        onClick={() => window.dispatchEvent(new CustomEvent("graphite:open-ai-panel"))}
+        title="AI Assistant"
+        style={{ background: "linear-gradient(135deg, #a855f7, #ec4899)", color: "#fff" }}
+      >
+        <Sparkles size={16} />
       </ToolbarButton>
 
       {showPomodoro && <PomodoroWidget />}
