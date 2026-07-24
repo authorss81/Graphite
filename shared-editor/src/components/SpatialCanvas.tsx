@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import type { SpatialCard, SpatialEdge } from "../utils/spatialCanvasStorage";
-import { Move, ArrowUpRight, ExternalLink, Trash2 } from "lucide-react";
+import { Move, ArrowUpRight, ExternalLink, Trash2, Download, Upload } from "lucide-react";
 import { ZoomControls } from "./ZoomControls";
+import { exportToJsonCanvas, importFromJsonCanvas, downloadCanvasFile, uploadCanvasFile } from "../utils/canvasFormat";
 
 export function SpatialCanvas() {
   const documents = useNoteStore((s) => s.documents);
@@ -219,6 +220,28 @@ export function SpatialCanvas() {
         <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
           <Move size={14} /> Spatial Canvas
         </span>
+        <div style={{ width: 1, background: "var(--border-color)", margin: "0 4px" }} />
+        <button
+          type="button"
+          onClick={() => downloadCanvasFile(exportToJsonCanvas(cards, edges), "spatial-canvas.graphite-canvas")}
+          title="Export canvas"
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "3px" }}
+        >
+          <Download size={14} /> Export
+        </button>
+        <button
+          type="button"
+          onClick={async () => {
+            const json = await uploadCanvasFile();
+            if (!json) return;
+            const imported = importFromJsonCanvas(json);
+            if (imported) persist(imported.cards, imported.edges);
+          }}
+          title="Import canvas"
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "3px" }}
+        >
+          <Upload size={14} /> Import
+        </button>
         <div style={{ width: 1, background: "var(--border-color)", margin: "0 4px" }} />
         <select
           onChange={(e) => e.target.value && addNoteToCanvas(e.target.value)}
