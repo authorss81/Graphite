@@ -268,9 +268,9 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 | # | Item | Details |
 |---|------|---------|
-| 3.6.1 | **E2E encryption** | Client-side encryption with user-controlled key. Supabase stores encrypted blobs only. |
-| 3.6.2 | **Key management** | WebAuthn / hardware key / recovery codes for key recovery. |
-| 3.6.3 | **Audit log** | Track document access, exports, sharing events. |
+| 3.6.1 | **E2E encryption** | Client-side encryption with user-controlled key. Supabase stores encrypted blobs only. | ✅ Done |
+| 3.6.2 | **Key management** | WebAuthn / hardware key / recovery codes for key recovery. | ✅ Done |
+| 3.6.3 | **Audit log** | Track document access, exports, sharing events. | ✅ Done |
 
 ### 3.7 Desktop & Mobile Native
 

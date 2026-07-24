@@ -3,6 +3,7 @@ import { useNoteStore } from "../store/useNoteStore";
 import { X, Shield, Lock, Unlock, Key, Eye, EyeOff, Download, Trash2, CheckCircle, AlertTriangle, FileText, RefreshCw } from "lucide-react";
 import {
   deriveKey,
+  deriveKeyWithHardware,
   getOrCreateSalt,
   encryptText,
   decryptText,
@@ -11,6 +12,12 @@ import {
   generateRecoveryCodes,
   verifyRecoveryCode,
   hasEncryptionSetup,
+  registerHardwareKey,
+  verifyHardwareKey,
+  isHardwareKeyEnabled,
+  setHardwareKeyEnabled,
+  hasRegisteredHardwareKey,
+  isWebAuthnAvailable,
 } from "../utils/encryption";
 import {
   getAuditLog,
@@ -75,6 +82,9 @@ export function SecurityModal({
   const [showRecovery, setShowRecovery] = useState(false);
   const [recoveryCodeInput, setRecoveryCodeInput] = useState("");
   const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+  const [useHardwareKey, setUseHardwareKey] = useState(isHardwareKeyEnabled());
+  const [hwKeyRegistered, setHwKeyRegistered] = useState(hasRegisteredHardwareKey());
+  const [hwKeyMessage, setHwKeyMessage] = useState("");
   const cryptoKeyRef = useRef<CryptoKey | null>(null);
   const unlockAttemptsRef = useRef(0);
   const lastUnlockAttemptRef = useRef(0);
@@ -105,9 +115,23 @@ export function SecurityModal({
     }
     setIsProcessing(true);
     setError("");
+    setHwKeyMessage("");
     try {
+      if (useHardwareKey && isWebAuthnAvailable()) {
+        setHwKeyMessage("Touch your security key to register it...");
+        const cred = await registerHardwareKey();
+        if (!cred) {
+          setError("Hardware key registration failed or was cancelled.");
+          setIsProcessing(false);
+          return;
+        }
+        setHardwareKeyEnabled(true);
+        setHwKeyRegistered(true);
+        setHwKeyMessage("Hardware key registered!");
+      }
+
       const salt = getOrCreateSalt();
-      const key = await deriveKey(passphrase, salt);
+      const key = useHardwareKey ? await deriveKeyWithHardware(passphrase, salt) : await deriveKey(passphrase, salt);
       cryptoKeyRef.current = key;
       setCryptoKey(key);
       const codes = await generateRecoveryCodes();
@@ -123,7 +147,7 @@ export function SecurityModal({
     setPassphrase("");
     setConfirmPassphrase("");
     setIsProcessing(false);
-  }, [passphrase, confirmPassphrase]);
+  }, [passphrase, confirmPassphrase, useHardwareKey]);
 
   const handleUnlock = useCallback(async () => {
     if (!unlockPassphrase) return;
@@ -136,9 +160,21 @@ export function SecurityModal({
     }
     setIsProcessing(true);
     setError("");
+    setHwKeyMessage("");
     try {
+      if (isHardwareKeyEnabled()) {
+        setHwKeyMessage("Touch your security key to verify...");
+        const verified = await verifyHardwareKey();
+        if (!verified) {
+          setError("Hardware key verification failed or was cancelled.");
+          setIsProcessing(false);
+          return;
+        }
+        setHwKeyMessage("Hardware key verified!");
+      }
+
       const salt = getOrCreateSalt();
-      const key = await deriveKey(unlockPassphrase, salt);
+      const key = isHardwareKeyEnabled() ? await deriveKeyWithHardware(unlockPassphrase, salt) : await deriveKey(unlockPassphrase, salt);
       const liveDoc = useNoteStore.getState().documents[currentDocId];
       const liveContent = liveDoc?.editorState || currentDocContent;
       if (!isEncrypted(liveContent)) {
@@ -158,7 +194,7 @@ export function SecurityModal({
     } catch {
       unlockAttemptsRef.current++;
       lastUnlockAttemptRef.current = Date.now();
-      setError("Wrong passphrase or corrupted data.");
+      setError("Wrong passphrase, corrupted data, or wrong hardware key.");
     }
     setIsProcessing(false);
   }, [unlockPassphrase, currentDocContent, currentDocId, currentDocTitle, onDecryptDoc]);
@@ -463,6 +499,22 @@ export function SecurityModal({
                       boxSizing: "border-box",
                     }}
                   />
+                  {isWebAuthnAvailable() && (
+                    <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "var(--text-secondary)", cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={useHardwareKey}
+                        onChange={(e) => setUseHardwareKey(e.target.checked)}
+                        style={{ accentColor: "var(--accent-color)" }}
+                      />
+                      Require hardware security key (YubiKey, Touch ID, Windows Hello)
+                    </label>
+                  )}
+                  {hwKeyMessage && (
+                    <div style={{ fontSize: "12px", color: "var(--accent-color)", padding: "4px 0" }}>
+                      {hwKeyMessage}
+                    </div>
+                  )}
                   <button
                     onClick={handleSetupEncryption}
                     disabled={isProcessing}
@@ -553,6 +605,17 @@ export function SecurityModal({
                     </div>
                   )}
 
+                  {isHardwareKeyEnabled() && hwKeyMessage && (
+                    <div style={{ fontSize: "12px", color: "var(--accent-color)", padding: "2px 0" }}>
+                      {hwKeyMessage}
+                    </div>
+                  )}
+                  {isHardwareKeyEnabled() && !useRecoveryCode && (
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "4px" }}>
+                      <span style={{ fontSize: "14px" }}>🔑</span>
+                      Hardware key required for unlock
+                    </div>
+                  )}
                   <div style={{ display: "flex", gap: "8px" }}>
                     <button
                       onClick={useRecoveryCode ? handleRecoveryUnlock : handleUnlock}

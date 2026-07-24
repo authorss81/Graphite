@@ -200,3 +200,136 @@ export function migrateStorageIfNeeded(): void {
   if (version >= CURRENT_ENC_VERSION) return;
   localStorage.setItem(STORAGE_VERSION_KEY, String(CURRENT_ENC_VERSION));
 }
+
+// ─── WebAuthn Hardware Key Support ───────────────────────────────────────────
+
+const WEBAUTHN_KEY_STORAGE = "graphite_webauthn_credential_v1";
+const WEBAUTHN_ENABLED_KEY = "graphite_webauthn_enabled_v1";
+
+export interface WebAuthnCredential {
+  id: string;
+  rawId: string; // base64
+  type: "public-key";
+}
+
+export function isWebAuthnAvailable(): boolean {
+  return typeof window !== "undefined" && typeof navigator !== "undefined" && "credentials" in navigator;
+}
+
+export async function registerHardwareKey(): Promise<WebAuthnCredential | null> {
+  if (!isWebAuthnAvailable()) return null;
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: { name: "Graphite Studio" },
+        user: {
+          id: crypto.getRandomValues(new Uint8Array(16)),
+          name: "graphite-user",
+          displayName: "Graphite User",
+        },
+        pubKeyCredParams: [
+          { type: "public-key", alg: -7 }, // ES256
+          { type: "public-key", alg: -257 }, // RS256
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: "cross-platform",
+          userVerification: "discouraged",
+        },
+        timeout: 60000,
+      },
+    });
+    if (!credential) return null;
+    const cred = {
+      id: credential.id,
+      rawId: bufToBase64(credential.rawId),
+      type: credential.type as "public-key",
+    };
+    localStorage.setItem(WEBAUTHN_KEY_STORAGE, JSON.stringify(cred));
+    return cred;
+  } catch (err) {
+    console.error("[WebAuthn] Registration failed:", err);
+    return null;
+  }
+}
+
+export async function verifyHardwareKey(): Promise<boolean> {
+  if (!isWebAuthnAvailable()) return false;
+  const stored = localStorage.getItem(WEBAUTHN_KEY_STORAGE);
+  if (!stored) return false;
+  try {
+    const cred: WebAuthnCredential = JSON.parse(stored);
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        allowCredentials: [{
+          id: base64ToBuf(cred.rawId),
+          type: "public-key",
+          transports: ["usb", "nfc", "ble", "internal"],
+        }],
+        userVerification: "discouraged",
+        timeout: 60000,
+      },
+    });
+    return assertion !== null;
+  } catch (err) {
+    console.error("[WebAuthn] Verification failed:", err);
+    return false;
+  }
+}
+
+export function isHardwareKeyEnabled(): boolean {
+  return localStorage.getItem(WEBAUTHN_ENABLED_KEY) === "true";
+}
+
+export function setHardwareKeyEnabled(enabled: boolean): void {
+  if (enabled) {
+    localStorage.setItem(WEBAUTHN_ENABLED_KEY, "true");
+  } else {
+    localStorage.removeItem(WEBAUTHN_ENABLED_KEY);
+    localStorage.removeItem(WEBAUTHN_KEY_STORAGE);
+  }
+}
+
+export function hasRegisteredHardwareKey(): boolean {
+  return localStorage.getItem(WEBAUTHN_KEY_STORAGE) !== null;
+}
+
+export async function deriveKeyWithHardware(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  let keyMaterial = passphrase;
+
+  if (isHardwareKeyEnabled()) {
+    const stored = localStorage.getItem(WEBAUTHN_KEY_STORAGE);
+    if (stored) {
+      try {
+        const cred: WebAuthnCredential = JSON.parse(stored);
+        keyMaterial = passphrase + cred.id + cred.rawId;
+      } catch {}
+    }
+  }
+
+  const keyBytes = enc.encode(keyMaterial);
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyBytes,
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+  const saltBuf = salt.buffer.slice(salt.byteOffset, salt.byteOffset + salt.byteLength) as ArrayBuffer;
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: saltBuf,
+      iterations: PBKDF2_ITERATIONS,
+      hash: "SHA-256",
+    },
+    cryptoKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
