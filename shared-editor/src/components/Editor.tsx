@@ -380,7 +380,6 @@ export function Editor({ docId, initialState }: EditorProps) {
       toast(`Failed to save: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
     }
 
-    const currentDoc = useNoteStore.getState().documents[targetDocId];
     if (currentDoc && !currentDoc.editorState?.trim().startsWith("enc:")) {
       const tags = useNoteStore.getState().documents[targetDocId]?.tags;
       if (!tags || tags.length === 0) {
