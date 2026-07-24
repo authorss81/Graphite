@@ -7,7 +7,7 @@ import { logToNative, decodeBase64 } from "./utils/bridge";
 import { saveDocs } from "./utils/docStorage";
 import { useNoteStore } from "./store/useNoteStore";
 import { useAuthStore } from "./store/useAuthStore";
-import { BookOpen, Palette, Info, RotateCcw, Share2, Network, Sparkles, LayoutGrid, Puzzle, Users, ShieldCheck, Columns3 } from "lucide-react";
+import { BookOpen, Palette, Info, RotateCcw, Share2, Network, Sparkles, LayoutGrid, Puzzle, Users, ShieldCheck, Columns3, FileText } from "lucide-react";
 import { GraphView } from "./components/GraphView";
 import { SpatialCanvas } from "./components/SpatialCanvas";
 import { KanbanBoard } from "./components/KanbanBoard";
@@ -20,6 +20,7 @@ import { TableOfContents } from "./components/TableOfContents";
 import { DailyJournal } from "./components/DailyJournal";
 import { SearchDialog } from "./components/SearchDialog";
 import { MetadataEditor } from "./components/MetadataEditor";
+import { TemplatesGalleryModal } from "./components/TemplatesGalleryModal";
 import { indexDocument } from "./utils/searchIndex";
 
 import { applyPluginEffects } from "./utils/pluginSystem";
@@ -48,7 +49,7 @@ export function App() {
   type ModalAction = { modal: string; open: boolean };
   const [modals, dispatch] = useReducer(
     (state: Record<string, boolean>, action: ModalAction) => ({ ...state, [action.modal]: action.open }),
-    { search: false, publish: false, history: false, aiPanel: false, plugins: false, team: false, security: false, quickOpen: false, cheatsheet: false }
+    { search: false, publish: false, history: false, aiPanel: false, plugins: false, team: false, security: false, quickOpen: false, cheatsheet: false, templates: false }
   );
   const isPluginModalOpen = modals.plugins;
   const openModal = (modal: string) => dispatch({ modal, open: true });
@@ -241,6 +242,14 @@ export function App() {
             >
               <Sparkles size={16} />
               AI Search
+            </button>
+            <button
+              className="graphite-btn"
+              onClick={() => openModal("templates")}
+              title="Templates Gallery"
+            >
+              <FileText size={16} />
+              Templates
             </button>
             <button
               className="graphite-btn"
@@ -588,6 +597,7 @@ export function App() {
       <QuickOpenModal isOpen={modals.quickOpen} onClose={() => closeModal("quickOpen")} />
       <KeyboardCheatsheetModal isOpen={modals.cheatsheet} onClose={() => closeModal("cheatsheet")} />
       <SearchDialog open={modals.search} onClose={() => closeModal("search")} />
+      <TemplatesGalleryModal isOpen={modals.templates} onClose={() => closeModal("templates")} />
     </div>
   );
 }
