@@ -252,7 +252,7 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 | 3.4.1 | **Databases** | Table view, board view (Kanban), list view, calendar view. Inspired by Notion databases. |
 | 3.4.2 | **Mermaid diagrams** | Render Mermaid code blocks as diagrams. Use mermaid.render. |
 | 3.4.3 | **LaTeX math** | KaTeX rendering for `$$` math blocks. |
-| 3.4.4 | **Code blocks with syntax highlighting** | Prism.js or Shiki for highlighting. Run button for JS/Python sandbox. |
+| 3.4.4 | **Code blocks with syntax highlighting** | Prism.js via @lexical/code auto-highlighting, 28 token types styled, language picker in toolbar. Run button for JS/Python sandbox. | ✅ Done |
 | 3.4.5 | **Audio/video** | Upload to Supabase Storage → embed player block. |
 
 ### 3.5 Team Workspace

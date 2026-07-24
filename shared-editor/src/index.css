@@ -237,19 +237,35 @@ body {
   tab-size: 2;
 }
 
-.graphite-editor-codeblock .token.keyword {
-  color: hsl(280, 85%, 70%);
-}
-.graphite-editor-codeblock .token.string {
-  color: var(--accent-success);
-}
-.graphite-editor-codeblock .token.function {
-  color: hsl(200, 85%, 65%);
-}
-.graphite-editor-codeblock .token.comment {
-  color: var(--text-muted);
-  font-style: italic;
-}
+.graphite-editor-codeblock .token.keyword { color: hsl(280, 85%, 70%); }
+.graphite-editor-codeblock .token.string { color: var(--accent-success); }
+.graphite-editor-codeblock .token.function { color: hsl(200, 85%, 65%); }
+.graphite-editor-codeblock .token.comment { color: var(--text-muted); font-style: italic; }
+.graphite-editor-codeblock .token.number { color: hsl(30, 85%, 65%); }
+.graphite-editor-codeblock .token.boolean { color: hsl(0, 85%, 70%); }
+.graphite-editor-codeblock .token.operator { color: hsl(160, 60%, 65%); }
+.graphite-editor-codeblock .token.punctuation { color: var(--text-secondary); }
+.graphite-editor-codeblock .token.property { color: hsl(190, 85%, 65%); }
+.graphite-editor-codeblock .token.selector { color: hsl(320, 85%, 70%); }
+.graphite-editor-codeblock .token.attr-name { color: hsl(30, 85%, 65%); }
+.graphite-editor-codeblock .token.attr-value { color: var(--accent-success); }
+.graphite-editor-codeblock .token.builtin { color: hsl(200, 85%, 65%); }
+.graphite-editor-codeblock .token.class-name { color: hsl(40, 85%, 65%); }
+.graphite-editor-codeblock .token.constant { color: hsl(0, 85%, 70%); }
+.graphite-editor-codeblock .token.symbol { color: hsl(280, 85%, 70%); }
+.graphite-editor-codeblock .token.deleted { color: hsl(0, 60%, 60%); text-decoration: line-through; }
+.graphite-editor-codeblock .token.inserted { color: var(--accent-success); }
+.graphite-editor-codeblock .token.tag { color: hsl(0, 70%, 65%); }
+.graphite-editor-codeblock .token.variable { color: hsl(30, 60%, 65%); }
+.graphite-editor-codeblock .token.url { color: hsl(200, 70%, 65%); text-decoration: underline; }
+.graphite-editor-codeblock .token.regex { color: hsl(30, 85%, 65%); }
+.graphite-editor-codeblock .token.important { color: hsl(0, 85%, 70%); font-weight: bold; }
+.graphite-editor-codeblock .token.atrule { color: hsl(280, 85%, 70%); }
+.graphite-editor-codeblock .token.prolog { color: var(--text-muted); }
+.graphite-editor-codeblock .token.doctype { color: var(--text-muted); }
+.graphite-editor-codeblock .token.cdata { color: var(--text-muted); }
+.graphite-editor-codeblock .token.entity { color: hsl(320, 85%, 70%); cursor: help; }
+.graphite-editor-codeblock .token.namespace { opacity: 0.7; }
 
 /* Dynamic glassmorphic navigation buttons */
 .graphite-btn {

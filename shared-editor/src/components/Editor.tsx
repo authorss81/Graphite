@@ -21,6 +21,7 @@ import { ImageNode, $createImageNode, INSERT_IMAGE_COMMAND } from "./ImageNode";
 import { BlockRefNode } from "./BlockRefNode";
 import { BlockRefPlugin } from "./BlockRefPlugin";
 import { GhostTextPlugin } from "./GhostTextPlugin";
+import { CodeHighlightPlugin } from "./CodeHighlightPlugin";
 import { EditorToolbar } from "./EditorToolbar";
 import { SlashMenuPlugin } from "./SlashMenuPlugin";
 import { WikiLinkPlugin } from "./WikiLinkPlugin";
@@ -493,6 +494,7 @@ export function Editor({ docId, initialState }: EditorProps) {
           <HtmlImportPlugin />
           <BlockRefPlugin />
           <GhostTextPlugin />
+          <CodeHighlightPlugin />
         </div>
         {isPluginActive("word-counter-pro") && <WordStatsBar />}
       </LexicalComposer>

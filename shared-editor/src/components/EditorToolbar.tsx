@@ -19,7 +19,7 @@ import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import { $isHeadingNode, $createHeadingNode } from "@lexical/rich-text";
 import { $isListNode, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND, ListNode } from "@lexical/list";
 import { $createQuoteNode } from "@lexical/rich-text";
-import { $createCodeNode } from "@lexical/code";
+import { $createCodeNode, $isCodeNode, getCodeLanguages, getLanguageFriendlyName, CODE_LANGUAGE_MAP } from "@lexical/code";
 import { isPluginActive } from "../utils/pluginSystem";
 import { PomodoroWidget } from "./PomodoroWidget";
 import { AudioRecording } from "./AudioRecording";
@@ -85,6 +85,8 @@ export function EditorToolbar() {
   const [isUnderline, setIsUnderline] = useState(false);
   const [isStrikethrough, setIsStrikethrough] = useState(false);
   const [blockType, setBlockType] = useState<BlockType>("p");
+  const [codeLanguage, setCodeLanguage] = useState<string>("");
+  const [showLangPicker, setShowLangPicker] = useState(false);
 
   const updateToolbar = useCallback(() => {
     const selection = $getSelection();
@@ -94,6 +96,7 @@ export function EditorToolbar() {
       setIsUnderline(false);
       setIsStrikethrough(false);
       setBlockType("p");
+      setCodeLanguage("");
       return;
     }
 
@@ -115,12 +118,18 @@ export function EditorToolbar() {
       element = anchorNode.getTopLevelElementOrThrow();
     }
 
-    if ($isHeadingNode(element)) {
+    if ($isCodeNode(element)) {
+      setBlockType("code");
+      setCodeLanguage((element as any).getLanguage?.() || "");
+    } else if ($isHeadingNode(element)) {
       setBlockType(element.getTag() as "h1" | "h2" | "h3");
+      setCodeLanguage("");
     } else if ($isListNode(element)) {
       setBlockType((element as ListNode).getListType() === "bullet" ? "ul" : "ol");
+      setCodeLanguage("");
     } else {
       setBlockType("p");
+      setCodeLanguage("");
     }
   }, []);
 
@@ -237,6 +246,83 @@ export function EditorToolbar() {
       <ToolbarButton onClick={insertCodeBlock} title="Code Block">
         <Code size={16} />
       </ToolbarButton>
+      {blockType === "code" && (
+        <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+          <button
+            type="button"
+            className="graphite-toolbar-btn"
+            onClick={() => setShowLangPicker(!showLangPicker)}
+            title="Change language"
+            style={{ fontSize: "11px", padding: "4px 8px", minWidth: "80px", display: "flex", alignItems: "center", gap: "4px" }}
+          >
+            <span>{codeLanguage ? getLanguageFriendlyName(codeLanguage) : "Auto"}</span>
+            <span style={{ fontSize: "8px" }}>▼</span>
+          </button>
+          {showLangPicker && (
+            <div
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                zIndex: 100,
+                background: "var(--bg-secondary)",
+                border: "1px solid var(--border-color)",
+                borderRadius: "8px",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+                maxHeight: "200px",
+                overflowY: "auto",
+                minWidth: "140px",
+              }}
+            >
+              <button
+                type="button"
+                className="graphite-toolbar-btn"
+                style={{ width: "100%", textAlign: "left", padding: "6px 12px", fontSize: "12px" }}
+                onClick={() => {
+                  editor.update(() => {
+                    const sel = $getSelection();
+                    if ($isRangeSelection(sel)) {
+                      const node = sel.anchor.getNode().getTopLevelElementOrThrow();
+                      if ($isCodeNode(node)) { (node as any).setLanguage?.(""); }
+                    }
+                  });
+                  setCodeLanguage("");
+                  setShowLangPicker(false);
+                }}
+              >
+                Auto-detect
+              </button>
+              {getCodeLanguages().map((lang: string) => (
+                <button
+                  key={lang}
+                  type="button"
+                  className="graphite-toolbar-btn"
+                  style={{
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "6px 12px",
+                    fontSize: "12px",
+                    background: codeLanguage === lang ? "var(--bg-tertiary)" : "transparent",
+                  }}
+                  onClick={() => {
+                    editor.update(() => {
+                      const sel = $getSelection();
+                      if ($isRangeSelection(sel)) {
+                        const node = sel.anchor.getNode().getTopLevelElementOrThrow();
+                        if ($isCodeNode(node)) { (node as any).setLanguage?.(lang); }
+                      }
+                    });
+                    setCodeLanguage(lang);
+                    setShowLangPicker(false);
+                  }}
+                >
+                  {getLanguageFriendlyName(lang)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <ToolbarButton onClick={insertQuote} title="Blockquote">
         <Quote size={16} />
       </ToolbarButton>
