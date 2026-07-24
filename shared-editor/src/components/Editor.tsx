@@ -67,6 +67,52 @@ function onError(error: Error) {
   logToNative("error", `Lexical Error: ${error.message}`);
 }
 
+function FileDropPlugin() {
+  const [editor] = useLexicalComposerContext();
+  const dropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = dropRef.current;
+    if (!el) return;
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    const handleDrop = async (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      const items = e.dataTransfer?.items;
+      if (items && items.length > 0) {
+        const url = await uploadFromClipboard(items);
+        if (url && file.type.startsWith("image/")) {
+          editor.dispatchCommand(INSERT_IMAGE_COMMAND, { src: url });
+          return;
+        }
+      }
+      if (file.type.startsWith("text/") || file.name.endsWith(".md")) {
+        const text = await file.text();
+        editor.update(() => {
+          const sel = $getSelection();
+          if ($isRangeSelection(sel)) {
+            sel.insertRawText(text);
+          }
+        });
+      }
+    };
+    el.addEventListener("dragover", handleDragOver);
+    el.addEventListener("drop", handleDrop);
+    return () => {
+      el.removeEventListener("dragover", handleDragOver);
+      el.removeEventListener("drop", handleDrop);
+    };
+  }, [editor]);
+
+  return <div ref={dropRef} style={{ display: "contents" }} />;
+}
+
 function EditorStateLoader({ initialState }: { initialState?: string }) {
   const [editor] = useLexicalComposerContext();
   const lastLoaded = useRef<string | undefined>(undefined);
@@ -387,6 +433,8 @@ export function Editor({ docId, initialState }: EditorProps) {
             contentEditable={
               <ContentEditable
                 className="editor-input"
+                dir="auto"
+                spellCheck={true}
                 aria-placeholder="Start writing something amazing... (Type / for commands, [[ for note links)"
                 placeholder={<div className="editor-placeholder">Start writing something amazing... (Type / for commands, [[ for note links)</div>}
               />
@@ -406,6 +454,7 @@ export function Editor({ docId, initialState }: EditorProps) {
           <SlashMenuPlugin />
           <WikiLinkPlugin />
           <BlockDragHandlePlugin />
+          <FileDropPlugin />
         </div>
         {isPluginActive("word-counter-pro") && <WordStatsBar />}
       </LexicalComposer>

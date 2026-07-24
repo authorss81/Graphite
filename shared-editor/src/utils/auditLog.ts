@@ -19,7 +19,6 @@ export interface AuditEvent {
 
 const AUDIT_KEY = "graphite_audit_log_v1";
 const HMAC_KEY_STORAGE = "graphite_audit_hmac_key";
-const HMAC_HEAD_STORAGE = "graphite_audit_hmac_head";
 const MAX_EVENTS = 500; // cap to prevent unbounded growth
 
 // HMAC chain initialization — generates a key once, stored separately

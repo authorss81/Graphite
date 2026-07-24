@@ -15,20 +15,6 @@ export interface DocCommit {
 const HISTORY_KEY = "graphite_doc_history_v1";
 export const GIT_DIR = "/graphite_vault";
 
-function generateUUID(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  let i = 0;
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, () => {
-    const v = bytes[i++];
-    return (v % 16).toString(16);
-  });
-}
 
 // Virtual Git Filesystem lazy-initialized in browser environment
 let fsInstance: any = null;

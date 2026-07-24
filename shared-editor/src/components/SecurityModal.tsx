@@ -78,7 +78,6 @@ export function SecurityModal({
   const cryptoKeyRef = useRef<CryptoKey | null>(null);
   const unlockAttemptsRef = useRef(0);
   const lastUnlockAttemptRef = useRef(0);
-  const passphraseBufRef = useRef<Uint8Array | null>(null);
 
 
   // Audit state

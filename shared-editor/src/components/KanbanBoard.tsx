@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNoteStore } from "../store/useNoteStore";
-import { Plus, Trash2, CheckCircle2, Circle, Clock, FileText } from "lucide-react";
+import { CheckCircle2, Circle, Clock, FileText } from "lucide-react";
 
 interface ChecklistItem {
   id: string;
@@ -36,7 +36,6 @@ export function KanbanBoard() {
   const documents = useNoteStore((s) => s.documents);
   const selectDocument = useNoteStore((s) => s.selectDocument);
 
-  const [newTitle, setNewTitle] = useState("");
   const [filterDoc, setFilterDoc] = useState<string | "all">("all");
   const [filterStatus, setFilterStatus] = useState<"all" | "todo" | "in_progress" | "done">("all");
 

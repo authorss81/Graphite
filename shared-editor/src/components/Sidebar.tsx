@@ -78,6 +78,8 @@ export function Sidebar() {
   const logout = useAuthStore((s) => s.logout);
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
+  const [docsCollapsed, setDocsCollapsed] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
@@ -380,33 +382,76 @@ export function Sidebar() {
         </div>
       )}
 
-      <div className="sidebar-tree" role="tree">
-        {tree.length === 0 ? (
-          <p className="sidebar-empty">
-            {showArchived ? "No archived documents." : activeTagFilter ? `No notes with #${activeTagFilter}` : "No documents yet."}
-          </p>
-        ) : (
-          <>
-            {tree.map(renderNode)}
-            {docTotal > (docPage + 1) * 50 && (
-              <button
-                className="sidebar-load-more"
-                onClick={loadNextPage}
-                style={{
-                  width: "100%",
-                  padding: "6px",
-                  fontSize: "11px",
-                  color: "var(--text-muted)",
-                  background: "transparent",
-                  border: "none",
-                  borderTop: "1px solid var(--border-color)",
-                  cursor: "pointer",
-                }}
-              >
-                Load more...
-              </button>
+      {pinnedNotes.length > 0 && (
+        <div style={{ marginBottom: "4px" }}>
+          <div
+            onClick={() => setPinnedCollapsed((p) => !p)}
+            style={{ display: "flex", alignItems: "center", gap: "4px", padding: "2px 8px", cursor: "pointer", fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", userSelect: "none" }}
+          >
+            {pinnedCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+            Pinned ({pinnedNotes.length})
+          </div>
+          {!pinnedCollapsed && (
+            <div className="sidebar-tree" role="tree">
+              {pinnedNotes.map((doc) => {
+                const isSelected = doc.id === docId;
+                return (
+                  <div
+                    key={doc.id}
+                    className={`sidebar-row${isSelected ? " selected" : ""}`}
+                    role="treeitem"
+                    role-description="pinned"
+                    onClick={() => !doc.isFolder && selectDocument(doc.id)}
+                    style={{ paddingLeft: 24, display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "12px", color: "var(--text-secondary)" }}
+                  >
+                    <Pin size={10} style={{ color: "var(--accent-color)", opacity: 0.7 }} />
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.title}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ marginBottom: "4px" }}>
+        <div
+          onClick={() => setDocsCollapsed((p) => !p)}
+          style={{ display: "flex", alignItems: "center", gap: "4px", padding: "2px 8px", cursor: "pointer", fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", userSelect: "none" }}
+        >
+          {docsCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+          Documents
+        </div>
+        {!docsCollapsed && (
+          <div className="sidebar-tree" role="tree">
+            {tree.length === 0 ? (
+              <p className="sidebar-empty">
+                {showArchived ? "No archived documents." : activeTagFilter ? `No notes with #${activeTagFilter}` : "No documents yet."}
+              </p>
+            ) : (
+              <>
+                {tree.map(renderNode)}
+                {docTotal > (docPage + 1) * 50 && (
+                  <button
+                    className="sidebar-load-more"
+                    onClick={loadNextPage}
+                    style={{
+                      width: "100%",
+                      padding: "6px",
+                      fontSize: "11px",
+                      color: "var(--text-muted)",
+                      background: "transparent",
+                      border: "none",
+                      borderTop: "1px solid var(--border-color)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Load more...
+                  </button>
+                )}
+              </>
             )}
-          </>
+          </div>
         )}
       </div>
 

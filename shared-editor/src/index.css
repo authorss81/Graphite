@@ -957,6 +957,79 @@ a {
   50% { opacity: 0.4; }
 }
 
+/* Callouts / rich blockquotes */
+.graphite-callout {
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin: 12px 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.graphite-callout--info {
+  background: rgba(59, 130, 246, 0.12);
+  border-left: 3px solid #3b82f6;
+}
+.graphite-callout--warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-left: 3px solid #f59e0b;
+}
+.graphite-callout--tip {
+  background: rgba(16, 185, 129, 0.12);
+  border-left: 3px solid #10b981;
+}
+.graphite-callout--danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-left: 3px solid #ef4444;
+}
+
+/* Keyboard cheatsheet */
+.graphite-cheatsheet-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  font-size: 13px;
+}
+.graphite-cheatsheet-key {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+}
+.graphite-cheatsheet-kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* TOC */
+.graphite-toc {
+  font-size: 13px;
+  line-height: 1.8;
+}
+.graphite-toc a {
+  color: var(--accent-color);
+  text-decoration: none;
+  cursor: pointer;
+}
+.graphite-toc a:hover {
+  text-decoration: underline;
+}
+.graphite-toc--h1 { padding-left: 0; font-weight: 600; }
+.graphite-toc--h2 { padding-left: 16px; }
+.graphite-toc--h3 { padding-left: 32px; font-size: 12px; }
+
 /* Premium Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 6px;

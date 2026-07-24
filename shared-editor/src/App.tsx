@@ -14,6 +14,10 @@ import { KanbanBoard } from "./components/KanbanBoard";
 import { PluginMarketplaceModal } from "./components/PluginMarketplaceModal";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ModalManager } from "./components/ModalManager";
+import { QuickOpenModal } from "./components/QuickOpenModal";
+import { KeyboardCheatsheetModal } from "./components/KeyboardCheatsheetModal";
+import { TableOfContents } from "./components/TableOfContents";
+import { DailyJournal } from "./components/DailyJournal";
 
 import { applyPluginEffects } from "./utils/pluginSystem";
 
@@ -41,7 +45,7 @@ export function App() {
   type ModalAction = { modal: string; open: boolean };
   const [modals, dispatch] = useReducer(
     (state: Record<string, boolean>, action: ModalAction) => ({ ...state, [action.modal]: action.open }),
-    { search: false, publish: false, history: false, aiPanel: false, plugins: false, team: false, security: false }
+    { search: false, publish: false, history: false, aiPanel: false, plugins: false, team: false, security: false, quickOpen: false, cheatsheet: false }
   );
   const isPluginModalOpen = modals.plugins;
   const openModal = (modal: string) => dispatch({ modal, open: true });
@@ -64,6 +68,17 @@ export function App() {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         dispatch({ modal: "search", open: true });
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        dispatch({ modal: "quickOpen", open: true });
+      }
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const active = document.activeElement;
+        if (!active || active === document.body) {
+          e.preventDefault();
+          dispatch({ modal: "cheatsheet", open: true });
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -535,6 +550,8 @@ export function App() {
                   </p>
                 )}
               </div>
+              <TableOfContents editorState={editorState} />
+              <DailyJournal />
             </div>
           )}
           {activeTab === "kanban" && <KanbanBoard />}
@@ -552,6 +569,8 @@ export function App() {
       <ToastContainer />
       <ModalManager modals={modals} onCloseModal={closeModal} />
       <PluginMarketplaceModal isOpen={isPluginModalOpen} onClose={() => closeModal("plugins")} />
+      <QuickOpenModal isOpen={modals.quickOpen} onClose={() => closeModal("quickOpen")} />
+      <KeyboardCheatsheetModal isOpen={modals.cheatsheet} onClose={() => closeModal("cheatsheet")} />
     </div>
   );
 }
