@@ -9,6 +9,8 @@ export interface SpatialCard {
   width: number;
   height: number;
   color?: string;
+  imageUrl?: string;
+  content?: string;
 }
 
 export interface SpatialEdge {
