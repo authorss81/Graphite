@@ -18,6 +18,8 @@ import { TRANSFORMERS } from "@lexical/markdown";
 import { $insertNodes, $getSelection, $isRangeSelection, $getRoot, $createParagraphNode, $createTextNode, KEY_ENTER_COMMAND, COMMAND_PRIORITY_LOW, COMMAND_PRIORITY_HIGH } from "lexical";
 import { CanvasNode, $createCanvasNode, INSERT_CANVAS_COMMAND } from "./CanvasNode";
 import { ImageNode, $createImageNode, INSERT_IMAGE_COMMAND } from "./ImageNode";
+import { BlockRefNode } from "./BlockRefNode";
+import { BlockRefPlugin } from "./BlockRefPlugin";
 import { EditorToolbar } from "./EditorToolbar";
 import { SlashMenuPlugin } from "./SlashMenuPlugin";
 import { WikiLinkPlugin } from "./WikiLinkPlugin";
@@ -324,7 +326,7 @@ export function Editor({ docId, initialState }: EditorProps) {
     namespace: "GraphiteEditor",
     theme: graphiteTheme,
     onError,
-    nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode, CodeHighlightNode, CanvasNode, ImageNode],
+    nodes: [HeadingNode, QuoteNode, ListNode, ListItemNode, LinkNode, CodeNode, CodeHighlightNode, CanvasNode, ImageNode, BlockRefNode],
     editorState: undefined,
   };
 
@@ -457,6 +459,7 @@ export function Editor({ docId, initialState }: EditorProps) {
           <BlockDragHandlePlugin />
           <FileDropPlugin />
           <HtmlImportPlugin />
+          <BlockRefPlugin />
         </div>
         {isPluginActive("word-counter-pro") && <WordStatsBar />}
       </LexicalComposer>
