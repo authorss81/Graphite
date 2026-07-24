@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNoteStore } from "../store/useNoteStore";
-import { exportAsMarkdown, exportAsHTML, exportAsPDF } from "../utils/exportDoc";
+import { editorStateToMarkdown, editorStateToHtml, downloadAsFile, printDocument } from "../utils/exportDoc";
 import { toast } from "./Toast";
 import { Share2, Globe, FileText, Printer, Copy, Check, X, Code } from "lucide-react";
 
@@ -161,7 +161,7 @@ export function PublishModal({ isOpen, onClose }: Props) {
             <button
               type="button"
               className="graphite-btn"
-              onClick={() => exportAsMarkdown(currentDoc.title, currentDoc.editorState)}
+              onClick={() => { const md = editorStateToMarkdown(currentDoc.editorState); downloadAsFile(md, `${currentDoc.title}.md`, "text/markdown"); }}
               style={{ flexDirection: "column", gap: "6px", padding: "12px 8px", fontSize: "12px" }}
             >
               <FileText size={18} color="var(--accent-color)" />
@@ -170,7 +170,7 @@ export function PublishModal({ isOpen, onClose }: Props) {
             <button
               type="button"
               className="graphite-btn"
-              onClick={() => exportAsHTML(currentDoc.title, currentDoc.editorState)}
+              onClick={() => { const html = editorStateToHtml(currentDoc.editorState, currentDoc.title); downloadAsFile(html, `${currentDoc.title}.html`, "text/html"); }}
               style={{ flexDirection: "column", gap: "6px", padding: "12px 8px", fontSize: "12px" }}
             >
               <Code size={18} color="#a855f7" />
@@ -179,7 +179,7 @@ export function PublishModal({ isOpen, onClose }: Props) {
             <button
               type="button"
               className="graphite-btn"
-              onClick={() => exportAsPDF()}
+              onClick={() => { printDocument(editorStateToHtml(currentDoc.editorState, currentDoc.title)); }}
               style={{ flexDirection: "column", gap: "6px", padding: "12px 8px", fontSize: "12px" }}
             >
               <Printer size={18} color="#38bdf8" />

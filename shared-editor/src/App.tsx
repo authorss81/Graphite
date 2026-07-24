@@ -1,4 +1,4 @@
-import { useEffect, useReducer, lazy, Suspense } from "react";
+import { useEffect, useReducer, useState, lazy, Suspense } from "react";
 import { Editor } from "./components/Editor";
 import { Sidebar } from "./components/Sidebar";
 import { AuthScreen } from "./components/AuthScreen";
@@ -7,7 +7,7 @@ import { logToNative, decodeBase64 } from "./utils/bridge";
 import { saveDocs } from "./utils/docStorage";
 import { useNoteStore } from "./store/useNoteStore";
 import { useAuthStore } from "./store/useAuthStore";
-import { BookOpen, Palette, Info, RotateCcw, Share2, Network, Sparkles, LayoutGrid, Puzzle, Users, ShieldCheck, Columns3, FileText } from "lucide-react";
+import { BookOpen, Palette, Info, RotateCcw, Share2, Network, Sparkles, LayoutGrid, Puzzle, Users, ShieldCheck, Columns3, FileText, Download } from "lucide-react";
 import { GraphView } from "./components/GraphView";
 import { SpatialCanvas } from "./components/SpatialCanvas";
 import { KanbanBoard } from "./components/KanbanBoard";
@@ -21,6 +21,7 @@ import { DailyJournal } from "./components/DailyJournal";
 import { SearchDialog } from "./components/SearchDialog";
 import { MetadataEditor } from "./components/MetadataEditor";
 import { TemplatesGalleryModal } from "./components/TemplatesGalleryModal";
+import { editorStateToMarkdown, editorStateToHtml, downloadAsFile, printDocument } from "./utils/exportDoc";
 import { indexDocument } from "./utils/searchIndex";
 
 import { applyPluginEffects } from "./utils/pluginSystem";
@@ -54,6 +55,31 @@ export function App() {
   const isPluginModalOpen = modals.plugins;
   const openModal = (modal: string) => dispatch({ modal, open: true });
   const closeModal = (modal: string) => dispatch({ modal, open: false });
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  const handleExport = (format: "markdown" | "html" | "html-print") => {
+    setShowExportMenu(false);
+    if (!editorState) return;
+    const title = documents[docId]?.title || "Untitled";
+    if (format === "markdown") {
+      const md = editorStateToMarkdown(editorState);
+      downloadAsFile(md, `${title}.md`, "text/markdown");
+    } else if (format === "html") {
+      const html = editorStateToHtml(editorState, title);
+      downloadAsFile(html, `${title}.html`, "text/html");
+    } else if (format === "html-print") {
+      const html = editorStateToHtml(editorState, title);
+      printDocument(html);
+    }
+  };
+
+  useEffect(() => {
+    const handleClick = () => setShowExportMenu(false);
+    if (showExportMenu) {
+      window.addEventListener("click", handleClick);
+      return () => window.removeEventListener("click", handleClick);
+    }
+  }, [showExportMenu]);
 
   useEffect(() => {
     // Track keyboard height for mobile via visualViewport API
@@ -284,6 +310,19 @@ export function App() {
               <ShieldCheck size={16} />
               Security
             </button>
+            <div style={{ position: "relative" }}>
+              <button className="graphite-btn" onClick={() => setShowExportMenu((p) => !p)} title="Export document" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", border: "none" }}>
+                <Download size={16} />
+                Export
+              </button>
+              {showExportMenu && (
+                <div style={{ position: "absolute", top: "100%", right: 0, marginTop: "4px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.4)", zIndex: 999, minWidth: "160px", overflow: "hidden" }}>
+                  <button onClick={() => handleExport("markdown")} style={{ width: "100%", textAlign: "left", padding: "8px 14px", background: "none", border: "none", cursor: "pointer", color: "var(--text-primary)", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }} onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")} onMouseLeave={(e) => (e.currentTarget.style.background = "none")}><FileText size={14} /> Markdown (.md)</button>
+                  <button onClick={() => handleExport("html")} style={{ width: "100%", textAlign: "left", padding: "8px 14px", background: "none", border: "none", cursor: "pointer", color: "var(--text-primary)", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }} onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")} onMouseLeave={(e) => (e.currentTarget.style.background = "none")}><FileText size={14} /> HTML (.html)</button>
+                  <button onClick={() => handleExport("html-print")} style={{ width: "100%", textAlign: "left", padding: "8px 14px", background: "none", border: "none", cursor: "pointer", color: "var(--text-primary)", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }} onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")} onMouseLeave={(e) => (e.currentTarget.style.background = "none")}><FileText size={14} /> Print / PDF</button>
+                </div>
+              )}
+            </div>
             <button className="graphite-btn" onClick={() => openModal("publish")} style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", border: "none" }}>
               <Share2 size={16} />
               Publish
