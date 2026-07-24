@@ -218,14 +218,14 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 ## Phase 3: World-Class — Platform for Thought
 
-### 3.1 Real-Time Multiplayer
+### 3.1 Real-Time Multiplayer ✅ Local — server relay pending
 
-| # | Item | Details |
-|---|------|---------|
-| 3.1.1 | **Yjs CRDT integration** | Actually use the `yjs` lib in the webview + `y-websocket` provider. Real conflict-free merge. |
-| 3.1.2 | **Awareness cursors** | Show other users' cursors in the editor (color-coded, name label). |
-| 3.1.3 | **Presence indicators** | Show who's viewing/editing each document. Avatar list in header. |
-| 3.1.4 | **Supabase Realtime relay** | Use Supabase Realtime as Yjs sync backend (broadcast Yjs updates via Realtime channels). |
+| # | Item | Details | Status |
+|---|------|---------|--------|
+| 3.1.1 | **Yjs CRDT integration** | Real `yjs` Doc + `y-indexeddb` persistence + BroadcastChannel multi-tab sync. `@lexical/yjs` binding to Lexical editor. | ✅ Done |
+| 3.1.2 | **Awareness cursors** | Color-coded cursor + name labels rendered on canvas overlay per editor. BroadcastChannel sync for multi-tab. | ✅ Done |
+| 3.1.3 | **Presence indicators** | Avatar dots in header showing who's viewing current doc. | ✅ Done |
+| 3.1.4 | **Supabase Realtime relay** | Use Supabase Realtime as Yjs sync backend (broadcast Yjs updates via Realtime channels). | ⬜ Pending (needs server setup) |
 
 ### 3.2 AI Features ✅ Completed
 

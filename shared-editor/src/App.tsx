@@ -14,6 +14,7 @@ import { KanbanBoard } from "./components/KanbanBoard";
 import { PluginMarketplaceModal } from "./components/PluginMarketplaceModal";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ModalManager } from "./components/ModalManager";
+import { PresenceIndicator } from "./components/PresenceIndicator";
 import { QuickOpenModal } from "./components/QuickOpenModal";
 import { KeyboardCheatsheetModal } from "./components/KeyboardCheatsheetModal";
 import { TableOfContents } from "./components/TableOfContents";
@@ -257,7 +258,8 @@ export function App() {
               {currentTitle}
             </p>
           </div>
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <PresenceIndicator />
             <button
               className="graphite-btn active"
               onClick={() => openModal("aiPanel")}

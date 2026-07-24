@@ -22,6 +22,8 @@ import { BlockRefNode } from "./BlockRefNode";
 import { BlockRefPlugin } from "./BlockRefPlugin";
 import { GhostTextPlugin } from "./GhostTextPlugin";
 import { CodeHighlightPlugin } from "./CodeHighlightPlugin";
+import { MultiplayerPlugin } from "./MultiplayerPlugin";
+import { AwarenessCursorsPlugin } from "./AwarenessCursorsPlugin";
 import { EditorToolbar } from "./EditorToolbar";
 import { SlashMenuPlugin } from "./SlashMenuPlugin";
 import { WikiLinkPlugin } from "./WikiLinkPlugin";
@@ -392,6 +394,7 @@ export function Editor({ docId, initialState }: EditorProps) {
   }, []);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [collabConnected, setCollabConnected] = useState(false);
 
   const handleEditorChange = useCallback((editorState: EditorState) => {
     const targetDocId = docId;
@@ -436,6 +439,24 @@ export function Editor({ docId, initialState }: EditorProps) {
               }}
             >
               Saving...
+            </span>
+          )}
+          {collabConnected && (
+            <span
+              style={{
+                position: "absolute",
+                right: isSaving ? 68 : 8,
+                top: 6,
+                fontSize: 10,
+                color: "var(--accent-success)",
+                fontFamily: "var(--font-mono)",
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent-success)", display: "inline-block" }} />
+              Collab
             </span>
           )}
         </div>
@@ -495,6 +516,8 @@ export function Editor({ docId, initialState }: EditorProps) {
           <BlockRefPlugin />
           <GhostTextPlugin />
           <CodeHighlightPlugin />
+          <MultiplayerPlugin docId={docId} onConnectionChange={setCollabConnected} />
+          {collabConnected && <AwarenessCursorsPlugin />}
         </div>
         {isPluginActive("word-counter-pro") && <WordStatsBar />}
       </LexicalComposer>
