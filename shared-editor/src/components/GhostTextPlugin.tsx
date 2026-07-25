@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   $getSelection,
@@ -7,7 +7,6 @@ import {
   COMMAND_PRIORITY_LOW,
 } from "lexical";
 import { loadAIConfig } from "../utils/aiConfig";
-import { toast } from "./Toast";
 
 let ghostAbortController: AbortController | null = null;
 

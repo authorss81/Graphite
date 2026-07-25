@@ -8,7 +8,7 @@ export function SmartBacklinks() {
   const docId = useNoteStore((s) => s.docId);
   const documents = useNoteStore((s) => s.documents);
   const currentDoc = documents[docId];
-  const navigateToDoc = useNoteStore((s) => s.setDocId);
+  const navigateToDoc = useNoteStore((s) => s.selectDocument);
   const backlinks = useNoteStore((s) => s.backlinks);
 
   const [suggestions, setSuggestions] = useState<AISuggestedLink[]>([]);
@@ -21,10 +21,10 @@ export function SmartBacklinks() {
     const timer = setTimeout(async () => {
       try {
         const result = await suggestSmartBacklinks(currentDoc.editorState || "", documents);
-        const existingLinkedIds = new Set(
-          (backlinks[docId] || []).map((b: any) => b.sourceDocId || b.targetDocId)
+        const existingLinkedTitles = new Set(backlinks);
+        const filtered = result.filter(
+          (s) => !existingLinkedTitles.has(s.title) && s.docId !== docId
         );
-        const filtered = result.filter((s) => !existingLinkedIds.has(s.docId) && s.docId !== docId);
         setSuggestions(filtered.slice(0, 3));
       } catch {
         setSuggestions([]);

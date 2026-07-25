@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { createYjsBinding, CONNECTED_COMMAND, syncCursorPositions, setLocalStateFocus } from "@lexical/yjs";
+import { createYjsBinding, CONNECTED_COMMAND } from "@lexical/yjs";
 import { getYDoc, setAwarenessState, clearAwareness } from "../utils/yjsSync";
 import { getCurrentUser } from "../utils/userRegistry";
 
@@ -18,8 +18,11 @@ export function MultiplayerPlugin({ docId, onConnectionChange }: MultiplayerPlug
   useEffect(() => {
     const yDoc = getYDoc(docId);
 
-    const binding = createYjsBinding(editor, yDoc, docId, {
-      isLocal: true,
+    const binding = createYjsBinding({
+      editor,
+      id: docId,
+      doc: yDoc,
+      docMap: yDoc.getMap("docs") as any,
     });
     bindingRef.current = binding;
 
@@ -36,7 +39,9 @@ export function MultiplayerPlugin({ docId, onConnectionChange }: MultiplayerPlug
 
     return () => {
       clearAwareness(clientIdRef.current);
-      try { binding.destroy(); } catch {}
+      try {
+        (binding as any).destroy();
+      } catch {}
       onConnectionChange?.(false);
     };
   }, [docId, editor, onConnectionChange]);
@@ -66,18 +71,28 @@ export function MultiplayerPlugin({ docId, onConnectionChange }: MultiplayerPlug
     const rootEl = editor.getRootElement();
     if (!rootEl) return;
 
-    const onMouseMove = (e: MouseEvent) => {
+    const onMouseMove = () => {
       if (document.activeElement === rootEl) {
         updateCursor();
       }
     };
 
     const onFocus = () => {
-      setLocalStateFocus(editor, true);
+      setAwarenessState(
+        user.current.id,
+        user.current.name,
+        user.current.color,
+        { focused: true, docId }
+      );
     };
 
     const onBlur = () => {
-      setLocalStateFocus(editor, false);
+      setAwarenessState(
+        user.current.id,
+        user.current.name,
+        user.current.color,
+        { focused: false, docId }
+      );
     };
 
     rootEl.addEventListener("mousemove", onMouseMove);
@@ -89,7 +104,7 @@ export function MultiplayerPlugin({ docId, onConnectionChange }: MultiplayerPlug
       rootEl.removeEventListener("focus", onFocus);
       rootEl.removeEventListener("blur", onBlur);
     };
-  }, [editor, updateCursor]);
+  }, [editor, updateCursor, docId]);
 
   return null;
 }

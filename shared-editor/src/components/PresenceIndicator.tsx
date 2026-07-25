@@ -6,7 +6,7 @@ import { Users } from "lucide-react";
 export function PresenceIndicator() {
   const docId = useNoteStore((s) => s.docId);
   const [online, setOnline] = useState<AwarenessState[]>([]);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   useEffect(() => {
     const update = () => {

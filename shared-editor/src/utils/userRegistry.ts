@@ -14,15 +14,31 @@ export interface AwarenessState {
 
 export const awarenessStates = new Map<number, AwarenessState>();
 
+let cachedCurrentUser: { id: string; name: string; color: string } | null = null;
+
 export function getCurrentUser(): { id: string; name: string; color: string } {
-  let user = localStorage.getItem("graphite_current_user");
-  if (!user) {
-    const id = crypto.randomUUID();
-    const name = `User-${id.slice(0, 4)}`;
-    const colors = ["#a855f7", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4"];
-    const color = colors[Math.abs(name.charCodeAt(0)) % colors.length];
-    user = JSON.stringify({ id, name, color });
-    localStorage.setItem("graphite_current_user", user);
+  if (cachedCurrentUser) return cachedCurrentUser;
+  try {
+    let user = localStorage.getItem("graphite_current_user");
+    if (!user) {
+      const id = crypto.randomUUID();
+      const name = `User-${id.slice(0, 4)}`;
+      const colors = ["#a855f7", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#06b6d4"];
+      const color = colors[Math.abs(name.charCodeAt(0)) % colors.length];
+      const newUser = { id, name, color };
+      cachedCurrentUser = newUser;
+      try {
+        localStorage.setItem("graphite_current_user", JSON.stringify(newUser));
+      } catch (e) {
+        console.warn("Failed to set user in localStorage", e);
+      }
+      return newUser;
+    }
+    cachedCurrentUser = JSON.parse(user);
+    return cachedCurrentUser!;
+  } catch {
+    const fallbackUser = { id: crypto.randomUUID(), name: "Guest", color: "#a855f7" };
+    cachedCurrentUser = fallbackUser;
+    return fallbackUser;
   }
-  return JSON.parse(user);
 }

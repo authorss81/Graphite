@@ -19,7 +19,7 @@ import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import { $isHeadingNode, $createHeadingNode } from "@lexical/rich-text";
 import { $isListNode, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND, ListNode } from "@lexical/list";
 import { $createQuoteNode } from "@lexical/rich-text";
-import { $createCodeNode, $isCodeNode, getCodeLanguages, getLanguageFriendlyName, CODE_LANGUAGE_MAP } from "@lexical/code";
+import { $createCodeNode, $isCodeNode, getCodeLanguages, getLanguageFriendlyName } from "@lexical/code";
 import { isPluginActive } from "../utils/pluginSystem";
 import { PomodoroWidget } from "./PomodoroWidget";
 import { AudioRecording } from "./AudioRecording";
@@ -50,19 +50,24 @@ function ToolbarButton({
   disabled,
   title,
   children,
+  style,
+  className,
 }: {
   onClick: () => void;
   active?: boolean;
   disabled?: boolean;
   title: string;
   children: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`graphite-toolbar-btn${active ? " active" : ""}${disabled ? " disabled" : ""}`}
+      style={style}
+      className={`graphite-toolbar-btn${active ? " active" : ""}${disabled ? " disabled" : ""}${className ? ` ${className}` : ""}`}
     >
       {children}
     </button>

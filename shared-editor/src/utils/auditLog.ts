@@ -27,7 +27,9 @@ function getHmacKey(): string {
   if (!key) {
     const bytes = crypto.getRandomValues(new Uint8Array(32));
     key = Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
-    localStorage.setItem(HMAC_KEY_STORAGE, key);
+    try {
+      localStorage.setItem(HMAC_KEY_STORAGE, key);
+    } catch {}
   }
   return key;
 }

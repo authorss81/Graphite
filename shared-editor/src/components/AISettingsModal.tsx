@@ -28,7 +28,6 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
     onClose();
   };
 
-  const provider = PROVIDERS.find((p) => p.value === config.provider)!;
 
   return (
     <div

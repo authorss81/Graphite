@@ -48,9 +48,24 @@ export class SupabaseSyncService {
     error: null,
     offlineQueue: [],
   };
+  private session: any = null;
 
   private constructor() {
     this.loadOfflineQueue();
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        this.session = session;
+        if (session) {
+          this.flushOfflineQueue().catch(console.error);
+        }
+      });
+      supabase.auth.onAuthStateChange((_event, session) => {
+        this.session = session;
+        if (session) {
+          this.flushOfflineQueue().catch(console.error);
+        }
+      });
+    }
     if (typeof window !== "undefined") {
       window.addEventListener("online", () => {
         this.flushOfflineQueue().catch(console.error);
@@ -119,7 +134,7 @@ export class SupabaseSyncService {
   }
 
   async flushOfflineQueue(): Promise<void> {
-    if (!supabase || !navigator.onLine || this.state.offlineQueue.length === 0) {
+    if (!supabase || !this.session || !navigator.onLine || this.state.offlineQueue.length === 0) {
       return;
     }
 
@@ -145,7 +160,7 @@ export class SupabaseSyncService {
   }
 
   async syncDocument(docId: string, docPayload: Partial<GraphiteDoc>): Promise<void> {
-    if (!supabase) {
+    if (!supabase || !this.session) {
       this.queueOfflineOp({ docId, action: "upsert", payload: docPayload });
       this.state.status = "offline";
       return;
@@ -203,7 +218,7 @@ export class SupabaseSyncService {
     onDocUpdated: (docId: string, data: Partial<GraphiteDoc>) => void,
     onDocDeleted: (docId: string) => void
   ): () => void {
-    if (!supabase) return () => {};
+    if (!supabase || !this.session) return () => {};
     const channelTopic = `graphite_realtime_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const channel = supabase
       .channel(channelTopic)

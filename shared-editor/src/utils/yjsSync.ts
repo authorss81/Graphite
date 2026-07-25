@@ -4,7 +4,7 @@ import { awarenessStates } from "./userRegistry";
 
 const YJS_DB_PREFIX = "graphite_yjs_";
 
-const docs = new Map<string, { doc: Y.Doc; provider: IndexeddbPersistence; channel: BroadcastChannel }>();
+const docs = new Map<string, { doc: Y.Doc; provider: any; channel: BroadcastChannel; interval: any }>();
 const userColors = [
   "#a855f7", "#ec4899", "#3b82f6", "#10b981", "#f59e0b",
   "#ef4444", "#06b6d4", "#84cc16", "#8b5cf6", "#f97316",
@@ -21,7 +21,10 @@ export function getYDoc(docId: string): Y.Doc {
   if (existing) return existing.doc;
 
   const doc = new Y.Doc({ guid: docId });
-  const provider = new IndexeddbPersistence(`${YJS_DB_PREFIX}${docId}`, doc);
+  const isTest = typeof globalThis !== "undefined" && (globalThis as any).process?.env?.NODE_ENV === "test";
+  const provider = !isTest && typeof indexedDB !== "undefined"
+    ? new IndexeddbPersistence(`${YJS_DB_PREFIX}${docId}`, doc)
+    : null;
   const channel = new BroadcastChannel(`yjs-sync-${docId}`);
 
   // Broadcast Yjs updates to other tabs
@@ -56,11 +59,13 @@ export function getYDoc(docId: string): Y.Doc {
     }
   }, 200);
 
-  provider.on("synced", () => {
-    provider.destroy(); // Keep IndexedDB updated but don't keep sync connection alive
-  });
+  if (provider) {
+    provider.on("synced", () => {
+      provider.destroy(); // Keep IndexedDB updated but don't keep sync connection alive
+    });
+  }
 
-  docs.set(docId, { doc, provider, channel });
+  docs.set(docId, { doc, provider, channel, interval: awarenessInterval });
 
   return doc;
 }
@@ -69,7 +74,8 @@ export function closeYDoc(docId: string): void {
   const existing = docs.get(docId);
   if (!existing) return;
   existing.channel.close();
-  existing.provider.destroy();
+  if (existing.provider) existing.provider.destroy();
+  if (existing.interval) clearInterval(existing.interval);
   existing.doc.destroy();
   docs.delete(docId);
 }

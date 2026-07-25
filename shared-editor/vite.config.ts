@@ -4,6 +4,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    global: "globalThis",
+    Buffer: ["buffer", "Buffer"],
+  },
   plugins: [
     react(),
     VitePWA({

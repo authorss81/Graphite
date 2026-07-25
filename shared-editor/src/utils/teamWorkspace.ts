@@ -42,7 +42,6 @@ export interface Comment {
 }
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
-let commentsListener: ((comments: Comment[]) => void) | null = null;
 const commentsChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("graphite-comments") : null;
 
 function getDB(): Promise<IDBPDatabase> {
@@ -209,14 +208,12 @@ export async function deleteComment(id: string): Promise<void> {
 }
 
 export function subscribeToComments(callback: (comments: Comment[]) => void): () => void {
-  commentsListener = callback;
   const handler = async () => {
     const comments = await loadComments();
     callback(comments);
   };
   commentsChannel?.addEventListener("message", handler);
   return () => {
-    commentsListener = null;
     commentsChannel?.removeEventListener("message", handler);
   };
 }

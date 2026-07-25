@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from "react";
-import { getActiveSandboxPlugins, registerPluginCommand, unregisterPluginCommands } from "../utils/pluginSystem";
+import { getActiveSandboxPlugins } from "../utils/pluginSystem";
 import { PluginSandbox } from "./PluginSandbox";
 import type { PluginDefinition } from "../utils/pluginAPI";
 import { toast } from "./Toast";
@@ -15,7 +15,7 @@ export function PluginContainer() {
     toast(`Plugin "${pluginId}" inserted text: ${text.slice(0, 50)}...`, "info");
   }, []);
 
-  const handleOpenUrl = useCallback((pluginId: string, url: string) => {
+  const handleOpenUrl = useCallback((_pluginId: string, url: string) => {
     window.open(url, "_blank", "noopener");
   }, []);
 

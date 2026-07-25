@@ -16,7 +16,6 @@ import {
   verifyHardwareKey,
   isHardwareKeyEnabled,
   setHardwareKeyEnabled,
-  hasRegisteredHardwareKey,
   isWebAuthnAvailable,
 } from "../utils/encryption";
 import {
@@ -83,7 +82,6 @@ export function SecurityModal({
   const [recoveryCodeInput, setRecoveryCodeInput] = useState("");
   const [useRecoveryCode, setUseRecoveryCode] = useState(false);
   const [useHardwareKey, setUseHardwareKey] = useState(isHardwareKeyEnabled());
-  const [hwKeyRegistered, setHwKeyRegistered] = useState(hasRegisteredHardwareKey());
   const [hwKeyMessage, setHwKeyMessage] = useState("");
   const cryptoKeyRef = useRef<CryptoKey | null>(null);
   const unlockAttemptsRef = useRef(0);
@@ -126,7 +124,6 @@ export function SecurityModal({
           return;
         }
         setHardwareKeyEnabled(true);
-        setHwKeyRegistered(true);
         setHwKeyMessage("Hardware key registered!");
       }
 

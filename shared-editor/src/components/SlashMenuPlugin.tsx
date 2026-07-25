@@ -16,6 +16,7 @@ import { INSERT_CHECK_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND, INSERT_ORDERE
 import { INSERT_CANVAS_COMMAND } from "./CanvasNode";
 import { INSERT_IMAGE_COMMAND } from "./ImageNode";
 import { pickImage, uploadImage } from "../utils/upload";
+import { getPluginCommands } from "../utils/pluginSystem";
 import {
   Heading1,
   Heading2,
@@ -33,7 +34,6 @@ import {
   Play,
   Sparkles,
   Lightbulb,
-  FileText,
   Puzzle,
 } from "lucide-react";
 
@@ -352,7 +352,7 @@ export function SlashMenuPlugin() {
           keywords: [cmd.title.toLowerCase(), cmd.pluginId, "plugin"],
           icon: Puzzle,
           badge: cmd.pluginId,
-          action: (ed: any) => cmd.action(),
+          action: (_ed: any) => cmd.action(),
         })),
       ],
       [],

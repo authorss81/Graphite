@@ -1,6 +1,5 @@
 import { extractHumanText } from "./versionHistory";
-import { loadAIConfig, type AIConfig, type AIProvider } from "./aiConfig";
-import { embeddingCache } from "./embedding";
+import { loadAIConfig, type AIConfig } from "./aiConfig";
 
 export interface AISuggestedLink {
   docId: string;

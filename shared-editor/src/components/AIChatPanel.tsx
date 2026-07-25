@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sparkles, X, Send, Copy, PlusCircle, Settings, Wand2, RotateCcw } from "lucide-react";
 import { useNoteStore } from "../store/useNoteStore";
 import { streamLLM, autoSuggestTags, rewriteText } from "../utils/aiService";

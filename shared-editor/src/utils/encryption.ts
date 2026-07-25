@@ -10,6 +10,14 @@ const LOCK_STORAGE_KEY = "graphite_enc_locked_docs_v1";
 const STORAGE_VERSION_KEY = "graphite_enc_storage_version";
 const CURRENT_ENC_VERSION = 1;
 
+function safeSetItem(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn(`localStorage setItem failed for key ${key}:`, e);
+  }
+}
+
 // ─── Utility: isomorphic base64 ──────────────────────────────────────────────
 
 const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -51,7 +59,7 @@ export function getOrCreateSalt(): Uint8Array {
   const stored = localStorage.getItem(KEY_STORAGE_KEY);
   if (stored) return new Uint8Array(base64ToBuf(stored));
   const salt = crypto.getRandomValues(new Uint8Array(16));
-  localStorage.setItem(KEY_STORAGE_KEY, bufToBase64(salt.buffer));
+  safeSetItem(KEY_STORAGE_KEY, bufToBase64(salt.buffer));
   return salt;
 }
 
@@ -133,7 +141,7 @@ export function setDocLocked(docId: string, locked: boolean): void {
   const locked_set = getLockedDocs();
   if (locked) locked_set.add(docId);
   else locked_set.delete(docId);
-  localStorage.setItem(LOCK_STORAGE_KEY, JSON.stringify([...locked_set]));
+  safeSetItem(LOCK_STORAGE_KEY, JSON.stringify([...locked_set]));
 }
 
 // ─── Recovery codes ──────────────────────────────────────────────────────────
@@ -154,7 +162,7 @@ function markCodeUsed(code: string) {
   // Merge with existing set to avoid racy overwrite from other tabs
   const existing = getUsedCodes();
   existing.add(code);
-  localStorage.setItem(USED_RECOVERY_KEY, JSON.stringify([...existing]));
+  safeSetItem(USED_RECOVERY_KEY, JSON.stringify([...existing]));
 }
 
 export async function generateRecoveryCodes(): Promise<string[]> {
@@ -166,7 +174,7 @@ export async function generateRecoveryCodes(): Promise<string[]> {
   );
   const enc = new TextEncoder();
   const hashBuf = await crypto.subtle.digest("SHA-256", enc.encode(codes.join(",")));
-  localStorage.setItem(RECOVERY_STORAGE_KEY, bufToBase64(hashBuf));
+  safeSetItem(RECOVERY_STORAGE_KEY, bufToBase64(hashBuf));
   localStorage.removeItem(USED_RECOVERY_KEY);
   return codes;
 }
@@ -198,7 +206,7 @@ export function getStorageVersion(): number {
 export function migrateStorageIfNeeded(): void {
   const version = getStorageVersion();
   if (version >= CURRENT_ENC_VERSION) return;
-  localStorage.setItem(STORAGE_VERSION_KEY, String(CURRENT_ENC_VERSION));
+  safeSetItem(STORAGE_VERSION_KEY, String(CURRENT_ENC_VERSION));
 }
 
 // ─── WebAuthn Hardware Key Support ───────────────────────────────────────────
@@ -241,12 +249,13 @@ export async function registerHardwareKey(): Promise<WebAuthnCredential | null> 
       },
     });
     if (!credential) return null;
+    const pubKeyCred = credential as PublicKeyCredential;
     const cred = {
-      id: credential.id,
-      rawId: bufToBase64(credential.rawId),
-      type: credential.type as "public-key",
+      id: pubKeyCred.id,
+      rawId: bufToBase64(pubKeyCred.rawId),
+      type: pubKeyCred.type as "public-key",
     };
-    localStorage.setItem(WEBAUTHN_KEY_STORAGE, JSON.stringify(cred));
+    safeSetItem(WEBAUTHN_KEY_STORAGE, JSON.stringify(cred));
     return cred;
   } catch (err) {
     console.error("[WebAuthn] Registration failed:", err);
@@ -286,7 +295,7 @@ export function isHardwareKeyEnabled(): boolean {
 
 export function setHardwareKeyEnabled(enabled: boolean): void {
   if (enabled) {
-    localStorage.setItem(WEBAUTHN_ENABLED_KEY, "true");
+    safeSetItem(WEBAUTHN_ENABLED_KEY, "true");
   } else {
     localStorage.removeItem(WEBAUTHN_ENABLED_KEY);
     localStorage.removeItem(WEBAUTHN_KEY_STORAGE);

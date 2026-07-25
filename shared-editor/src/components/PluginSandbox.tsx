@@ -33,7 +33,7 @@ export function PluginSandbox({ plugin, onCommand, onInsertText, onOpenUrl, visi
         if (iframeRef.current?.contentWindow) {
           iframeRef.current.contentWindow.postMessage({
             type: "host:command-result",
-            _channel: msg._channel,
+            _channel: (msg as any)._channel,
             payload: { online: navigator.onLine, language: navigator.language },
           }, "*");
         }
