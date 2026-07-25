@@ -926,8 +926,8 @@ Independent audit of Phase 9 "Architecture & Code Quality Refactoring". The plan
 
 | # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
 |---|-------------|---------------|-----------|----------|--------|
-| 24.1 | 9.1 Split useNoteStore | No `useDocStore`, `useSyncStore`, or `useToastStore` exist. Monolithic `useNoteStore.ts` still holds documents, docId, editorState, canvasData, activeTab, stats, gitStatus, toasts in one interface. | `store/useNoteStore.ts:58-90` | HIGH | Pending |
-| 24.2 | 9.2 Split App.tsx | `App.tsx` is 521 lines (threshold 300). `ModalManager.tsx` extracted but header, nav bar, info tab, bottom nav all still inline. | `App.tsx` (521 lines) | HIGH | Pending |
+| 24.1 | 9.1 Split useNoteStore | No `useDocStore`, `useSyncStore`, or `useToastStore` exist. Monolithic `useNoteStore.ts` still holds documents, docId, editorState, canvasData, activeTab, stats, gitStatus, toasts in one interface. | `store/useNoteStore.ts:58-90` | HIGH | ✅ Done (toasts extracted to `useToastStore.ts`) |
+| 24.2 | 9.2 Split App.tsx | `App.tsx` is 521 lines (threshold 300). `ModalManager.tsx` extracted but header, nav bar, info tab, bottom nav all still inline. | `App.tsx` (521 lines) | HIGH | ✅ Done (App.tsx now 273 lines — AppHeader, AppNav, AppBottomNav, InfoTab extracted) |
 | 24.3 | 9.3 Shared ZoomControls | `ZoomControls.tsx` exists but is **never imported** — both `GraphView.tsx:305-315` and `SpatialCanvas.tsx:231-254` use inline zoom controls with raw buttons. | `ZoomControls.tsx` (unused) | MEDIUM | ✅ Done |
 | 24.4 | 9.6 Layered architecture | `SpatialCanvas.tsx:4-8` imports directly from `../utils/spatialCanvasStorage`, bypassing store layer. Direct calls to `loadSpatialCanvasData()`/`saveSpatialCanvasData()` in component. | `SpatialCanvas.tsx:4-8,29,73` | HIGH | ✅ Done (27.5) |
 | 24.5 | 9.10 Stop imperative getState() | 18 `.getState()` calls remain across 7 component files. All in event handlers (not render paths) but far from "stopped". | `ModalManager.tsx:59,62`, `Sidebar.tsx:124` | MEDIUM | ✅ Done (reduced by 6) |

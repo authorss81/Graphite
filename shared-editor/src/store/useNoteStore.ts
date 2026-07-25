@@ -50,12 +50,6 @@ function parseStats(editorState: string): {
   }
 }
 
-interface Toast {
-  id: number;
-  message: string;
-  type: "info" | "error" | "success";
-}
-
 interface NoteStore {
   documents: Record<string, GraphiteDoc>;
   docId: string;
@@ -68,7 +62,6 @@ interface NoteStore {
   totalTodos: number;
   completedTodos: number;
   gitStatus: string;
-  toasts: Toast[];
   spatialCards: SpatialCard[];
   spatialEdges: SpatialEdge[];
   docPage: number;
@@ -76,9 +69,6 @@ interface NoteStore {
 
   setActiveTab: (tab: "editor" | "canvas" | "split" | "spatial" | "graph" | "kanban" | "meta") => void;
   setGitStatus: (status: string) => void;
-
-  addToast: (toast: Toast) => void;
-  removeToast: (id: number) => void;
 
   initDocs: () => void;
   selectDocument: (id: string) => void;
@@ -114,7 +104,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   totalTodos: 0,
   completedTodos: 0,
   gitStatus: "",
-  toasts: [],
   spatialCards: [],
   spatialEdges: [],
   docPage: 0,
@@ -122,8 +111,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setGitStatus: (status) => set({ gitStatus: status }),
-  addToast: (toast) => set((s) => ({ toasts: [...s.toasts, toast] })),
-  removeToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
   initDocs: () => {
     let documents = loadDocs();

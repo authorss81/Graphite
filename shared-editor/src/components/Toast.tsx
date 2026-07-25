@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { useNoteStore } from "../store/useNoteStore";
+import { useToastStore } from "../store/useToastStore";
 
 interface Toast {
   id: number;
@@ -11,15 +11,15 @@ let nextId = 0;
 
 export function toast(message: string, type: Toast["type"] = "info") {
   const currentId = ++nextId;
-  useNoteStore.getState().addToast({ id: currentId, message, type });
+  useToastStore.getState().addToast({ id: currentId, message, type });
   setTimeout(() => {
-    useNoteStore.getState().removeToast(currentId);
+    useToastStore.getState().removeToast(currentId);
   }, 4000);
 }
 
 export function ToastContainer() {
-  const toasts = useNoteStore((s) => s.toasts);
-  const removeToast = useNoteStore((s) => s.removeToast);
+  const toasts = useToastStore((s) => s.toasts);
+  const removeToast = useToastStore((s) => s.removeToast);
 
   const dismiss = useCallback(
     (id: number) => removeToast(id),
