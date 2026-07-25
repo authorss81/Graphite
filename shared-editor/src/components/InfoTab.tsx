@@ -1,9 +1,10 @@
+import { memo } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import { TableOfContents } from "./TableOfContents";
 import { DailyJournal } from "./DailyJournal";
 import { MetadataEditor } from "./MetadataEditor";
 
-export function InfoTab() {
+export const InfoTab = memo(function InfoTab() {
   const docId = useNoteStore((s) => s.docId);
   const editorState = useNoteStore((s) => s.editorState);
   const wordCount = useNoteStore((s) => s.wordCount);
@@ -109,9 +110,9 @@ export function InfoTab() {
         </h3>
         {backlinks.length > 0 ? (
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {backlinks.map((link, idx) => (
+            {backlinks.map((link) => (
               <span
-                key={idx}
+                key={link}
                 style={{
                   padding: "4px 10px",
                   background: "rgba(129, 140, 248, 0.15)",
@@ -143,4 +144,4 @@ export function InfoTab() {
       <MetadataEditor docId={docId} />
     </div>
   );
-}
+});

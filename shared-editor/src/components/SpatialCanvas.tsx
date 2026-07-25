@@ -4,6 +4,7 @@ import type { SpatialCard, SpatialEdge } from "../utils/spatialCanvasStorage";
 import { Move, ArrowUpRight, ExternalLink, Trash2, Download, Upload, Layout, InfinityIcon, Search, Palette, Grid3X3, Minimize2, CheckSquare } from "lucide-react";
 import { ZoomControls } from "./ZoomControls";
 import { exportToJsonCanvas, importFromJsonCanvas, downloadCanvasFile, uploadCanvasFile } from "../utils/canvasFormat";
+import { saveSpatialCanvasData } from "../utils/spatialCanvasStorage";
 import { extractTextFromPdf } from "../utils/pdfImport";
 
 const PAGE_WIDTH = 800;
@@ -62,6 +63,8 @@ export function SpatialCanvas() {
 
   const [cards, setCards] = useState<SpatialCard[]>(storeCards);
   const [edges, setEdges] = useState<SpatialEdge[]>(storeEdges);
+  const cardsRef = useRef(cards);
+  cardsRef.current = cards;
   const [zoomLevel, setZoomLevel] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [pageMode, setPageMode] = useState(false);
@@ -128,6 +131,7 @@ export function SpatialCanvas() {
     setCards(nextCards);
     setEdges(nextEdges);
     setSpatialData(nextCards, nextEdges);
+    saveSpatialCanvasData({ cards: nextCards, edges: nextEdges });
   }, [setSpatialData]);
 
   const addNoteToCanvas = (docId: string) => {
@@ -262,7 +266,7 @@ export function SpatialCanvas() {
   }, [cards]);
 
   const zoomToCard = (cardId: string) => {
-    const card = cards.find((c) => c.id === cardId);
+    const card = cardsRef.current.find((c) => c.id === cardId);
     if (!card) return;
     setHighlightedCardId(cardId);
     const targetZoom = 1.5;
@@ -292,7 +296,7 @@ export function SpatialCanvas() {
     return { minX, minY, maxX, maxY };
   }, [cards]);
 
-  const totalPages = pageMode ? Math.max(1, Math.ceil(cards.length / 3)) : 0;
+  const totalPages = pageMode && cards.length > 0 ? Math.ceil(cards.length / 3) : 0;
 
   // ── Mouse handlers ─────────────────────────────────────────────────────
   const handleMouseDownCanvas = (e: React.MouseEvent) => {

@@ -1,20 +1,29 @@
-import { BookOpen, Palette, Columns3, LayoutGrid, Network, Info } from "lucide-react";
+import { memo } from "react";
+import { BookOpen, Palette, Columns3, LayoutGrid, Network, Kanban, Info } from "lucide-react";
+
+type Tab = "editor" | "canvas" | "split" | "spatial" | "graph" | "kanban" | "meta";
 
 interface AppBottomNavProps {
-  activeTab: string;
-  onSetActiveTab: (tab: any) => void;
+  activeTab: Tab;
+  onSetActiveTab: (tab: Tab) => void;
 }
 
-export function AppBottomNav({ activeTab, onSetActiveTab }: AppBottomNavProps) {
+const BOTTOM_TABS: { tab: Tab; Icon: any; label: string }[] = [
+  { tab: "editor", Icon: BookOpen, label: "Editor" },
+  { tab: "split", Icon: Columns3, label: "Split" },
+  { tab: "canvas", Icon: Palette, label: "Canvas" },
+  { tab: "spatial", Icon: LayoutGrid, label: "Spatial" },
+  { tab: "graph", Icon: Network, label: "Graph" },
+  { tab: "kanban", Icon: Kanban, label: "Kanban" },
+  { tab: "meta", Icon: Info, label: "Info" },
+];
+
+export const AppBottomNav = memo(function AppBottomNav({ activeTab, onSetActiveTab }: AppBottomNavProps) {
   return (
-    <nav className="graphite-bottom-nav">
-      <button className={`graphite-bottom-nav-btn${activeTab === "editor" ? " active" : ""}`} onClick={() => onSetActiveTab("editor")}><BookOpen size={20} /><span>Editor</span></button>
-      <button className={`graphite-bottom-nav-btn${activeTab === "split" ? " active" : ""}`} onClick={() => onSetActiveTab("split")}><Columns3 size={20} /><span>Split</span></button>
-      <button className={`graphite-bottom-nav-btn${activeTab === "canvas" ? " active" : ""}`} onClick={() => onSetActiveTab("canvas")}><Palette size={20} /><span>Canvas</span></button>
-      <button className={`graphite-bottom-nav-btn${activeTab === "spatial" ? " active" : ""}`} onClick={() => onSetActiveTab("spatial")}><LayoutGrid size={20} /><span>Spatial</span></button>
-      <button className={`graphite-bottom-nav-btn${activeTab === "graph" ? " active" : ""}`} onClick={() => onSetActiveTab("graph")}><Network size={20} /><span>Graph</span></button>
-      <button className={`graphite-bottom-nav-btn${activeTab === "kanban" ? " active" : ""}`} onClick={() => onSetActiveTab("kanban")}><LayoutGrid size={20} /><span>Kanban</span></button>
-      <button className={`graphite-bottom-nav-btn${activeTab === "meta" ? " active" : ""}`} onClick={() => onSetActiveTab("meta")}><Info size={20} /><span>Info</span></button>
+    <nav aria-label="Bottom navigation" className="graphite-bottom-nav">
+      {BOTTOM_TABS.map(({ tab, Icon, label }) => (
+        <button key={tab} className={`graphite-bottom-nav-btn${activeTab === tab ? " active" : ""}`} aria-current={activeTab === tab ? "page" : undefined} onClick={() => onSetActiveTab(tab)}><Icon size={20} /><span>{label}</span></button>
+      ))}
     </nav>
   );
-}
+});

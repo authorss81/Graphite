@@ -13,6 +13,11 @@ export function PluginSandbox({ plugin, onCommand, onInsertText, onOpenUrl, visi
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const handleMessage = useCallback((event: MessageEvent<PluginMessage>) => {
+    // Only accept messages from the sandbox iframe (origin is null for sandboxed iframes without allow-same-origin)
+    const iframeWin = iframeRef.current?.contentWindow;
+    if (event.source !== iframeWin) return;
+    if (event.origin !== null) return;
+
     const msg = event.data;
     if (!msg || !msg.type || msg.pluginId !== plugin.id) return;
 
@@ -30,12 +35,12 @@ export function PluginSandbox({ plugin, onCommand, onInsertText, onOpenUrl, visi
         onOpenUrl?.(plugin.id, msg.payload || "");
         break;
       case "plugin:get-state":
-        if (iframeRef.current?.contentWindow) {
-          iframeRef.current.contentWindow.postMessage({
+        if (iframeWin) {
+          iframeWin.postMessage({
             type: "host:command-result",
             _channel: (msg as any)._channel,
             payload: { online: navigator.onLine, language: navigator.language },
-          }, "*");
+          }, event.origin);
         }
         break;
       case "plugin:command":
@@ -65,6 +70,9 @@ export function PluginSandbox({ plugin, onCommand, onInsertText, onOpenUrl, visi
     <iframe
       ref={iframeRef}
       src={url}
+      // Minimal sandbox: allow-scripts only. Do NOT add allow-same-origin (defeats sandbox).
+      // Do NOT add allow-popups, allow-forms, or allow-top-navigation — these would let
+      // untrusted plugin code escape the sandbox or phish the user.
       sandbox="allow-scripts"
       style={{
         width: "100%",

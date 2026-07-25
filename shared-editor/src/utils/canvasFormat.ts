@@ -84,8 +84,8 @@ export function importFromJsonCanvas(json: string): { cards: any[]; edges: any[]
 
     const edges = (canvas.edges || []).map((e: JsonCanvasEdge) => ({
       id: e.id,
-      fromCardId: e.fromNode,
-      toCardId: e.toNode,
+      fromCardId: e.fromNode || e.from || e.source || e.fromCardId,
+      toCardId: e.toNode || e.to || e.target || e.toCardId,
       label: e.label,
       color: e.color,
     }));

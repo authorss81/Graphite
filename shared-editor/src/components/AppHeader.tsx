@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import { editorStateToMarkdown, editorStateToHtml, downloadAsFile, printDocument } from "../utils/exportDoc";
 import { RotateCcw, Share2, Sparkles, Puzzle, Users, ShieldCheck, FileText, Download } from "lucide-react";
@@ -9,18 +9,17 @@ interface AppHeaderProps {
   onOpenModal: (modal: string) => void;
 }
 
-export function AppHeader({ currentTitle, onOpenModal }: AppHeaderProps) {
+export const AppHeader = memo(function AppHeader({ currentTitle, onOpenModal }: AppHeaderProps) {
   const docId = useNoteStore((s) => s.docId);
   const editorState = useNoteStore((s) => s.editorState);
   const documents = useNoteStore((s) => s.documents);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
+    if (!showExportMenu) return;
     const handleClick = () => setShowExportMenu(false);
-    if (showExportMenu) {
-      window.addEventListener("click", handleClick);
-      return () => window.removeEventListener("click", handleClick);
-    }
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
   }, [showExportMenu]);
 
   const handleExport = (format: "markdown" | "html" | "html-print") => {
@@ -134,7 +133,7 @@ export function AppHeader({ currentTitle, onOpenModal }: AppHeaderProps) {
           Security
         </button>
         <div style={{ position: "relative" }}>
-          <button className="graphite-btn" onClick={() => setShowExportMenu((p) => !p)} title="Export document" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", border: "none" }}>
+          <button type="button" className="graphite-btn" onClick={(e) => { e.stopPropagation(); setShowExportMenu((p) => !p); }} title="Export document" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", border: "none" }}>
             <Download size={16} />
             Export
           </button>

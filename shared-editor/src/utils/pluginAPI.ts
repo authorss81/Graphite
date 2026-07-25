@@ -47,13 +47,21 @@ export interface HostMessage {
   payload?: any;
 }
 
+function safeScriptString(str: string): string {
+  return JSON.stringify(str).replace(/<\//g, "<\\/");
+}
+
 export function createPluginSandboxHTML(plugin: PluginDefinition): string {
+  const parentOrigin = location.origin;
+  const safeId = safeScriptString(plugin.id);
+  const safeName = safeScriptString(plugin.name);
+  const safeSource = safeScriptString(plugin.source);
+
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<base href="${location.origin}/">
 <style>
   body { margin: 0; padding: 8px; font-family: system-ui, sans-serif; font-size: 13px; color: #e0e0e0; background: transparent; }
   .plugin-error { color: #ef4444; padding: 8px; }
@@ -63,28 +71,29 @@ export function createPluginSandboxHTML(plugin: PluginDefinition): string {
 <body>
 <script>
   // Sandboxed Plugin API - exposed via postMessage to parent
-  const pluginAPI = {
-    id: ${JSON.stringify(plugin.id)},
+  var TARGET_ORIGIN = ${JSON.stringify(parentOrigin)};
+  var pluginAPI = {
+    id: ${safeId},
 
     log: function(msg) {
-      parent.postMessage({ type: 'plugin:log', pluginId: this.id, payload: msg }, '*');
+      parent.postMessage({ type: 'plugin:log', pluginId: this.id, payload: msg }, TARGET_ORIGIN);
     },
 
     error: function(msg) {
-      parent.postMessage({ type: 'plugin:error', pluginId: this.id, payload: msg }, '*');
+      parent.postMessage({ type: 'plugin:error', pluginId: this.id, payload: msg }, TARGET_ORIGIN);
     },
 
     insertText: function(text) {
-      parent.postMessage({ type: 'plugin:insert-text', pluginId: this.id, payload: text }, '*');
+      parent.postMessage({ type: 'plugin:insert-text', pluginId: this.id, payload: text }, TARGET_ORIGIN);
     },
 
     openUrl: function(url) {
-      parent.postMessage({ type: 'plugin:open-url', pluginId: this.id, payload: url }, '*');
+      parent.postMessage({ type: 'plugin:open-url', pluginId: this.id, payload: url }, TARGET_ORIGIN);
     },
 
     getState: function() {
       return new Promise(function(resolve) {
-        var channel = 'plugin:state:' + Date.now() + Math.random();
+        var channel = 'plugin:state:' + crypto.randomUUID();
         var handler = function(e) {
           if (e.data.type === 'host:command-result' && e.data._channel === channel) {
             window.removeEventListener('message', handler);
@@ -92,7 +101,7 @@ export function createPluginSandboxHTML(plugin: PluginDefinition): string {
           }
         };
         window.addEventListener('message', handler);
-        parent.postMessage({ type: 'plugin:get-state', pluginId: this.id, _channel: channel }, '*');
+        parent.postMessage({ type: 'plugin:get-state', pluginId: this.id, _channel: channel }, TARGET_ORIGIN);
       }.bind(this));
     },
 
@@ -105,15 +114,16 @@ export function createPluginSandboxHTML(plugin: PluginDefinition): string {
     }
   };
 
-  // Make pluginAPI globally available
   window.pluginAPI = pluginAPI;
 
-  // Load plugin source code
   var script = document.createElement('script');
-  script.src = ${JSON.stringify(plugin.source)};
+  script.src = ${safeSource};
   script.onerror = function() {
-    document.body.innerHTML = '<div class="plugin-error">Failed to load plugin: ' + ${JSON.stringify(plugin.name)} + '</div>';
-    pluginAPI.error('Failed to load plugin script: ' + ${JSON.stringify(plugin.source)});
+    var errDiv = document.createElement('div');
+    errDiv.className = 'plugin-error';
+    errDiv.textContent = 'Failed to load plugin: ' + ${safeName};
+    document.body.appendChild(errDiv);
+    pluginAPI.error('Failed to load plugin script: ' + ${safeSource});
   };
   document.body.appendChild(script);
 <\/script>

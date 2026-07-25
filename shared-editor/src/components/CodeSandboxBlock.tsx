@@ -23,6 +23,19 @@ return "Result: " + doubled.reduce((a, b) => a + b, 0);`);
     }
 
     const workerCode = `
+      // Block all networking and storage APIs before executing user code
+      self.fetch = undefined;
+      self.XMLHttpRequest = undefined;
+      self.WebSocket = undefined;
+      self.BroadcastChannel = undefined;
+      self.Worker = undefined;
+      self.SharedWorker = undefined;
+      self.importScripts = undefined;
+      self.indexedDB = undefined;
+      self.caches = undefined;
+      self.Notification = undefined;
+      self.PushManager = undefined;
+
       self.onmessage = function(e) {
         const userCode = e.data;
         const logs = [];

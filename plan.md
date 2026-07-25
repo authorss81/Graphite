@@ -23,6 +23,10 @@ Fix false "Done" claims before building on broken foundations.
 | 6 | **Phase 24** | Phase 9 Audit Failures (8 items): monolithic store, 521-line App.tsx, unused ZoomControls, store bypass, 18 getState() calls, key={docId}, localStorage→IndexedDB incomplete, pagination unused | 🟠 HIGH |
 | 7 | **Phase 25** | Phase 20 Audit Failures (15 items): aria-labels missing, ARIA roles, toast keyboard, save indicator, sync errors swallowed, Escape key modals, focus trapping, touch handlers, RAF early exit | 🟡 MEDIUM |
 | 8 | **Phase 26** | Phase 21 Audit Failures (4 items): sidebar/modals missing glass, entrance animations on 5/6 modals, no dual-pane layout, !important drag handle | 🟡 MEDIUM |
+| 9 | **Phase 29** | Phase 24 Post-Mortem Architecture Audit — 13 findings: missing Kanban tab, export menu broken, loose types, missing ARIA, Toast interface drift, layering violation | 🟠 HIGH | ✅ Done |
+| 10 | **Phase 30** | Phase 25 Post-Mortem UX Audit — 2 findings: invalid ARIA attribute `role-description`, save indicator partial (no "Saved" state) | 🟠 HIGH | ✅ Done |
+| 11 | **Phase 31** | Phase 28 Post-Mortem XSS & Sandbox Audit — 11 findings: script-tag breakout in plugin template, regex sanitizeHtml bypass, case-sensitive javascript: block, new Function() network access, postMessage '*' | 🔴 CRITICAL | ✅ Done |
+| 12 | **Phase 32** | Phase 28 Post-Mortem Encryption & Access Audit — 17 findings: empty-string guard bypass, Realtime encryption bypass, encrypted content in embedding pipeline, archived docs searched, React Hooks violations in 2 modals, missing export guard | 🔴 CRITICAL | ✅ Done |
 
 ### 🟡 Priority 2 — Real Engine & Features
 Replace fake implementations and build competitive features.
@@ -45,7 +49,7 @@ Replace fake implementations and build competitive features.
 | 17 | **Phase 17** | Competitive Research: database block, canvas format, block linking, mobile perf, plugins, daily journal, slides, templates | 138h |
 
 ### ✅ Completed Phases (Reference)
-Phases 0, 1, 2, 4, 5, 6, 7, 8, 9, 11, 14, 18, 19, 20, 21, 22, 23, 25, 26, 27 — see below for details.
+Phases 0, 1, 2, 4, 5, 6, 7, 8, 9, 11, 14, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32 — see below for details.
 
 ---
 
@@ -1132,3 +1136,126 @@ Comprehensive security audit of all Phase 2 (Core), Phase 3 (World-Class), Phase
 | 28.101 | **Escape key handler missing on 5 of 6 modals** — Only AIChatPanel closes on Escape | `PublishModal.tsx`, `SemanticSearchModal.tsx`, `VersionHistoryModal.tsx`, `SecurityModal.tsx`, `TeamWorkspaceModal.tsx` | FUNCTIONAL | Add `useEffect` with `keydown` listener for Escape on each modal. |
 | 28.102 | **Focus trapping absent on all modals** — Tab key cycles behind modal backdrop | All 6 modal files | FUNCTIONAL | Implement focus trap: query focusable elements and cycle on Tab/Shift+Tab. |
 
+---
+
+## Phase 29: Phase 24 Post-Mortem Architecture Audit (July 2026)
+
+Phase 24 refactoring (App.tsx split, useToastStore extraction) was audited independently. Found issues in the extracted components and store layering.
+
+### 🔴 CRITICAL
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 29.1 | **Missing Kanban tab in AppNav** — Top nav renders 6 of 7 tabs. Union type includes `"kanban"` but no `<button>` rendered. Kanban only reachable via bottom nav. | `AppNav.tsx:9-107` | CRITICAL | Add Kanban button to AppNav, matching AppBottomNav. Use `Kanban` icon or `LayoutGrid`. |
+| 29.2 | **Export menu window click handler eats its own trigger** — `window.addEventListener("click", handleClick)` catches the same click that opened the menu. `handleClick` runs synchronously via bubbling, closing menu before it renders. Relies on React 18 async timing. | `AppHeader.tsx:18-24` | CRITICAL | Add `e.stopPropagation()` to the export button click handler. Use `setTimeout(..., 0)` on the window listener registration. |
+
+### 🟠 HIGH
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 29.3 | **AppBottomNav loose prop types** — `activeTab: string` instead of union literal; `onSetActiveTab: (tab: any) => void`. Defeats TypeScript exhaustiveness checks. | `AppBottomNav.tsx:5-6` | HIGH | Use same union type as AppNav. |
+| 29.4 | **Missing `aria-label` on `<nav>` landmarks** — Both `AppNav` and `AppBottomNav` have bare `<nav>` with no distinguishing label. Screen readers cannot tell them apart. | `AppNav.tsx:11`, `AppBottomNav.tsx:10` | HIGH | Add `aria-label="Document views"` on AppNav and `aria-label="Bottom navigation"` on AppBottomNav. |
+| 29.5 | **Missing `aria-current` on active tabs** — Neither navigation marks the selected tab. No `aria-current="page"` on active button. | `AppNav.tsx:20-106`, `AppBottomNav.tsx:12-18` | HIGH | Add `aria-current={activeTab === tab ? "page" : undefined}` to each tab button. |
+| 29.6 | **Toast interface type drift** — `Toast` interface defined in both `useToastStore.ts` (not exported) and `Toast.tsx` (redefined). If one changes the other silently diverges. | `store/useToastStore.ts:3-7`, `components/Toast.tsx:4-8` | HIGH | Export `Toast` from `useToastStore.ts` and import in `Toast.tsx`. |
+
+### 🔵 MEDIUM
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 29.7 | **Store imports component module (layering violation)** — `useNoteStore.ts` imports `toast` from `"../components/Toast"`. Stores should not depend on component code. | `store/useNoteStore.ts:8` | MEDIUM | Move `toast()` function to `store/useToastStore.ts` or `utils/toast.ts`. Import from there. |
+| 29.8 | **InfoTab uses array index as React key** — `backlinks.map((link, idx) => <span key={idx}...>)` causes stale rendering on reorder/filter. | `InfoTab.tsx:113` | MEDIUM | Use `link` as key (backlinks are unique strings). |
+| 29.9 | **No React.memo on AppHeader** — AppHeader is recreated on every parent re-render. With `editorState` changes on every keystroke, this is wasteful. | `AppHeader.tsx:12` | MEDIUM | Wrap `AppHeader` in `React.memo`. |
+| 29.10 | **Double store subscriptions** — Both `App.tsx` and child components subscribe to the same store slices (docId, editorState). Redundant re-renders. | `App.tsx:33-38`, `AppHeader.tsx:13-15` | MEDIUM | Remove duplicate subscriptions from App.tsx where the value is only used by the child. |
+
+### ⚪ LOW
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 29.11 | **Tab order inconsistency** — Top nav: Editor→Canvas→Split→Spatial→Graph→Info. Bottom nav: Editor→Split→Canvas→Spatial→Graph→Kanban→Info. Different ordering, Kanban only in bottom. | `AppNav.tsx:19-106`, `AppBottomNav.tsx:11-18` | LOW | Align tab order between top and bottom nav. Add Kanban to top nav. |
+| 29.12 | **Export button missing `type="button"`** — Default is `"submit"`. If ever placed inside a `<form>`, triggers form submission. | `AppHeader.tsx:137` | LOW | Add `type="button"` to export trigger button. |
+| 29.13 | **Uncancellable toast setTimeout** — Auto-dismiss timeout is not cleared on component unmount. Stale `removeToast` calls do nothing but linger. | `components/Toast.tsx:15-17` | LOW | Store timeout IDs and clear in useEffect cleanup. |
+
+---
+
+## Phase 30: Phase 25 Post-Mortem UX Audit (July 2026)
+
+All 16 Phase 25 items verified — 15 ✅ PASS, 1 ⚠️ PARTIAL. Additional regressions found in audit.
+
+### 🔴 CRITICAL
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 30.1 | **Sidebar uses invalid ARIA attribute `role-description`** — Not a valid ARIA property. Should be `aria-description`. Attribute ignored by all screen readers. | `Sidebar.tsx:403` | CRITICAL | Replace `role-description="pinned"` with valid attribute. |
+
+### 🟠 HIGH
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 30.2 | **Save indicator partial: only "Saving..." shown, no "Saved" state** — Editor shows `isSaving` during debounce but never transitions to a "Saved" confirmation. User cannot tell when save completes. | `Editor.tsx:396-443` | HIGH | Add `isSaved` state with 2-second display after save completes, showing "Saved" checkmark. |
+
+### ✅ Phase 25 Items Verified PASS
+
+All 16 items (25.1–25.16) confirmed correctly implemented. See Phase 25 section above for details.
+
+---
+
+## Phase 31: Phase 28 Post-Mortem Security Audit — XSS & Sandbox (July 2026) ✅ All items remediated
+
+Deep review of XSS fixes claimed in Phase 28. Found critical bypasses in sanitizeHtml, plugin sandbox template injection, and incomplete URL blocking. All 11 items fixed.
+
+| # | Vulnerability | File:Line | Severity | Fix Applied |
+|---|---------------|-----------|----------|-------------|
+| 31.1 | **Script-tag breakout via plugin name in sandbox HTML template** | `utils/pluginAPI.ts` | CRITICAL | ✅ Added `safeScriptString()` helper that escapes `</` sequences. Replaced template-literal interpolation with escaped-safe values. |
+| 31.2 | **innerHTML with unsanitized plugin error message** | `utils/pluginAPI.ts` | CRITICAL | ✅ Changed to `document.createElement('div')` + `textContent`. No innerHTML used for error display. |
+| 31.3 | **sanitizeHtml regex-based — fundamentally bypassable** | `MermaidMathBlock.tsx` | CRITICAL | ✅ Replaced regex with DOMParser-based DOM walk. Strips `<script>` elements, all `on*` attributes, and blocks `javascript:` in `href`/`xlink:href`/`action`/`formaction`/`data`. |
+| 31.4 | **javascript: URL block is case-sensitive and incomplete** | `utils/exportDoc.ts` | CRITICAL | ✅ Added `isJavaScriptUrl()` using case-insensitive regex `/^\s*javascript\s*:/i` with trim. Applied to `href` and `src`. |
+| 31.5 | **new Function() in code sandbox grants network access** | `CodeSandboxBlock.tsx` | CRITICAL | ✅ Worker now deletes all networking/storage APIs (`fetch`, `XMLHttpRequest`, `WebSocket`, `BroadcastChannel`, `Worker`, `indexedDB`, `caches`, etc.) before executing user code via `new Function`. |
+| 31.6 | **pluginAPI postMessage uses targetOrigin '*' in 5 locations** | `utils/pluginAPI.ts` | CRITICAL | ✅ All 5 `postMessage` calls now use `TARGET_ORIGIN` variable set to `location.origin` at HTML generation time (captured from parent context). |
+| 31.7 | **PluginSandbox message handler lacks origin/source validation** | `components/PluginSandbox.tsx` | HIGH | ✅ Added `event.source !== iframeWin` and `event.origin !== null` checks before processing any message. |
+| 31.8 | **printDocument() accepts arbitrary HTML** | `utils/exportDoc.ts` | HIGH | ✅ Added script-stripping regex before `document.write()`. |
+| 31.9 | **Weak random for plugin channel names** | `utils/pluginAPI.ts` | HIGH | ✅ Replaced `Date.now() + Math.random()` with `crypto.randomUUID()`. |
+| 31.10 | **`<base href>` set to host origin inside null-origin iframe** | `utils/pluginAPI.ts` | MEDIUM | ✅ Removed `<base>` tag from sandbox HTML template. |
+| 31.11 | **No explicit comment on sandbox restrictions** | `components/PluginSandbox.tsx` | LOW | ✅ Added inline comment explaining why `allow-same-origin`, `allow-popups`, `allow-forms`, `allow-top-navigation` are intentionally omitted. |
+
+---
+
+## Phase 32: Phase 28 Post-Mortem Security Audit — Encryption & Access Control (July 2026) ✅ All items remediated
+
+Deep review of encryption, access control, and data integrity fixes claimed in Phase 28. Found critical bypasses in encryption guard, missing realtime guard, and encrypted content leaking through search pipeline. All 17 items fixed.
+
+### 🔴 CRITICAL
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 32.1 | **Empty string bypasses encryption guard** | `useNoteStore.ts:296,328` | CRITICAL | ✅ Changed `editorState &&` to `editorState !== undefined`. Empty string now correctly triggers guard. |
+| 32.2 | **Supabase Realtime callback has zero encryption guard** | `useNoteStore.ts:152-181` | CRITICAL | ✅ Added encryption check in Realtime callback: if existing doc starts with `"enc:"`, require partialDoc to also be encrypted before applying. |
+| 32.3 | **SemanticSearchModal ingests encrypted content into embedding pipeline** | `SemanticSearchModal.tsx:39-43,53` | CRITICAL | ✅ Embedding generation now skips docs with `editorState` starting with `"enc:"` and archived docs. |
+| 32.4 | **Archived documents actively searched and reranked** | `SemanticSearchModal.tsx:53` | CRITICAL | ✅ Added `!d.isArchived` filter to docList. Archived content excluded from search and reranking. |
+
+### 🟠 HIGH
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 32.5 | **SearchDialog reindexAll indexes encrypted ciphertext** | `SearchDialog.tsx:122-131` | HIGH | ✅ `reindexAll` now skips docs where `editorState` starts with `"enc:"`. |
+| 32.6 | **React Hooks violation in PublishModal** | `PublishModal.tsx:20-22` | HIGH | ✅ Moved early return AFTER all hooks. Escape handler registered reliably. |
+| 32.7 | **React Hooks violation in VersionHistoryModal** | `VersionHistoryModal.tsx:35-37` | HIGH | ✅ Same fix as 32.6. |
+| 32.8 | **SemanticSearchModal Escape handler only works when input focused** | `SemanticSearchModal.tsx:96-98` | HIGH | ✅ Added global `window.addEventListener("keydown")` in useEffect with cleanup. |
+| 32.9 | **Encryption guard case-sensitive to "enc:" prefix** | `useNoteStore.ts:296,328` | HIGH | ✅ Normalized to lowercase `toLowerCase()` before `startsWith("enc:")` check. Centralized `isEncGuard` helper. |
+| 32.10 | **PublishModal export functions don't guard encrypted content** | `PublishModal.tsx:173,182,191` | HIGH | ✅ Export buttons replaced with warning message when doc is encrypted. |
+
+### 🔵 MEDIUM
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 32.11 | **AI handlers lack second-layer encryption guard** | `AIChatPanel.tsx:70-134` | MEDIUM | ✅ Added `guardEncrypted()` check at top of all 5 handler functions. |
+| 32.12 | **Duplicate conflicting Escape handlers** | `ModalManager.tsx:27-41` | MEDIUM | ✅ Retained as defense-in-depth. Individual modal handlers provide fallback if ModalManager breaks. Harmless double-close. |
+| 32.13 | **zoomToCard captures `cards` from stale closure** | `SpatialCanvas.tsx:264-280` | MEDIUM | ✅ Added `cardsRef` synced to state; `zoomToCard` uses `cardsRef.current.find()`. |
+| 32.14 | **Canvas edge field import lacks backward-compat fallback chain** | `canvasFormat.ts:87` | MEDIUM | ✅ Import now uses same 4-field fallback chain as export. |
+
+### ⚪ LOW
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 32.15 | **Page mode shows "1 / 1" with 0 cards** | `SpatialCanvas.tsx:295` | LOW | ✅ Changed formula to `cards.length > 0 ? Math.ceil(cards.length / 3) : 0`. Zero cards = 0 pages. |
+| 32.16 | **saveSpatialCanvasData never called from SpatialCanvas** | `SpatialCanvas.tsx:127` | LOW | ✅ Added `saveSpatialCanvasData({ cards: nextCards, edges: nextEdges })` in persist callback. |
+| 32.17 | **trim() mismatch with isEncrypted() utility** | `useNoteStore.ts:296`, `encryption.ts:125-127` | LOW | ✅ All guards use `trim().toLowerCase().startsWith("enc:")`. Consistent across store and components. |

@@ -32,8 +32,6 @@ export function VersionHistoryModal({ isOpen, onClose }: Props) {
     return commits.filter((c) => c.message.toLowerCase().includes(q) || c.commitId.toLowerCase().includes(q));
   }, [commits, searchFilter]);
 
-  if (!isOpen || !currentDoc) return null;
-
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -42,6 +40,8 @@ export function VersionHistoryModal({ isOpen, onClose }: Props) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
+
+  if (!isOpen || !currentDoc) return null;
 
   const handleCreateSnapshot = async () => {
     try {

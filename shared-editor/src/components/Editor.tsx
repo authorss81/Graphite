@@ -394,6 +394,8 @@ export function Editor({ docId, initialState }: EditorProps) {
   }, []);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [collabConnected, setCollabConnected] = useState(false);
 
   const handleEditorChange = useCallback((editorState: EditorState) => {
@@ -403,6 +405,8 @@ export function Editor({ docId, initialState }: EditorProps) {
       return;
     }
 
+    if (savedTimerRef.current) { clearTimeout(savedTimerRef.current); savedTimerRef.current = null; }
+    setIsSaved(false);
     setIsSaving(true);
     pendingSaveRef.current = { targetDocId, editorState };
 
@@ -411,8 +415,14 @@ export function Editor({ docId, initialState }: EditorProps) {
     debounceRef.current = setTimeout(() => {
       flushPendingSave();
       setIsSaving(false);
+      setIsSaved(true);
+      savedTimerRef.current = setTimeout(() => { setIsSaved(false); savedTimerRef.current = null; }, 2000);
     }, 300);
   }, [docId, flushPendingSave]);
+
+  useEffect(() => {
+    return () => { if (savedTimerRef.current) clearTimeout(savedTimerRef.current); };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -441,11 +451,25 @@ export function Editor({ docId, initialState }: EditorProps) {
               Saving...
             </span>
           )}
+          {isSaved && !isSaving && (
+            <span
+              style={{
+                position: "absolute",
+                right: 8,
+                top: 6,
+                fontSize: 10,
+                color: "#10b981",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
+              Saved
+            </span>
+          )}
           {collabConnected && (
             <span
               style={{
                 position: "absolute",
-                right: isSaving ? 68 : 8,
+                right: isSaving || isSaved ? 68 : 8,
                 top: 6,
                 fontSize: 10,
                 color: "var(--accent-success)",

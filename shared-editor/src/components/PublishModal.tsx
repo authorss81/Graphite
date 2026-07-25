@@ -17,8 +17,6 @@ export function PublishModal({ isOpen, onClose }: Props) {
   const [isPublished, setIsPublished] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  if (!isOpen || !currentDoc) return null;
-
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -27,6 +25,10 @@ export function PublishModal({ isOpen, onClose }: Props) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
+
+  if (!isOpen || !currentDoc) return null;
+
+  const isEncrypted = currentDoc.editorState?.trim().toLowerCase().startsWith("enc:");
 
   const publicUrl = typeof window !== "undefined"
     ? `${window.location.origin}${window.location.pathname}#doc=${docId}`
@@ -166,6 +168,11 @@ export function PublishModal({ isOpen, onClose }: Props) {
             Export Document
           </h4>
 
+          {isEncrypted ? (
+            <div style={{ padding: "12px", background: "rgba(239,68,68,0.1)", borderRadius: "8px", color: "#f87171", fontSize: "13px", textAlign: "center" }}>
+              Cannot export encrypted document. Decrypt it first in Security settings.
+            </div>
+          ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
             <button
               type="button"
@@ -195,6 +202,7 @@ export function PublishModal({ isOpen, onClose }: Props) {
               Print / PDF
             </button>
           </div>
+          )}
         </div>
       </div>
     </div>

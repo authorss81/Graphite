@@ -41,6 +41,11 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
+function isJavaScriptUrl(url: string): boolean {
+  if (!url) return false;
+  return /^\s*javascript\s*:/i.test(url.trim());
+}
+
 function nodeToHtml(node: any): string {
   const type = node.type;
   let content = "";
@@ -62,7 +67,7 @@ function nodeToHtml(node: any): string {
   }
   if (type === "link") {
     const url = node.url || "#";
-    const safeUrl = url.startsWith("javascript:") ? "#" : url;
+    const safeUrl = isJavaScriptUrl(url) ? "#" : url;
     return `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(extractPlainText(node))}</a>`;
   }
   if (type === "list") {
@@ -80,7 +85,7 @@ function nodeToHtml(node: any): string {
   if (type === "horizontalrule" || type === "divider") return `<hr />`;
   if (type === "image") {
     const src = node.src || "";
-    const safeSrc = src.startsWith("javascript:") ? "" : src;
+    const safeSrc = isJavaScriptUrl(src) ? "" : src;
     return `<img src="${escapeHtml(safeSrc)}" alt="${escapeHtml(node.alt || "")}" style="max-width:100%" />`;
   }
   return content || escapeHtml(extractPlainText(node));
@@ -125,7 +130,9 @@ export function downloadAsFile(content: string, filename: string, mime: string =
 export function printDocument(html: string) {
   const win = window.open("", "_blank");
   if (!win) return;
-  win.document.write(html);
+  // Strip script tags from print HTML to prevent XSS in the popup window
+  const safe = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+  win.document.write(safe);
   win.document.close();
   win.focus();
   win.print();

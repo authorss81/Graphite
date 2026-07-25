@@ -34,14 +34,18 @@ export function SemanticSearchModal({ isOpen, onClose }: Props) {
   useEffect(() => { resultsRef.current = results; }, [results]);
 
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-      Object.values(documents).forEach((doc) => {
-        if (!doc.isFolder && !getCachedEmbedding(doc.id)) {
-          storeDocumentEmbedding(doc.id, doc.title, doc.editorState || "");
-        }
-      });
-    }
+    if (!isOpen) return;
+    const handleGlobalKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleGlobalKey);
+    setTimeout(() => inputRef.current?.focus(), 50);
+    Object.values(documents).forEach((doc) => {
+      if (!doc.isFolder && !doc.isArchived && !doc.editorState?.trim().toLowerCase().startsWith("enc:") && !getCachedEmbedding(doc.id)) {
+        storeDocumentEmbedding(doc.id, doc.title, doc.editorState || "");
+      }
+    });
+    return () => window.removeEventListener("keydown", handleGlobalKey);
   }, [isOpen]);
 
   useEffect(() => {
@@ -50,7 +54,7 @@ export function SemanticSearchModal({ isOpen, onClose }: Props) {
     computeTimeoutRef.current = setTimeout(async () => {
       const queryVector = await generateEmbedding(query);
       const qTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-      const docList = Object.values(documents).filter((d) => !d.isFolder);
+      const docList = Object.values(documents).filter((d) => !d.isFolder && !d.isArchived && !d.editorState?.trim().toLowerCase().startsWith("enc:"));
       const scored: SearchResult[] = await Promise.all(docList.map(async (doc) => {
         const docText = `${doc.title}\n${doc.editorState || ""}`;
         const docVector = await generateEmbedding(docText);

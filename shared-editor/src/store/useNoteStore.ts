@@ -4,6 +4,7 @@ import { newDocId, loadDocs, saveDocs, loadDocsPaginated } from "../utils/docSto
 import type { SpatialCard, SpatialEdge } from "../utils/spatialCanvasStorage";
 import { SupabaseSyncService } from "../utils/supabase";
 import { createDocCommit } from "../utils/versionHistory";
+import { toast } from "../components/Toast";
 
 let unsubscribeRealtime: (() => void) | null = null;
 
@@ -160,6 +161,11 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
           editorState: "",
           canvasData: null,
         };
+        // Encryption guard: if existing doc is encrypted, require synced update to also be encrypted
+        const isEncrypted = (s: string) => s.trim().toLowerCase().startsWith("enc:");
+        if (isEncrypted(existing.editorState || "") && partialDoc.editorState && !isEncrypted(partialDoc.editorState)) {
+          return;
+        }
         const updatedDoc = { ...existing, ...partialDoc };
         const nextDocs = { ...currentDocs, [updatedId]: updatedDoc };
         saveDocs(nextDocs);
@@ -212,7 +218,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         activeTab: "editor",
       })
     );
-    SupabaseSyncService.getInstance().syncDocument(id, doc).catch((err) => console.error("[Sync]", err));
+    SupabaseSyncService.getInstance().syncDocument(id, doc).catch((err) => { console.error("[Sync]", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
     return id;
   },
 
@@ -229,7 +235,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     };
     const documents = { ...get().documents, [id]: doc };
     set(persistAndSet(documents));
-    SupabaseSyncService.getInstance().syncDocument(id, doc).catch((err) => console.error("[Sync]", err));
+    SupabaseSyncService.getInstance().syncDocument(id, doc).catch((err) => { console.error("[Sync]", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
     return id;
   },
 
@@ -239,7 +245,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...documents[id], title: title.trim() || "Untitled", updatedAt: Date.now() };
     documents[id] = updated;
     set(persistAndSet(documents));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync]", err));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => { console.error("[Sync]", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
   },
 
   deleteDocument: (id) => {
@@ -292,9 +298,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const { docId, documents } = get();
     if (!docId || !documents[docId]) return;
     const cur = documents[docId];
-    if (cur.editorState?.trim().startsWith("enc:") && editorState && !editorState.trim().startsWith("enc:")) {
-      return;
-    }
+    const isEncGuard = (s: string) => s.trim().toLowerCase().startsWith("enc:");
+    if (isEncGuard(cur.editorState || "") && editorState !== undefined && !isEncGuard(editorState)) { return; }
     const nextEditorState = editorState ?? cur.editorState;
     const nextCanvasData =
       canvasData !== undefined ? canvasData : cur.canvasData;
@@ -317,16 +322,15 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       canvasData: nextCanvasData,
     });
     createDocCommit(docId, cur.title, nextEditorState, nextCanvasData);
-    SupabaseSyncService.getInstance().syncDocument(docId, next).catch((err) => console.error("[Sync] update failed:", err));
+    SupabaseSyncService.getInstance().syncDocument(docId, next).catch((err) => { console.error("[Sync] update failed:", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
   },
 
   updateContentForDoc: (targetDocId, editorState, canvasData) => {
     const { documents } = get();
     if (!targetDocId || !documents[targetDocId]) return;
     const cur = documents[targetDocId];
-    if (cur.editorState?.trim().startsWith("enc:") && editorState && !editorState.trim().startsWith("enc:")) {
-      return;
-    }
+    const isEncGuard = (s: string) => s.trim().toLowerCase().startsWith("enc:");
+    if (isEncGuard(cur.editorState || "") && editorState !== undefined && !isEncGuard(editorState)) { return; }
     const nextEditorState = editorState ?? cur.editorState;
     const nextCanvasData = canvasData !== undefined ? canvasData : cur.canvasData;
     const next: GraphiteDoc = {
@@ -351,7 +355,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
 
     createDocCommit(targetDocId, next.title, nextEditorState, nextCanvasData);
-    SupabaseSyncService.getInstance().syncDocument(targetDocId, next).catch((err) => console.error("[Sync] updateForDoc failed:", err));
+    SupabaseSyncService.getInstance().syncDocument(targetDocId, next).catch((err) => { console.error("[Sync] updateForDoc failed:", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
   },
 
   togglePinDocument: (id) => {
@@ -361,7 +365,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, isPinned: !cur.isPinned, updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync]", err));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => { console.error("[Sync]", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
   },
 
   toggleArchiveDocument: (id) => {
@@ -371,7 +375,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, isArchived: !cur.isArchived, updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync] toggleArchive failed:", err));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => { console.error("[Sync] toggleArchive failed:", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
   },
 
   addTagToDocument: (id, tag) => {
@@ -385,7 +389,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, tags: [...existing, cleanTag], updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync] addTag failed:", err));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => { console.error("[Sync] addTag failed:", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
   },
 
   removeTagFromDocument: (id, tag) => {
@@ -396,7 +400,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, tags: existing.filter((t) => t !== tag), updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync] removeTag failed:", err));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => { console.error("[Sync] removeTag failed:", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
   },
 
   updateDocMetadata: (id, updates) => {
@@ -406,7 +410,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const updated = { ...cur, ...updates, updatedAt: Date.now() };
     const nextDocs = { ...documents, [id]: updated };
     set(persistAndSet(nextDocs));
-    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => console.error("[Sync] updateMetadata failed:", err));
+    SupabaseSyncService.getInstance().syncDocument(id, updated).catch((err) => { console.error("[Sync] updateMetadata failed:", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
   },
 
   setSpatialData: (cards, edges) => set({ spatialCards: cards, spatialEdges: edges }),

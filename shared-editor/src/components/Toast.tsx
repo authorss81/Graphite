@@ -1,28 +1,40 @@
-import { useCallback } from "react";
-import { useToastStore } from "../store/useToastStore";
-
-interface Toast {
-  id: number;
-  message: string;
-  type: "info" | "error" | "success";
-}
+import { useCallback, useEffect, useRef } from "react";
+import { useToastStore, type Toast } from "../store/useToastStore";
 
 let nextId = 0;
+const toastTimeouts = new Map<number, ReturnType<typeof setTimeout>>();
 
 export function toast(message: string, type: Toast["type"] = "info") {
   const currentId = ++nextId;
   useToastStore.getState().addToast({ id: currentId, message, type });
-  setTimeout(() => {
+  const id = setTimeout(() => {
+    toastTimeouts.delete(currentId);
     useToastStore.getState().removeToast(currentId);
   }, 4000);
+  toastTimeouts.set(currentId, id);
 }
 
 export function ToastContainer() {
   const toasts = useToastStore((s) => s.toasts);
   const removeToast = useToastStore((s) => s.removeToast);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      for (const [id, timeout] of toastTimeouts) {
+        clearTimeout(timeout);
+        toastTimeouts.delete(id);
+      }
+    };
+  }, []);
 
   const dismiss = useCallback(
-    (id: number) => removeToast(id),
+    (id: number) => {
+      const timeout = toastTimeouts.get(id);
+      if (timeout) { clearTimeout(timeout); toastTimeouts.delete(id); }
+      removeToast(id);
+    },
     [removeToast],
   );
 

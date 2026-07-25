@@ -122,7 +122,7 @@ export function SearchDialog({ open, onClose }: SearchDialogProps) {
 export async function reindexAll() {
   const docs = useNoteStore.getState().documents;
   for (const doc of Object.values(docs)) {
-    if (doc.isFolder || doc.isArchived) continue;
+    if (doc.isFolder || doc.isArchived || doc.editorState?.trim().toLowerCase().startsWith("enc:")) continue;
     const plain = doc.editorState
       ? doc.editorState.replace(/<[^>]*>/g, "").replace(/\\n/g, " ")
       : "";

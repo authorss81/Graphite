@@ -400,7 +400,7 @@ export function Sidebar() {
                     key={doc.id}
                     className={`sidebar-row${isSelected ? " selected" : ""}`}
                     role="treeitem"
-                    role-description="pinned"
+                    aria-description="pinned"
                     onClick={() => !doc.isFolder && selectDocument(doc.id)}
                     style={{ paddingLeft: 24, display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "12px", color: "var(--text-secondary)" }}
                   >

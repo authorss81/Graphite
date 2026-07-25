@@ -2,12 +2,31 @@ import { useState, useEffect, useRef } from "react";
 import { Network, Sigma } from "lucide-react";
 
 function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/on\w+="[^"]*"/gi, "")
-    .replace(/on\w+='[^']*'/gi, "")
-    .replace(/on\w+=\S+/gi, "")
-    .replace(/javascript:/gi, "");
+  if (!html) return "";
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null, false);
+  const toRemove: Node[] = [];
+  const nodes: Element[] = [];
+  let node: Node | null;
+  while ((node = walker.nextNode())) {
+    if (node.nodeType === Node.ELEMENT_NODE) nodes.push(node as Element);
+  }
+  for (const el of nodes) {
+    if (el.tagName === "SCRIPT") { toRemove.push(el); continue; }
+    const attrs = el.attributes;
+    for (let i = attrs.length - 1; i >= 0; i--) {
+      const attr = attrs[i];
+      const name = attr.name.toLowerCase();
+      if (name.startsWith("on")) { el.removeAttribute(attr.name); continue; }
+      if ((name === "href" || name === "xlink:href" || name === "action" || name === "formaction" || name === "data") &&
+          /^\s*javascript\s*:/i.test(attr.value)) {
+        el.setAttribute(attr.name, "#");
+      }
+    }
+  }
+  for (const el of toRemove) el.parentNode?.removeChild(el);
+  return doc.body.innerHTML;
 }
 
 export function MermaidBlock() {

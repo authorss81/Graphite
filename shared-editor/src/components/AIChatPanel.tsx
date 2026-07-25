@@ -65,9 +65,18 @@ export function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
     );
   }
 
+  const guardEncrypted = () => {
+    if (currentDoc.editorState?.trim().toLowerCase().startsWith("enc:")) {
+      toast("AI features are unavailable for encrypted documents. Decrypt first.", "error");
+      return true;
+    }
+    return false;
+  };
+
   const getNoteText = () => currentDoc.editorState || "";
 
   const handleSendPrompt = async () => {
+    if (guardEncrypted()) return;
     const text = inputPrompt.trim();
     if (!text || isLoading) return;
 
@@ -98,6 +107,7 @@ export function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
   };
 
   const handleAutoTag = async () => {
+    if (guardEncrypted()) return;
     const tags = await autoSuggestTags("", currentDoc.editorState || "");
     tags.forEach((t: string) => addTagToDocument(docId, t));
     toast(`AI added tags: #${tags.join(" #")}`, "success");
@@ -107,12 +117,14 @@ export function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
   };
 
   const handleAppendToNote = (text: string) => {
+    if (guardEncrypted()) return;
     const currentText = currentDoc.editorState || "";
     updateCurrentContent(currentText + "\n\n" + text, currentDoc.canvasData);
     toast("Inserted AI output into note!", "success");
   };
 
   const handleRewrite = async (instruction: string) => {
+    if (guardEncrypted()) return;
     const noteText = getNoteText();
     if (!noteText || noteText.length < 10) {
       toast("Note is too short to rewrite", "error");
@@ -134,6 +146,7 @@ export function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
   };
 
   const handleReplaceContent = (text: string) => {
+    if (guardEncrypted()) return;
     const mark = "---\n\n";
     const idx = text.indexOf(mark);
     const content = idx !== -1 ? text.slice(idx + mark.length) : text;
