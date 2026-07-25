@@ -9,39 +9,40 @@ Fix immediately — these cause data loss, lockout, or are exploitable.
 
 | Order | Phase | Focus | Severity |
 |-------|-------|-------|----------|
-| 1 | **Phase 22** | Post-Audit Round 3 — CRITICAL: runtime config bypass, encryption false success, origin validation bypass | 🔴 CRITICAL |
-| 2 | **Phase 23** | Deep Security Audit — 10 vulns: JS injection bypass, token exfiltration, no rate limiting, cryptoKey in React state | 🔴 CRITICAL |
-| 3 | **Phase 27** | New Vulns from audits: AIChatPanel broken (never opens), touch handlers absent, Pomodoro timer leak, RAF waste | 🔴 CRITICAL |
-| 4 | **Phase 14** | Security Hardening: RLS, httpOnly cookies, CSP, SRI, rate limiting, HMAC audit chain, Math.random→crypto.randomUUID | 🟠 HIGH |
+| 1 | **Phase 28** | Phase 2/3/10/11/12/26 Audit — 91 vulns: plugin sandbox escape, encryption bypass, WebAuthn mock, XSS in export/print/Mermaid/KaTeX, no auth on Yjs/workspaces/Realtime, API keys plaintext, prompt injection | 🔴 CRITICAL |
+| 2 | **Phase 22** | Post-Audit Round 3 — CRITICAL: runtime config bypass, encryption false success, origin validation bypass | 🔴 CRITICAL |
+| 3 | **Phase 23** | Deep Security Audit — 10 vulns: JS injection bypass, token exfiltration, no rate limiting, cryptoKey in React state | 🔴 CRITICAL |
+| 4 | **Phase 27** | New Vulns from audits: AIChatPanel broken (never opens), touch handlers absent, Pomodoro timer leak, RAF waste | 🔴 CRITICAL |
+| 5 | **Phase 14** | Security Hardening: RLS, httpOnly cookies, CSP, SRI, rate limiting, HMAC audit chain, Math.random→crypto.randomUUID | 🟠 HIGH |
 
 ### 🟠 Priority 1 — Architecture & Audit Remediation
 Fix false "Done" claims before building on broken foundations.
 
 | Order | Phase | Focus | Severity |
 |-------|-------|-------|----------|
-| 5 | **Phase 24** | Phase 9 Audit Failures (8 items): monolithic store, 521-line App.tsx, unused ZoomControls, store bypass, 18 getState() calls, key={docId}, localStorage→IndexedDB incomplete, pagination unused | 🟠 HIGH |
-| 6 | **Phase 25** | Phase 20 Audit Failures (15 items): aria-labels missing, ARIA roles, toast keyboard, save indicator, sync errors swallowed, Escape key modals, focus trapping, touch handlers, RAF early exit | 🟡 MEDIUM |
-| 7 | **Phase 26** | Phase 21 Audit Failures (4 items): sidebar/modals missing glass, entrance animations on 5/6 modals, no dual-pane layout, !important drag handle | 🟡 MEDIUM |
+| 6 | **Phase 24** | Phase 9 Audit Failures (8 items): monolithic store, 521-line App.tsx, unused ZoomControls, store bypass, 18 getState() calls, key={docId}, localStorage→IndexedDB incomplete, pagination unused | 🟠 HIGH |
+| 7 | **Phase 25** | Phase 20 Audit Failures (15 items): aria-labels missing, ARIA roles, toast keyboard, save indicator, sync errors swallowed, Escape key modals, focus trapping, touch handlers, RAF early exit | 🟡 MEDIUM |
+| 8 | **Phase 26** | Phase 21 Audit Failures (4 items): sidebar/modals missing glass, entrance animations on 5/6 modals, no dual-pane layout, !important drag handle | 🟡 MEDIUM |
 
 ### 🟡 Priority 2 — Real Engine & Features
 Replace fake implementations and build competitive features.
 
 | Order | Phase | Focus | Est. Effort |
 |-------|-------|-------|-------------|
-| 8 | **Phase 10** | Real Engine Implementations: Yjs CRDT, transformers.js embeddings, LLM streaming, Git, Team Workspace, Plugin Marketplace, Kanban, Mermaid/KaTeX, Audio | 172h | ✅ 8/12 Done |
-| 9 | **Phase 11** | Competitive Feature Parity: block refs, daily journal, PDF/HTML import, templates, canvas format, metadata, full-text search, RTL, callouts, quick open | 140h | ✅ 16/18 Done |
-| 10 | **Phase 2** | Competitive (Match Notion/Obsidian): block editor, graph view, AI semantic search, publish/share, version history, tags, spatial canvas | Ongoing | ✅ Mostly complete |
-| 11 | **Phase 3** | World-Class: real-time multiplayer (Yjs), AI writing assistant, plugin system, advanced blocks, team workspace, desktop/mobile native | Long-term | ✅ 3.2 AI done, 3.4 advanced blocks mostly done, 3.6 encryption done |
+| 9 | **Phase 10** | Real Engine Implementations: Yjs CRDT, transformers.js embeddings, LLM streaming, Git, Team Workspace, Plugin Marketplace, Kanban, Mermaid/KaTeX, Audio | 172h | ✅ 8/12 Done |
+| 10 | **Phase 11** | Competitive Feature Parity: block refs, daily journal, PDF/HTML import, templates, canvas format, metadata, full-text search, RTL, callouts, quick open | 140h | ✅ 16/18 Done |
+| 11 | **Phase 2** | Competitive (Match Notion/Obsidian): block editor, graph view, AI semantic search, publish/share, version history, tags, spatial canvas | Ongoing | ✅ Mostly complete |
+| 12 | **Phase 3** | World-Class: real-time multiplayer (Yjs), AI writing assistant, plugin system, advanced blocks, team workspace, desktop/mobile native | Long-term | ✅ 3.2 AI done, 3.4 advanced blocks mostly done, 3.6 encryption done |
 
 ### 🟢 Priority 3 — Canvas, Graph, Testing, Polish
 
 | Order | Phase | Focus | Est. Effort |
 |-------|-------|-------|-------------|
-| 12 | **Phase 12** | Spatial Canvas: page-wise mode, rich cards, auto-layout, minimap, colors, multi-select, presentation, stylus, nested | 87h |
-| 13 | **Phase 13** | Graph View: d3-force, click popup, filter, cluster, edge weights, timeline, saved layouts, RAF fix | 36h |
-| 14 | **Phase 15** | Testing & CI: 18 test suites (encryption, auth, stores, Git, canvas, graph, sidebar, Kotlin), strict TS mode, E2E, visual regression | 85h |
-| 15 | **Phase 16** | UX Onboarding: walkthrough, templates, empty states, breadcrumbs, tabbed docs, keyboard nav, accessibility, screen readers | 50h |
-| 16 | **Phase 17** | Competitive Research: database block, canvas format, block linking, mobile perf, plugins, daily journal, slides, templates | 138h |
+| 13 | **Phase 12** | Spatial Canvas: page-wise mode, rich cards, auto-layout, minimap, colors, multi-select, presentation, stylus, nested | 87h |
+| 14 | **Phase 13** | Graph View: d3-force, click popup, filter, cluster, edge weights, timeline, saved layouts, RAF fix | 36h |
+| 15 | **Phase 15** | Testing & CI: 18 test suites (encryption, auth, stores, Git, canvas, graph, sidebar, Kotlin), strict TS mode, E2E, visual regression | 85h |
+| 16 | **Phase 16** | UX Onboarding: walkthrough, templates, empty states, breadcrumbs, tabbed docs, keyboard nav, accessibility, screen readers | 50h |
+| 17 | **Phase 17** | Competitive Research: database block, canvas format, block linking, mobile perf, plugins, daily journal, slides, templates | 138h |
 
 ### ✅ Completed Phases (Reference)
 Phases 0, 1, 2, 4, 5, 6, 7, 8, 9, 11, 14, 18, 19, 20, 21, 22, 23, 25, 26, 27 — see below for details.
@@ -1104,4 +1105,19 @@ Comprehensive security audit of all Phase 2 (Core), Phase 3 (World-Class), Phase
 | 28.74 | **BlockRefPlugin overly restrictive ID regex** — Dots not matched | `BlockRefPlugin.tsx:6` | LOW | Use `/[[([^\]#]+)#\^([^\]]+)\]\]/` instead. |
 | 28.75 | **Code language from editor state not validated** | `EditorToolbar.tsx:291,317` | LOW | Validate against Prism language list before setting. |
 | 28.76 | **AudioRecording stream tracks not stopped after stop** — Mic stays active | `AudioRecording.tsx:50-57` | LOW | Stop all tracks when stopping recording. |
+| 28.77 | **Tauri allowlist too permissive (fs:all, dialog:all, shell:open)** — XSS in WebView can read/write any file | `src-tauri/tauri.conf.json:14-26` | SECURITY | Restrict fs to `$DOCUMENT/*`, dialog to specific APIs, remove shell.open. |
+| 28.78 | **Capacitor config.xml allows all origins (`<access origin="*"/>`)** — WebView can navigate to any URL | `android/app/src/main/res/xml/config.xml:3` | SECURITY | Replace with specific allowed origins (Supabase only). |
+| 28.79 | **AndroidJSBridge origin validation TOCTOU race condition** — URL check vs navigation timing gap | `AndroidJSBridge.kt:24-57` | SECURITY | Use `onPageCommitVisible()` for atomic URL validation. |
+| 28.80 | **Network security config missing in Capacitor project; cleartext to emulator hosts** | `network_security_config.xml:8-11` | SECURITY | Add network_security_config.xml to Capacitor project, remove cleartext in release builds. |
+| 28.81 | **GraphiteWebView is dead code — never instantiated** — Custom secure WebView never wired to any Activity | `GraphiteWebView.kt` | FUNCTIONAL | Create MainActivity or wire into Capacitor BridgeActivity. |
+| 28.82 | **Tauri app is skeleton only — no Rust source files** — Cannot build or run | `src-tauri/tauri.conf.json` | FUNCTIONAL | Run `npx tauri init` to generate Rust scaffold. |
+| 28.83 | **iOS native shell does not exist** — No .swift files, Xcode project, or WKWebView wrapper | N/A | FUNCTIONAL | Create full iOS Xcode project with Capacitor or native WKWebView. |
+| 28.84 | **Widgets (iOS Today / Android App Widget) not implemented** — Zero code | N/A | FUNCTIONAL | Implement WidgetKit extension and AppWidgetProvider. |
+| 28.85 | **File chooser (WebChromeClient) is dead code** — Lives in uninstantiated GraphiteWebView | `GraphiteWebView.kt:37-57` | FUNCTIONAL | Wire custom WebChromeClient into Capacitor project. |
+| 28.86 | **AndroidDatabaseHelper missing transaction methods** — begin/commit/rollback not implemented | `AndroidDatabaseHelper.kt:7` | FUNCTIONAL | Add SQLiteDatabase transaction wrappers. |
+| 28.87 | **Back gesture only exits app** — No in-app history navigation before exit | `MainActivity.java:10` | FUNCTIONAL | Add OnBackPressedCallback to navigate WebView history and dismiss modals. |
+| 28.88 | **Duplicate visualViewport keyboard listeners** — Both App.tsx and Editor.tsx set same CSS var | `App.tsx:91-100`, `Editor.tsx:226-241` | FUNCTIONAL | Remove KeyboardHandler from Editor.tsx. |
+| 28.89 | **Two competing Android manifests with inconsistent permissions** — composeApp vs Capacitor | Two `AndroidManifest.xml` | FUNCTIONAL | Consolidate to single manifest source of truth. |
+| 28.90 | **Share sheet handler and notification integration not implemented** — Intent filter exists but no handler | N/A | FUNCTIONAL | Implement onNewIntent() to parse ACTION_SEND, add FCM/LocalNotifications. |
+| 28.91 | **evaluateJavascript after Activity destruction risk** — No lifecycle check before JS injection | `GraphiteWebView.kt:102-104` | FUNCTIONAL | Add isFinishing/isDestroyed check before evaluateJavascript. |
 
