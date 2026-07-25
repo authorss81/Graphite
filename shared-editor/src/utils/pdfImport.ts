@@ -10,7 +10,8 @@ export async function extractTextFromPdf(file: File): Promise<string> {
   const pdf = await pdfjs.getDocument({ data: buffer }).promise;
   const parts: string[] = [];
 
-  for (let i = 1; i <= pdf.numPages; i++) {
+  const maxPages = Math.min(pdf.numPages, 100);
+  for (let i = 1; i <= maxPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     const lines: string[] = [];

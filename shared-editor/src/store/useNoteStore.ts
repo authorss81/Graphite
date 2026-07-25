@@ -305,6 +305,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const { docId, documents } = get();
     if (!docId || !documents[docId]) return;
     const cur = documents[docId];
+    if (cur.editorState?.trim().startsWith("enc:") && editorState && !editorState.trim().startsWith("enc:")) {
+      return;
+    }
     const nextEditorState = editorState ?? cur.editorState;
     const nextCanvasData =
       canvasData !== undefined ? canvasData : cur.canvasData;

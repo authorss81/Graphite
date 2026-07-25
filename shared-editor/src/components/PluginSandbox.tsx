@@ -65,7 +65,7 @@ export function PluginSandbox({ plugin, onCommand, onInsertText, onOpenUrl, visi
     <iframe
       ref={iframeRef}
       src={url}
-      sandbox="allow-scripts allow-same-origin"
+      sandbox="allow-scripts"
       style={{
         width: "100%",
         height: "0",

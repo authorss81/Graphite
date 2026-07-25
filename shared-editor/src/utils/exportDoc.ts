@@ -37,19 +37,23 @@ function nodeToMarkdown(node: any, indent: number = 0): string {
   return text ? `${prefix}${text}` : "";
 }
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
 function nodeToHtml(node: any): string {
   const type = node.type;
   let content = "";
   if (node.children) { for (const c of node.children) content += nodeToHtml(c); }
 
   if (type === "root") return content;
-  if (type === "heading" || type === "h1") return `<h1>${extractPlainText(node)}</h1>`;
-  if (type === "h2") return `<h2>${extractPlainText(node)}</h2>`;
-  if (type === "h3") return `<h3>${extractPlainText(node)}</h3>`;
-  if (type === "quote") return `<blockquote>${content || extractPlainText(node)}</blockquote>`;
-  if (type === "paragraph") return `<p>${content || extractPlainText(node)}</p>`;
+  if (type === "heading" || type === "h1") return `<h1>${escapeHtml(extractPlainText(node))}</h1>`;
+  if (type === "h2") return `<h2>${escapeHtml(extractPlainText(node))}</h2>`;
+  if (type === "h3") return `<h3>${escapeHtml(extractPlainText(node))}</h3>`;
+  if (type === "quote") return `<blockquote>${content || escapeHtml(extractPlainText(node))}</blockquote>`;
+  if (type === "paragraph") return `<p>${content || escapeHtml(extractPlainText(node))}</p>`;
   if (type === "text") {
-    let t = node.text || "";
+    let t = escapeHtml(node.text || "");
     if (node.bold) t = `<strong>${t}</strong>`;
     if (node.italic) t = `<em>${t}</em>`;
     if (node.code) t = `<code>${t}</code>`;
@@ -57,7 +61,9 @@ function nodeToHtml(node: any): string {
     return t;
   }
   if (type === "link") {
-    return `<a href="${node.url || "#"}" target="_blank">${extractPlainText(node)}</a>`;
+    const url = node.url || "#";
+    const safeUrl = url.startsWith("javascript:") ? "#" : url;
+    return `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(extractPlainText(node))}</a>`;
   }
   if (type === "list") {
     const tag = node.listType === "number" ? "ol" : "ul";
@@ -65,15 +71,19 @@ function nodeToHtml(node: any): string {
   }
   if (type === "listitem" || type === "checklistitem") {
     const checked = node.checked !== undefined ? (node.checked ? ` checked` : "") : "";
-    return `<li${checked}>${content || extractPlainText(node)}</li>`;
+    return `<li${checked}>${content || escapeHtml(extractPlainText(node))}</li>`;
   }
   if (type === "code" || type === "codeblock") {
-    const lang = node.language ? ` class="language-${node.language}"` : "";
-    return `<pre><code${lang}>${extractPlainText(node)}</code></pre>`;
+    const lang = node.language ? ` class="language-${escapeHtml(node.language)}"` : "";
+    return `<pre><code${lang}>${escapeHtml(extractPlainText(node))}</code></pre>`;
   }
   if (type === "horizontalrule" || type === "divider") return `<hr />`;
-  if (type === "image") return `<img src="${node.src || ""}" alt="${node.alt || ""}" style="max-width:100%" />`;
-  return content || extractPlainText(node);
+  if (type === "image") {
+    const src = node.src || "";
+    const safeSrc = src.startsWith("javascript:") ? "" : src;
+    return `<img src="${escapeHtml(safeSrc)}" alt="${escapeHtml(node.alt || "")}" style="max-width:100%" />`;
+  }
+  return content || escapeHtml(extractPlainText(node));
 }
 
 export function editorStateToMarkdown(editorState: string): string {
@@ -94,10 +104,11 @@ export function editorStateToMarkdown(editorState: string): string {
 export function editorStateToHtml(editorState: string, title: string = "Document"): string {
   try {
     const parsed = JSON.parse(editorState);
-    const body = parsed.root ? (parsed.root.children || []).map((c: any) => nodeToHtml(c)).join("\n") : editorState;
-    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${title}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;line-height:1.6;color:#333}h1,h2,h3{color:#111}blockquote{border-left:3px solid #ddd;margin:0;padding:4px 16px;color:#666}pre{background:#f5f5f5;padding:12px;border-radius:6px;overflow-x:auto}code{background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:0.9em}img{max-width:100%;height:auto}hr{border:none;border-top:1px solid #ddd}</style></head><body><h1>${title}</h1>${body}</body></html>`;
+    const body = parsed.root ? (parsed.root.children || []).map((c: any) => nodeToHtml(c)).join("\n") : escapeHtml(editorState);
+    const safeTitle = escapeHtml(title);
+    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${safeTitle}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:40px auto;padding:0 20px;line-height:1.6;color:#333}h1,h2,h3{color:#111}blockquote{border-left:3px solid #ddd;margin:0;padding:4px 16px;color:#666}pre{background:#f5f5f5;padding:12px;border-radius:6px;overflow-x:auto}code{background:#f0f0f0;padding:2px 6px;border-radius:3px;font-size:0.9em}img{max-width:100%;height:auto}hr{border:none;border-top:1px solid #ddd}</style></head><body><h1>${safeTitle}</h1>${body}</body></html>`;
   } catch {
-    return `<html><body><pre>${editorState}</pre></body></html>`;
+    return `<html><body><pre>${escapeHtml(editorState)}</pre></body></html>`;
   }
 }
 

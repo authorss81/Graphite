@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import { getDocCommits, computeTextDiff, createDocCommit, formatRelativeTime, type DocCommit } from "../utils/versionHistory";
 import { toast } from "./Toast";
@@ -33,6 +33,15 @@ export function VersionHistoryModal({ isOpen, onClose }: Props) {
   }, [commits, searchFilter]);
 
   if (!isOpen || !currentDoc) return null;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   const handleCreateSnapshot = async () => {
     try {

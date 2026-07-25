@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { Network, Sigma } from "lucide-react";
 
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/on\w+="[^"]*"/gi, "")
+    .replace(/on\w+='[^']*'/gi, "")
+    .replace(/on\w+=\S+/gi, "")
+    .replace(/javascript:/gi, "");
+}
+
 export function MermaidBlock() {
   const [code, setCode] = useState(`graph TD\n    A[Start Note] --> B{Choose Workspace}\n    B -->|Editor| C[Rich Text Blocks]\n    B -->|Canvas| D[Spatial Canvas]\n    B -->|Graph| E[Backlink Graph]`);
   const [svg, setSvg] = useState("");
@@ -28,7 +37,7 @@ export function MermaidBlock() {
       </div>
       <textarea value={code} onChange={(e) => setCode(e.target.value)} rows={4} style={{ width: "100%", background: "var(--bg-tertiary)", color: "#e2e8f0", border: "1px solid var(--border-color)", borderRadius: "6px", padding: "8px", fontFamily: "monospace", fontSize: "12px", boxSizing: "border-box", marginBottom: "10px" }} />
       <div ref={containerRef} style={{ background: "#1a1b26", padding: "12px", borderRadius: "8px", overflow: "auto", minHeight: "80px" }}>
-        {svg ? <div dangerouslySetInnerHTML={{ __html: svg }} /> : <div style={{ color: "var(--text-muted)", fontSize: "12px", fontStyle: "italic" }}>Rendering diagram...</div>}
+        {svg ? <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(svg) }} /> : <div style={{ color: "var(--text-muted)", fontSize: "12px", fontStyle: "italic" }}>Rendering diagram...</div>}
       </div>
     </div>
   );
@@ -57,7 +66,7 @@ export function MathBlock() {
       </div>
       <input type="text" value={latex} onChange={(e) => setLatex(e.target.value)} style={{ width: "100%", background: "var(--bg-tertiary)", color: "#e2e8f0", border: "1px solid var(--border-color)", borderRadius: "6px", padding: "6px 10px", fontFamily: "monospace", fontSize: "12px", boxSizing: "border-box", marginBottom: "10px" }} />
       <div style={{ background: "rgba(99, 102, 241, 0.1)", padding: "12px", borderRadius: "8px", textAlign: "center", overflow: "auto" }}>
-        {html ? <div dangerouslySetInnerHTML={{ __html: html }} /> : <div style={{ color: "var(--text-muted)", fontSize: "12px", fontStyle: "italic" }}>Rendering math...</div>}
+        {html ? <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} /> : <div style={{ color: "var(--text-muted)", fontSize: "12px", fontStyle: "italic" }}>Rendering math...</div>}
       </div>
     </div>
   );

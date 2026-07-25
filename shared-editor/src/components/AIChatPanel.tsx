@@ -50,6 +50,21 @@ export function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
 
   if (!isOpen || !currentDoc) return null;
 
+  const isEncrypted = currentDoc.editorState?.trim().startsWith("enc:") || false;
+
+  if (isEncrypted) {
+    return (
+      <div className="graphite-modal-backdrop" onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(0, 0, 0, 0.5)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "flex-end" }}>
+        <div className="graphite-ai-panel graphite-modal-card" onClick={(e) => e.stopPropagation()} style={{ width: "420px", height: "100%", background: "var(--bg-secondary)", borderLeft: "1px solid var(--border-color)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: "-8px 0 24px rgba(0,0,0,0.3)" }}>
+          <Sparkles size={32} style={{ color: "var(--accent-color)", marginBottom: "16px" }} />
+          <h3 style={{ margin: "0 0 8px", fontSize: "16px", color: "var(--text-primary)" }}>Encrypted Document</h3>
+          <p style={{ color: "var(--text-muted)", fontSize: "13px", textAlign: "center", maxWidth: "280px" }}>AI features are unavailable while this document is encrypted. Decrypt the document to use the AI assistant.</p>
+          <button type="button" className="graphite-btn" onClick={onClose} style={{ marginTop: "16px" }}>Close</button>
+        </div>
+      </div>
+    );
+  }
+
   const getNoteText = () => currentDoc.editorState || "";
 
   const handleSendPrompt = async () => {
@@ -149,7 +164,7 @@ export function AIChatPanel({ isOpen, onClose }: AIChatPanelProps) {
           style={{
             width: "420px",
             height: "100%",
-            background: "var(--bg-secondary)",
+            background: "var(--glass-bg)",
             borderLeft: "1px solid var(--border-color)",
             display: "flex",
             flexDirection: "column",

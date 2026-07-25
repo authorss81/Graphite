@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import type { SpatialCard, SpatialEdge } from "../utils/spatialCanvasStorage";
-import { Move, ArrowUpRight, ExternalLink, Trash2, Download, Upload, Layout, Infinity, Search, Palette, Grid3X3, Minimize2, CheckSquare, List, Bold, Heading, Type } from "lucide-react";
+import { Move, ArrowUpRight, ExternalLink, Trash2, Download, Upload, Layout, InfinityIcon, Search, Palette, Grid3X3, Minimize2, CheckSquare } from "lucide-react";
 import { ZoomControls } from "./ZoomControls";
 import { exportToJsonCanvas, importFromJsonCanvas, downloadCanvasFile, uploadCanvasFile } from "../utils/canvasFormat";
 import { extractTextFromPdf } from "../utils/pdfImport";
@@ -114,12 +114,6 @@ export function SpatialCanvas() {
     }
   }, [documents]);
 
-  const getSnippet = (raw?: string): string => {
-    if (!raw) return "Empty note";
-    if (raw.trim().startsWith("enc:")) return "[Encrypted Document]";
-    return renderLexicalContent(raw).text || "Empty note";
-  };
-
   const getCardColor = (card: SpatialCard): string => {
     if (card.color) return card.color;
     const doc = documents[card.docId];
@@ -177,16 +171,22 @@ export function SpatialCanvas() {
       for (const file of Array.from(files)) {
         if (file.type.startsWith("image/")) {
           addImageCard(file, x, y);
-        } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-          try {
-            const text = await extractTextFromPdf(file);
-            const pages = text.split(/\n\n(?=Page \d|$)/);
-            pages.forEach((pageText, idx) => {
-              const id = "pdf_" + Date.now().toString(36) + "_" + idx;
-              const newCard: SpatialCard = { id, docId: id, title: `${file.name} — Page ${idx + 1}`, x: x + idx * 40, y: y + idx * 40, width: 400, height: 500, content: pageText.slice(0, 2000) };
-              setCards((prev) => [...prev, newCard]);
-            });
-          } catch (err) { console.error("PDF import failed", err); }
+          } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+            try {
+              const text = await extractTextFromPdf(file);
+              const pages = text.split(/\n\n(?=Page \d|$)/);
+              const newCards = pages.map((pageText, idx) => ({
+                id: "pdf_" + Date.now().toString(36) + "_" + idx,
+                docId: "pdf_" + Date.now().toString(36) + "_" + idx,
+                title: `${file.name} — Page ${idx + 1}`,
+                x: x + idx * 40,
+                y: y + idx * 40,
+                width: 400,
+                height: 500,
+                content: pageText.slice(0, 2000),
+              }));
+              persist([...cards, ...newCards], edges);
+            } catch (err) { console.error("PDF import failed", err); }
         }
       }
     };
@@ -236,9 +236,6 @@ export function SpatialCanvas() {
 
   const groupSelectedCards = () => {
     if (selectedCardIds.size < 2) return;
-    const selected = cards.filter((c) => selectedCardIds.has(c.id));
-    const avgX = selected.reduce((s, c) => s + c.x, 0) / selected.length;
-    const avgY = selected.reduce((s, c) => s + c.y, 0) / selected.length;
     const newColor = CARD_COLORS[Math.floor(Math.random() * CARD_COLORS.length)];
     persist(
       cards.map((c) => selectedCardIds.has(c.id) ? { ...c, color: newColor } : c),
@@ -268,13 +265,14 @@ export function SpatialCanvas() {
     const card = cards.find((c) => c.id === cardId);
     if (!card) return;
     setHighlightedCardId(cardId);
+    const targetZoom = 1.5;
     const container = cardsContainerRef.current;
     if (container) {
       const rect = container.getBoundingClientRect();
-      const targetX = -(card.x * zoomLevel - rect.width / 2 + card.width * zoomLevel / 2);
-      const targetY = -(card.y * zoomLevel - rect.height / 2 + card.height * zoomLevel / 2);
+      const targetX = -(card.x * targetZoom - rect.width / 2 + card.width * targetZoom / 2);
+      const targetY = -(card.y * targetZoom - rect.height / 2 + card.height * targetZoom / 2);
       setOffset({ x: targetX, y: targetY });
-      setZoomLevel(1.5);
+      setZoomLevel(targetZoom);
     }
     setTimeout(() => setHighlightedCardId(null), 1500);
     setSearchQuery("");
@@ -294,7 +292,7 @@ export function SpatialCanvas() {
     return { minX, minY, maxX, maxY };
   }, [cards]);
 
-  const totalPages = pageMode ? Math.max(1, Math.ceil(cards.length / 3) + 1) : 0;
+  const totalPages = pageMode ? Math.max(1, Math.ceil(cards.length / 3)) : 0;
 
   // ── Mouse handlers ─────────────────────────────────────────────────────
   const handleMouseDownCanvas = (e: React.MouseEvent) => {
@@ -399,7 +397,7 @@ export function SpatialCanvas() {
           <button type="button" onClick={async () => { const json = await uploadCanvasFile(); if (!json) return; const imported = importFromJsonCanvas(json); if (imported) persist(imported.cards, imported.edges); }} title="Import" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "3px" }}><Upload size={14} /></button>
           <div style={{ width: 1, background: "var(--border-color)", margin: "0 2px" }} />
           <button type="button" onClick={() => { setPageMode((p) => !p); setOffset({ x: 0, y: 0 }); setZoomLevel(1); }} title="Toggle page mode" style={{ background: pageMode ? "var(--accent-color)" : "none", border: "none", cursor: "pointer", color: pageMode ? "#fff" : "var(--text-muted)", padding: "4px 8px", fontSize: "12px", display: "flex", alignItems: "center", gap: "3px", borderRadius: "6px" }}>
-            {pageMode ? <Layout size={14} /> : <Infinity size={14} />} {pageMode ? "Page" : "Infinite"}
+            {pageMode ? <Layout size={14} /> : <InfinityIcon size={14} />} {pageMode ? "Page" : "Infinite"}
           </button>
           <button type="button" onClick={() => setShowMinimap((p) => !p)} title="Toggle minimap" style={{ background: "none", border: "none", cursor: "pointer", color: showMinimap ? "var(--accent-color)" : "var(--text-muted)", padding: "4px" }}><Minimize2 size={14} /></button>
           <div style={{ width: 1, background: "var(--border-color)", margin: "0 2px" }} />
@@ -471,7 +469,6 @@ export function SpatialCanvas() {
                 const mapH = 100;
                 const rangeW = minimapBounds.maxX - minimapBounds.minX || 1;
                 const rangeH = minimapBounds.maxY - minimapBounds.minY || 1;
-                const scale = Math.min(mapW / rangeW, mapH / rangeH) * 0.8;
                 const cx = (c.x + c.width / 2 - minimapBounds.minX) / rangeW * mapW;
                 const cy = (c.y + c.height / 2 - minimapBounds.minY) / rangeH * mapH;
                 return (
@@ -516,7 +513,7 @@ export function SpatialCanvas() {
           })}
 
           {/* Cards */}
-          {cards.map((card) => {
+          {(pageMode ? cards.filter((_, i) => Math.floor(i / 3) === currentPage - 1) : cards).map((card) => {
             const doc = documents[card.docId];
             const content = renderLexicalContent(doc?.editorState);
             const textSnippet = card.content || content.text;

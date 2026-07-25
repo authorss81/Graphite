@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import { editorStateToMarkdown, editorStateToHtml, downloadAsFile, printDocument } from "../utils/exportDoc";
 import { toast } from "./Toast";
@@ -18,6 +18,15 @@ export function PublishModal({ isOpen, onClose }: Props) {
   const [copied, setCopied] = useState(false);
 
   if (!isOpen || !currentDoc) return null;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   const publicUrl = typeof window !== "undefined"
     ? `${window.location.origin}${window.location.pathname}#doc=${docId}`
