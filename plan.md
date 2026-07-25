@@ -245,15 +245,15 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 | 3.3.2 | **Plugin marketplace** | In-app browser for community plugins. One-click install/enable/disable. 5 builtin + 3 community plugins. | ✅ Done |
 | 3.3.3 | **Theme API** | CSS variable overrides. Solarized theme, Zen mode toggle. | ✅ Done |
 
-### 3.4 Advanced Block Types
+### 3.4 Advanced Block Types ⬜ Partial — code highlighting done, rest pending
 
-| # | Item | Details |
-|---|------|---------|
-| 3.4.1 | **Databases** | Table view, board view (Kanban), list view, calendar view. Inspired by Notion databases. |
-| 3.4.2 | **Mermaid diagrams** | Render Mermaid code blocks as diagrams. Use mermaid.render. |
-| 3.4.3 | **LaTeX math** | KaTeX rendering for `$$` math blocks. |
+| # | Item | Details | Status |
+|---|------|---------|--------|
+| 3.4.1 | **Databases** | Table view, board view (Kanban), list view, calendar view. Inspired by Notion databases. | ⬜ Pending |
+| 3.4.2 | **Mermaid diagrams** | Render Mermaid code blocks as diagrams. Use mermaid.render. | ⬜ Pending |
+| 3.4.3 | **LaTeX math** | KaTeX rendering for `$$` math blocks. | ⬜ Pending |
 | 3.4.4 | **Code blocks with syntax highlighting** | Prism.js via @lexical/code auto-highlighting, 28 token types styled, language picker in toolbar. Run button for JS/Python sandbox. | ✅ Done |
-| 3.4.5 | **Audio/video** | Upload to Supabase Storage → embed player block. |
+| 3.4.5 | **Audio/video** | Upload to Supabase Storage → embed player block. | ⬜ Pending |
 
 ### 3.5 Team Workspace
 
@@ -272,14 +272,14 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 | 3.6.2 | **Key management** | WebAuthn / hardware key / recovery codes for key recovery. | ✅ Done |
 | 3.6.3 | **Audit log** | Track document access, exports, sharing events. | ✅ Done |
 
-### 3.7 Desktop & Mobile Native
+### 3.7 Desktop & Mobile Native ⬜ Pending — needs platform-specific tooling
 
-| # | Item | Details |
-|---|------|---------|
-| 3.7.1 | **Desktop app (Tauri)** | Native file system, system tray, global quick-note shortcut (Ctrl+Shift+N). |
-| 3.7.2 | **Android native shell** | Full WebView wrapper with proper lifecycle, back gesture, share sheet, notification integration. |
-| 3.7.3 | **iOS native shell** | WKWebView with keyboard handling, Apple Pencil support, Drag & Drop, Shortcuts integration. |
-| 3.7.4 | **Widgets** | iOS Today Widget, Android App Widget — quick note, recent docs. |
+| # | Item | Details | Status |
+|---|------|---------|--------|
+| 3.7.1 | **Desktop app (Tauri)** | Native file system, system tray, global quick-note shortcut (Ctrl+Shift+N). | ⬜ Pending |
+| 3.7.2 | **Android native shell** | Full WebView wrapper with proper lifecycle, back gesture, share sheet, notification integration. | ⬜ Pending |
+| 3.7.3 | **iOS native shell** | WKWebView with keyboard handling, Apple Pencil support, Drag & Drop, Shortcuts integration. | ⬜ Pending |
+| 3.7.4 | **Widgets** | iOS Today Widget, Android App Widget — quick note, recent docs. | ⬜ Pending |
 
 
 ---
@@ -467,12 +467,12 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 |---|------|---------|--------|--------|
 | 12.1 | Page-wise canvas mode | Bounded A4 pages vs infinite; dashed page edges; Add Page button; page numbers; slide decks | 8h | ✅ Done |
 | 12.2 | Canvas mode toggle in UI | Toggle infinite/page-wise button in SpatialCanvas toolbar | 3h | ✅ Done |
-| 12.3 | Rich card content in SpatialCanvas | Render bold/headings/lists/checkboxes/images in cards | 8h | Pending |
-| 12.4 | SpatialCanvas auto-layout (Arrange All) | Force-directed or grid layout | 6h | Pending |
-| 12.5 | SpatialCanvas minimap | Thumbnail overview of full canvas | 8h | Pending |
-| 12.6 | Search/zoom-to-card | Find by title, animate zoom | 4h | Pending |
-| 12.7 | Card colors and groups | Color-code by tag, drag to group | 4h | Pending |
-| 12.8 | Multi-select on SpatialCanvas | Select multiple cards to move/delete/group | 4h | Pending |
+| 12.3 | Rich card content in SpatialCanvas | Render Lexical JSON: bold/headings/lists/checkboxes in cards | 8h | ✅ Done |
+| 12.4 | SpatialCanvas auto-layout (Arrange All) | Grid layout Arrange All button | 6h | ✅ Done |
+| 12.5 | SpatialCanvas minimap | Thumbnail overview of full canvas | 8h | ✅ Done |
+| 12.6 | Search/zoom-to-card | Find by title, animate zoom with highlight | 4h | ✅ Done |
+| 12.7 | Card colors and groups | Color-code by tag, palette picker, color group action | 4h | ✅ Done |
+| 12.8 | Multi-select on SpatialCanvas | Ctrl+click multi-select, group drag, bulk delete, group color | 4h | ✅ Done |
 | 12.9 | Canvas presentation / slides mode | Select sequence, animated transitions, export | 12h | Pending |
 | 12.10 | Canvas onChange perf fix (DONE) | Buffer strokes, defer to pointerUp | 3h | Done |
 | 12.11 | Canvas drawing offset fix (DONE) | detectScroll=true, remove forced CSS, fix zoom math | 2h | Done |
