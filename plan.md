@@ -1003,3 +1003,105 @@ Additional critical/high issues discovered during cross-phase audit not in previ
 | 27.7 | No focus trapping in 6 of 7 modals | All modals except AIChatPanel | MEDIUM | Tab key cycles behind modal backdrop — user can interact with background page while modal is open. WCAG violation. | ✅ Done |
 | 27.8 | Touch events absent on SpatialCanvas + GraphView | `SpatialCanvas.tsx:170-172`, `GraphView.tsx:319-322` | HIGH | Mobile touch interaction completely broken on both canvas views — only mouse events handled. Users on tablets/phones cannot pan or zoom. | ✅ Done |
 
+---
+
+## Phase 28: Deep Security Audit — Phase 2, 3, 10, 11, 12 Vulnerabilities (July 2026)
+
+Comprehensive security audit of all Phase 2 (Core), Phase 3 (World-Class), Phase 10 (Real Engines), Phase 11 (Feature Parity), Phase 12 (Spatial Canvas), and Phase 26 (Design Polish) features. Independent review with strict criteria.
+
+### 🔴 CRITICAL
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 28.1 | **new Function() executes arbitrary user code in CodeSandbox** — Worker blob created with `allow-same-origin`, full fetch/XHR/Storage access | `CodeSandboxBlock.tsx:36` | CRITICAL | Use frozen `with()` scope or dedicated sandbox Worker with CSP. Block `fetch`, `XMLHttpRequest`, `WebSocket` in Worker context. |
+| 28.2 | **dangerouslySetInnerHTML with unsanitized Mermaid SVG** — User-controlled Mermaid code produces SVG with event handlers | `MermaidMathBlock.tsx:31` | CRITICAL | Sanitize SVG with DOMPurify before injection. Use `USE_PROFILES: { svg: true }`. |
+| 28.3 | **dangerouslySetInnerHTML with unsanitized KaTeX HTML** — KaTeX `throwOnError:false` emits raw markup on error | `MermaidMathBlock.tsx:60` | CRITICAL | Sanitize KaTeX output with DOMPurify. Set `throwOnError: true, trust: false`. |
+| 28.4 | **Plugin iframe uses allow-same-origin + allow-scripts** — Full same-origin access, defeats sandbox | `PluginSandbox.tsx:68` | CRITICAL | Remove `allow-same-origin`. Use only `allow-scripts`. Never combine both. |
+| 28.5 | **Plugin postMessage targetOrigin '*'** — Any window can intercept plugin messages | `pluginAPI.ts:70,74,78,82,95` | CRITICAL | Replace `'*'` with `window.location.origin` or validate `event.origin`. |
+| 28.6 | **PluginSandbox no origin/source validation** — Any iframe/popup can send commands | `PluginSandbox.tsx:16` | CRITICAL | Check `event.source === iframeRef.current?.contentWindow` and `event.origin`. |
+| 28.7 | **printDocument writes unsanitized HTML in same-origin popup** — Scripts in exported HTML execute in popup context | `exportDoc.ts:114-121` | CRITICAL | Strip `<script>` tags or sanitize with DOMPurify before `document.write()`. |
+| 28.8 | **HTML export XSS — no escaping of title, URLs, img src** — String interpolation without HTML escaping | `exportDoc.ts:60,75,98` | CRITICAL | Escape HTML entities in title, href, src. Validate URL schemes — block `javascript:`. |
+| 28.9 | **Prototype pollution via Supabase realtime payload spread** — `payload.new` spread directly into objects | `supabase.ts:176,232-238` | CRITICAL | Extract known-safe properties explicitly. Never spread untrusted objects. |
+| 28.10 | **WebAuthn assertion signature never verified** — Any hardware key accepted, challenge/origin/authenticatorData not validated | `encryption.ts:266-290` | CRITICAL | Implement full assertion verification: clientDataJSON, authenticatorData, signature against stored public key. |
+| 28.11 | **updateCurrentContent lacks encryption guard** — 5 code paths can overwrite encrypted content with plaintext | `useNoteStore.ts:304` | CRITICAL | Add `if (cur.editorState?.startsWith("enc:") && editorState && !editorState.startsWith("enc:")) return;`. |
+| 28.12 | **Encrypted ciphertext sent to third-party AI APIs** — `AIChatPanel` sends raw `enc:` blob to OpenAI/Anthropic/Ollama | `AIChatPanel.tsx:53,71` | CRITICAL | Skip AI features when doc is encrypted; show user warning instead. |
+| 28.13 | **HMAC comparison uses string !== (timing side-channel)** — Attacker can forge audit log entries byte-by-byte | `auditLog.ts:76` | CRITICAL | Implement constant-time comparison with `timingSafeEqual`. |
+| 28.14 | **Yjs document access control — no authorization for any docId** — `getYDoc()` accepts any docId, BroadcastChannel relays all data | `yjsSync.ts:19-71` | CRITICAL | Implement document access whitelist or capability token. Only allow authorized docIds. |
+| 28.15 | **IDOR — Supabase Realtime subscribes to ALL changes without user_id filter** — Any authenticated user receives all document updates | `supabase.ts:217-268` | CRITICAL | Add `filter: 'user_id=eq.${userId}'` to Realtime channel subscriptions. |
+| 28.16 | **No authorization checks on workspace CRUD** — Any user can delete/change any workspace or role | `teamWorkspace.ts:109-158` | CRITICAL | Add caller role verification before every mutation. Only admin can edit members. |
+| 28.17 | **Awareness state injection via BroadcastChannel with no validation** — Malicious tab can inject fake users, poison cursor state | `yjsSync.ts:43-48` | CRITICAL | Validate each awareness state object schema: `user.id`, `user.name` (max length), `user.color` (valid hex). Cap Map at 50 entries. |
+| 28.18 | **AI provider API keys stored in plaintext localStorage** — Any XSS exfiltrates OpenAI/Anthropic keys | `aiConfig.ts:35-38` | CRITICAL | Encrypt keys with Web Crypto + session key, or use backend proxy. |
+| 28.19 | **Plugin remote scripts loaded from unpkg without SRI** — Compromised CDN or package hijack = arbitrary code execution | `pluginSystem.ts:96,109,122` | CRITICAL | Add `integrity` SRI hashes. Pin exact versions. Self-host or require plugin signing. |
+
+### 🟠 HIGH
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 28.20 | **Recovery codes never persisted to localStorage** — Lost on modal close, verification always fails | `SecurityModal.tsx:80,206` | HIGH | Persist individual SHA-256 hashes of each code to localStorage. |
+| 28.21 | **HMAC signing key stored in localStorage plaintext** — Anyone with localStorage access can forge audit log | `auditLog.ts:25-35` | HIGH | Derive HMAC key from user passphrase via PBKDF2, not stored independently. |
+| 28.22 | **"Require hardware key" enforced via localStorage boolean** — Trivially bypassable by attacker | `encryption.ts:292-303` | HIGH | Make hardware key REQUIRED at cryptographic level (seal/unseal with WebAuthn). |
+| 28.23 | **Prompt injection in LLM streaming — no input/output sanitization** — User can inject system prompt overrides | `aiService.ts:111-131` | HIGH | Separate system/user messages properly. Sanitize LLM output. |
+| 28.24 | **Git command injection / path traversal via docId** — docId used directly in file paths without sanitization | `versionHistory.ts:175-179` | HIGH | Sanitize docId to alphanumeric only. Validate resolved path stays in GIT_DIR. |
+| 28.25 | **HTML import no sanitization** — DOMParser preserves dangerous attributes (`onerror`, `javascript:`) | `HtmlImportPlugin.tsx:19-21` | HIGH | Sanitize with DOMPurify before parsing. |
+| 28.26 | **CSP allows unsafe-eval and unsafe-inline** — Defeats CSP's protection against injection | `index.html:26` | HIGH | Remove `unsafe-eval`, refactor CodeSandbox. Use nonces for inline scripts. |
+| 28.27 | **Role escalation — invite form allows inviting as "admin"** — No check that inviter has admin privileges | `TeamWorkspaceModal.tsx:96-110` | HIGH | Restrict invite role dropdown to roles <= current user's role. |
+| 28.28 | **Math.random() for user ID on invite** — Predictable IDs, collision risk | `TeamWorkspaceModal.tsx:100` | HIGH | Use `crypto.randomUUID()`. |
+| 28.29 | **Concurrent modification race condition in workspace/comments** — Clear-and-reload pattern loses concurrent writes | `teamWorkspace.ts:99-107` | HIGH | Use per-item IndexedDB transactions. Add version numbers with compare-and-swap. |
+| 28.30 | **First-in-first-served user identity — no auth binding** — Collaborative identity trivially forgeable | `userRegistry.ts:19-44` | HIGH | Bind collaborative identity to authenticated Supabase user ID. |
+| 28.31 | **HTML export — `printDocument` opens window with no CSP** — Scripts execute in popup context | `exportDoc.ts:114-120` | HIGH | Strip scripts before `document.write()`. Use `noopener,noreferrer`. |
+| 28.32 | **WikiLinkPlugin directly manipulates DOM — bypasses React reconciliation** | `WikiLinkPlugin.tsx:81-113` | HIGH | Use Lexical decorator node system instead of direct DOM mutation. |
+| 28.33 | **SpatialCanvas CSS injection via card.imageUrl** — `url()` interpolation without validation | `SpatialCanvas.tsx:539` | HIGH | Validate imageUrl against allowlist (https:, data:image/). Escape CSS. |
+| 28.34 | **No RLS on Supabase note_nodes/block_entities** — Any auth user can read/write any document | `supabase.ts:227-262` | HIGH | Configure Supabase RLS policies per user. Filter Realtime by user_id. |
+| 28.35 | **FileDropPlugin inserts raw file content without size limits** — OOM with large files | `Editor.tsx:107-113` | HIGH | Add file size limits (5MB max). Add timeout for large reads. |
+| 28.36 | **Recovery codes stored only in React state — lost on modal close** | `SecurityModal.tsx:80` | HIGH | Persist individual SHA-256 hashes per code to localStorage. |
+| 28.37 | **XSS via awareness user name in canvas cursor rendering** — User name overflow/phishing | `AwarenessCursorsPlugin.tsx:71` | HIGH | Truncate to 30 chars, strip non-printable characters. |
+| 28.38 | **Decrypted plaintext persists in Zustand + localStorage indefinitely** | `useNoteStore.ts:304-318` | HIGH | Keep decrypted content in memory-only cache; never write to localStorage. |
+| 28.39 | **Supabase sync has no encryption assertion** — Plaintext synced to server when encryption is enabled | `supabase.ts:173-174` | HIGH | Assert `editorState.startsWith("enc:")` before syncing. |
+
+### 🟡 MEDIUM
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 28.40 | **parseInt() without radix** — Hex interpretation of indices | `SemanticSearchModal.tsx:136` | MEDIUM | Always specify `parseInt(s, 10)`. Validate with `/^\d+$/`. |
+| 28.41 | **Math.random() for security-sensitive IDs** (multiple locations) | `canvasFormat.ts:32`, `supabase.ts:123,222`, `docStorage.ts:29` | MEDIUM | Use `crypto.randomUUID()` or `crypto.getRandomValues()`. |
+| 28.42 | **Realtime channel topic uses Date.now() + Math.random()** — Predictable channel names | `supabase.ts:222` | MEDIUM | Use `crypto.randomUUID()` for channel topic. |
+| 28.43 | **No input size limits on embedding generation — potential OOM** | `embedding.ts:19-24` | MEDIUM | Truncate to 100KB max. Add try-catch timeout. |
+| 28.44 | **Tag sanitization insufficient** — Tags can contain special chars, path traversal | `useNoteStore.ts:391` | MEDIUM | Max 50 chars, restrict to `[a-z0-9-_.#@]`, block `../`. |
+| 28.45 | **Path traversal in download filenames via document title** | `PublishModal.tsx:164-165` | MEDIUM | Sanitize filename: remove `/`, `\`, null bytes, control chars. |
+| 28.46 | **Cross-origin fetch to user-configurable Ollama endpoint — SSRF risk** | `aiService.ts:77-83` | MEDIUM | Validate endpoint against `localhost` allowlist. Warn on non-local. |
+| 28.47 | **GraphView ctx.fillText renders titles without length limit** — DoS/overload | `GraphView.tsx:207` | MEDIUM | Truncate titles to 80 chars for canvas rendering. |
+| 28.48 | **Version history stores plaintext editorState in localStorage** | `versionHistory.ts:51-66` | MEDIUM | For encrypted docs, store only ciphertext. Add "Clear History" option. |
+| 28.49 | **Truncated UUIDs (32 bits) — collision risk** | `teamWorkspace.ts:111,185` | MEDIUM | Use full UUID or at least 16 hex chars. |
+| 28.50 | **No input validation on workspace name, email, comment content** | `teamWorkspace.ts:109,135-142` | MEDIUM | Add max lengths (200/254/10000). Validate email format. |
+| 28.51 | **Awareness state unbounded Map growth (DoS)** | `yjsSync.ts:45-46` | MEDIUM | Cap Map at 50 entries. Reject messages with excessive state entries. |
+| 28.52 | **CryptoKey in React state (DevTools exposure)** | `SecurityModal.tsx:75` | MEDIUM | Store CryptoKey only in useRef, never in state. |
+| 28.53 | **verifyAuditChain() defined but never called** — Tamper detection is dead code | `auditLog.ts:66-79` | MEDIUM | Wire up verifyAuditChain() into audit log display. |
+| 28.54 | **Comment content stored as plaintext in IndexedDB without encryption** | `teamWorkspace.ts:160-175` | MEDIUM | Document that workspace/comments are not E2E encrypted. |
+| 28.55 | **Offline queue stores documents in localStorage plaintext** | `supabase.ts:87-118` | MEDIUM | Encrypt queue data with device-local key. |
+| 28.56 | **Spatial canvas data synced without access control** | `spatialCanvasStorage.ts:30-68` | MEDIUM | Add RLS for canvas_edges, scope to user_id. |
+| 28.57 | **Canvas format import — no JSON schema validation / prototype pollution** | `canvasFormat.ts:67-97` | MEDIUM | Validate all fields: ID types, coordinate bounds, color format. |
+| 28.58 | **PDF import — no page limit (DoS vector)** | `pdfImport.ts:13` | MEDIUM | Cap at 200 pages. |
+| 28.59 | **No input size limits on code/text areas (DoS)** | `CodeSandboxBlock.tsx:131`, `MermaidMathBlock.tsx:29,58` | MEDIUM | Add maxLength (50KB code, 2KB LaTeX). |
+| 28.60 | **KanbanBoard IDs from user-controlled JSON not validated** | `KanbanBoard.tsx:24` | MEDIUM | Validate editor-state IDs with regex before use. |
+| 28.61 | **No per-document size limit — quota exhaustion** | `docStorage.ts:88-123` | MEDIUM | Cap editorState at 1MB per doc. Show user feedback. |
+
+### 🟢 LOW
+
+| # | Vulnerability | File:Line | Severity | Fix |
+|---|---------------|-----------|----------|-----|
+| 28.62 | **ImageNode allows data: URLs without content type validation** | `ImageNode.tsx:58-61` | LOW | Validate data: URLs use image MIME types only. |
+| 28.63 | **PDF import fileName used directly in markdown** | `pdfImport.ts:39-43` | LOW | Sanitize filename in generated markdown. |
+| 28.64 | **ReDoS potential in extractHumanText regex** | `versionHistory.ts:124-127` | LOW | Add size limits before regex processing. |
+| 28.65 | **No rate limiting on comment creation** | `teamWorkspace.ts:182` | LOW | Add 1s cooldown, cap at 1000 comments/doc. |
+| 28.66 | **BroadcastChannel origin validation not applicable (same-origin)** | `yjsSync.ts:38-49` | LOW | Acceptable — BroadcastChannel is same-origin by spec. |
+| 28.67 | **Passphrase in immutable JS string (no memory zeroing)** | `SecurityModal.tsx:71,188` | LOW | Known limitation of JS; use Uint8Array if possible. |
+| 28.68 | **WebAuthn userVerification: "discouraged"** — No PIN/biometric prompt | `encryption.ts:247,281` | LOW | Change to `"required"` for stronger security. |
+| 28.69 | **verifyRecoveryCode requires full code array** — Poor API design | `encryption.ts:182-191` | LOW | Store individual code hashes instead of joint hash. |
+| 28.70 | **Embedding service indexes encrypted content** | `embedding.ts:58-76` | LOW | Skip embedding for `enc:` documents. |
+| 28.71 | **Sidebar unsanitized title in confirm() dialog** — Social engineering | `Sidebar.tsx:277-279` | LOW | Strip control characters, limit to 100 chars. |
+| 28.72 | **Daily Journal fragile date-in-title matching** — False positives | `DailyJournal.tsx:15` | LOW | Use dedicated `dailyNoteDate` field. |
+| 28.73 | **Keyboard shortcut Ctrl+P intercepts browser print — not globally bound** | `KeyboardCheatsheetModal.tsx:13` | LOW | Add global Ctrl+P/Cmd+P listener. |
+| 28.74 | **BlockRefPlugin overly restrictive ID regex** — Dots not matched | `BlockRefPlugin.tsx:6` | LOW | Use `/[[([^\]#]+)#\^([^\]]+)\]\]/` instead. |
+| 28.75 | **Code language from editor state not validated** | `EditorToolbar.tsx:291,317` | LOW | Validate against Prism language list before setting. |
+| 28.76 | **AudioRecording stream tracks not stopped after stop** — Mic stays active | `AudioRecording.tsx:50-57` | LOW | Stop all tracks when stopping recording. |
+
