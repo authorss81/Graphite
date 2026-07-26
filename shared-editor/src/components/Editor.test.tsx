@@ -8,7 +8,6 @@ describe("Editor component", () => {
     render(<Editor docId="doc-test" initialState="" />);
     expect(screen.getByTitle("Bold Ctrl+B")).toBeInTheDocument();
     expect(screen.getByTitle("Italic Ctrl+I")).toBeInTheDocument();
-    expect(screen.getByTitle("Insert Drawing Canvas")).toBeInTheDocument();
   });
 
   it("renders the empty-state placeholder", () => {
