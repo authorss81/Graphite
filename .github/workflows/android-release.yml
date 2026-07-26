@@ -1,0 +1,138 @@
+name: "Build & Release APK → Amazon Appstore"
+
+# ─────────────────────────────────────────────────────────
+#  Triggers:
+#    • Every push to 'main'         → debug APK (for testing)
+#    • Every tag  'v*'              → signed release APK (for Amazon Appstore)
+#    • Manual run in GitHub UI      → either
+# ─────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Build a signed release APK?"
+        required: false
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ───────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Node.js (build the web app) ───────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: shared-editor/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: shared-editor
+        run: npm ci
+
+      - name: Build Vite web app
+        working-directory: shared-editor
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      # ── 3. Java (required for Gradle / Android build) ────
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # ── 4. Android SDK ───────────────────────────────────
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ── 5. Capacitor sync (copies dist/ into android/) ──
+      - name: Capacitor sync
+        working-directory: shared-editor
+        run: npx cap sync android
+
+      # ── 6. Make Gradle executable ────────────────────────
+      - name: Grant Gradle execute permission
+        working-directory: shared-editor/android
+        run: chmod +x gradlew
+
+      # ── 7a. DEBUG build (branches, not tags) ─────────────
+      - name: Build debug APK
+        if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event.inputs.release != 'true' }}
+        working-directory: shared-editor/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload debug APK
+        if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event.inputs.release != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphite-debug-${{ github.run_number }}
+          path: shared-editor/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      # ── 7b. RELEASE build (tags only, signed) ────────────
+      - name: Decode keystore from secret
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.release == 'true' }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 --decode > shared-editor/android/app/graphite-release.jks
+
+      - name: Build signed release APK
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.release == 'true' }}
+        working-directory: shared-editor/android
+        run: |
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=${{ github.workspace }}/shared-editor/android/app/graphite-release.jks \
+            -Pandroid.injected.signing.store.password=${{ secrets.ANDROID_STORE_PASS }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.ANDROID_KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.ANDROID_KEY_PASS }} \
+            --no-daemon
+
+      - name: Upload signed release APK
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event.inputs.release == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphite-release-${{ github.ref_name }}
+          path: shared-editor/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 90
+
+      # ── 8. Create GitHub Release with APK attached ───────
+      - name: Create GitHub Release
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: shared-editor/android/app/build/outputs/apk/release/app-release.apk
+          generate_release_notes: true
+          name: "Graphite ${{ github.ref_name }}"
+          body: |
+            ## 📦 Graphite ${{ github.ref_name }}
+
+            ### How to install (Amazon Appstore / Sideload)
+            1. Download `app-release.apk` from the assets below.
+            2. Upload to [Amazon Developer Console](https://developer.amazon.com/apps-and-services) → Binary File(s) tab.
+            3. Or sideload directly: enable "Unknown Sources" on Android → open the APK.
+
+            ### Amazon Appstore Submission
+            After downloading the APK, follow the guide in `PUBLISHING_GUIDE.md` in the repository.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 9. Clean up keystore from runner ─────────────────
+      - name: Remove keystore from runner
+        if: always()
+        run: rm -f shared-editor/android/app/graphite-release.jks

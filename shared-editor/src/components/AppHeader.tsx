@@ -1,26 +1,40 @@
 import { memo, useState, useEffect } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import { editorStateToMarkdown, editorStateToHtml, downloadAsFile, printDocument } from "../utils/exportDoc";
-import { RotateCcw, Share2, Sparkles, Puzzle, Users, ShieldCheck, FileText, Download } from "lucide-react";
+import { RotateCcw, Share2, Sparkles, Puzzle, Users, ShieldCheck, FileText, Download, Menu, MoreVertical, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { PresenceIndicator } from "./PresenceIndicator";
 
 interface AppHeaderProps {
   currentTitle: string;
   onOpenModal: (modal: string) => void;
+  onToggleSidebar?: () => void;
 }
 
-export const AppHeader = memo(function AppHeader({ currentTitle, onOpenModal }: AppHeaderProps) {
+export const AppHeader = memo(function AppHeader({ currentTitle, onOpenModal, onToggleSidebar }: AppHeaderProps) {
   const docId = useNoteStore((s) => s.docId);
   const editorState = useNoteStore((s) => s.editorState);
   const documents = useNoteStore((s) => s.documents);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showMobileDropdown, setShowMobileDropdown] = useState(false);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(
+    () => localStorage.getItem("graphite_header_collapsed") === "true"
+  );
+
+  const toggleHeaderCollapse = () => {
+    const next = !isHeaderCollapsed;
+    setIsHeaderCollapsed(next);
+    localStorage.setItem("graphite_header_collapsed", String(next));
+  };
 
   useEffect(() => {
-    if (!showExportMenu) return;
-    const handleClick = () => setShowExportMenu(false);
+    if (!showExportMenu && !showMobileDropdown) return;
+    const handleClick = () => {
+      setShowExportMenu(false);
+      setShowMobileDropdown(false);
+    };
     window.addEventListener("click", handleClick);
     return () => window.removeEventListener("click", handleClick);
-  }, [showExportMenu]);
+  }, [showExportMenu, showMobileDropdown]);
 
   const handleExport = (format: "markdown" | "html" | "html-print") => {
     setShowExportMenu(false);
@@ -39,40 +53,36 @@ export const AppHeader = memo(function AppHeader({ currentTitle, onOpenModal }: 
   };
 
   return (
-    <header
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        borderBottom: "1px solid var(--border-color)",
-        paddingBottom: "16px",
-        overflowX: "auto",
-      }}
-    >
-      <div>
-        <h1
-          style={{
-            margin: 0,
-            fontFamily: "var(--font-heading)",
-            fontSize: "28px",
-            background: "linear-gradient(to right, #c084fc, #818cf8)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
+    <header className={`graphite-header${isHeaderCollapsed ? " graphite-header-collapsed" : ""}`}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <button
+          className="sidebar-toggle-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onToggleSidebar) onToggleSidebar();
           }}
+          title="Toggle Sidebar"
         >
-          Graphite Studio
-        </h1>
-        <p
-          style={{
-            margin: "4px 0 0 0",
-            color: "var(--text-secondary)",
-            fontSize: "14px",
-          }}
-        >
-          {currentTitle}
-        </p>
+          <Menu size={20} />
+        </button>
+        <div>
+          <h1 className="header-title">Graphite Studio</h1>
+          <p className="header-subtitle">{currentTitle}</p>
+        </div>
       </div>
-      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+
+      {/* Header collapse toggle — visible on desktop only */}
+      <button
+        className="header-collapse-btn desktop-only"
+        onClick={toggleHeaderCollapse}
+        title={isHeaderCollapsed ? "Expand header buttons" : "Collapse header buttons"}
+        style={{ marginLeft: "auto", marginRight: "8px" }}
+      >
+        {isHeaderCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+      </button>
+
+      {/* Desktop Buttons Container */}
+      <div className="desktop-header-buttons">
         <PresenceIndicator />
         <button
           className="graphite-btn active"
@@ -85,11 +95,11 @@ export const AppHeader = memo(function AppHeader({ currentTitle, onOpenModal }: 
         </button>
         <button
           className="graphite-btn"
-          onClick={() => onOpenModal("search")}
-          title="AI Semantic Search (Ctrl+K)"
+          onClick={() => onOpenModal("quickSearch")}
+          title="Quick Search (Ctrl+K)"
         >
-          <Sparkles size={16} />
-          AI Search
+          <Search size={16} />
+          Search
         </button>
         <button
           className="graphite-btn"
@@ -139,9 +149,9 @@ export const AppHeader = memo(function AppHeader({ currentTitle, onOpenModal }: 
           </button>
           {showExportMenu && (
             <div style={{ position: "absolute", top: "100%", right: 0, marginTop: "4px", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "10px", boxShadow: "0 8px 24px rgba(0,0,0,0.4)", zIndex: 999, minWidth: "160px", overflow: "hidden" }}>
-              <button onClick={() => handleExport("markdown")} style={{ width: "100%", textAlign: "left", padding: "8px 14px", background: "none", border: "none", cursor: "pointer", color: "var(--text-primary)", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }} onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")} onMouseLeave={(e) => (e.currentTarget.style.background = "none")}><FileText size={14} /> Markdown (.md)</button>
-              <button onClick={() => handleExport("html")} style={{ width: "100%", textAlign: "left", padding: "8px 14px", background: "none", border: "none", cursor: "pointer", color: "var(--text-primary)", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }} onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")} onMouseLeave={(e) => (e.currentTarget.style.background = "none")}><FileText size={14} /> HTML (.html)</button>
-              <button onClick={() => handleExport("html-print")} style={{ width: "100%", textAlign: "left", padding: "8px 14px", background: "none", border: "none", cursor: "pointer", color: "var(--text-primary)", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }} onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")} onMouseLeave={(e) => (e.currentTarget.style.background = "none")}><FileText size={14} /> Print / PDF</button>
+              <button onClick={() => handleExport("markdown")} style={{ width: "100%", textAlign: "left", padding: "8px 14px", background: "none", border: "none", cursor: "pointer", color: "var(--text-primary)", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }} onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}><FileText size={14} /> Markdown (.md)</button>
+              <button onClick={() => handleExport("html")} style={{ width: "100%", textAlign: "left", padding: "8px 14px", background: "none", border: "none", cursor: "pointer", color: "var(--text-primary)", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }} onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}><FileText size={14} /> HTML (.html)</button>
+              <button onClick={() => handleExport("html-print")} style={{ width: "100%", textAlign: "left", padding: "8px 14px", background: "none", border: "none", cursor: "pointer", color: "var(--text-primary)", fontSize: "13px", display: "flex", alignItems: "center", gap: "8px" }} onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-tertiary)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}><FileText size={14} /> Print / PDF</button>
             </div>
           )}
         </div>
@@ -150,6 +160,50 @@ export const AppHeader = memo(function AppHeader({ currentTitle, onOpenModal }: 
           Publish
         </button>
       </div>
+
+      {/* Mobile Buttons Container */}
+      <div className="mobile-header-buttons">
+        <PresenceIndicator />
+        <button
+          className="graphite-btn icon-only"
+          onClick={() => onOpenModal("quickSearch")}
+          title="Quick Search"
+        >
+          <Search size={18} />
+        </button>
+        <button
+          className="graphite-btn icon-only active"
+          onClick={() => onOpenModal("aiPanel")}
+          title="AI Assistant"
+          style={{ background: "linear-gradient(135deg, #a855f7, #ec4899)", color: "#fff", border: "none" }}
+        >
+          <Sparkles size={18} />
+        </button>
+        <div style={{ position: "relative" }}>
+          <button
+            type="button"
+            className="graphite-btn icon-only"
+            onClick={(e) => { e.stopPropagation(); setShowMobileDropdown((p) => !p); }}
+            title="More Actions"
+          >
+            <MoreVertical size={18} />
+          </button>
+          {showMobileDropdown && (
+            <div className="mobile-action-dropdown">
+              <button onClick={() => onOpenModal("templates")}><FileText size={14} /> Templates</button>
+              <button onClick={() => onOpenModal("history")}><RotateCcw size={14} /> History</button>
+              <button onClick={() => onOpenModal("plugins")}><Puzzle size={14} /> Plugins</button>
+              <button onClick={() => onOpenModal("team")}><Users size={14} /> Team</button>
+              <button onClick={() => onOpenModal("security")}><ShieldCheck size={14} /> Security</button>
+              <button onClick={() => onOpenModal("publish")}><Share2 size={14} /> Publish</button>
+              <hr style={{ border: "none", borderTop: "1px solid var(--border-color)", margin: "4px 0" }} />
+              <button onClick={() => handleExport("markdown")}><Download size={14} /> Export Markdown</button>
+              <button onClick={() => handleExport("html")}><Download size={14} /> Export HTML</button>
+              <button onClick={() => handleExport("html-print")}><Download size={14} /> Print / PDF</button>
+            </div>
+          )}
+        </div>
+      </div>
     </header>
   );
-}
+});

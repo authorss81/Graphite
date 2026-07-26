@@ -88,14 +88,15 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
       // Only call updateScene if it actually differs from what is currently loaded
       if (newFingerprint !== lastFingerprintRef.current) {
         lastFingerprintRef.current = newFingerprint;
+        const currentAppState = excalidrawAPIRef.current.getAppState ? excalidrawAPIRef.current.getAppState() : {};
         excalidrawAPIRef.current.updateScene({
           elements: initialData.elements || [],
           files: initialData.files,
           appState: {
-            viewBackgroundColor: initialData.appState?.viewBackgroundColor || "#1e1e24",
-            currentItemStrokeColor: initialData.appState?.currentItemStrokeColor,
-            currentItemBackgroundColor: initialData.appState?.currentItemBackgroundColor,
-            ...initialData.appState,
+            ...currentAppState,
+            viewBackgroundColor: initialData.appState?.viewBackgroundColor || currentAppState.viewBackgroundColor || "#1e1e24",
+            currentItemStrokeColor: initialData.appState?.currentItemStrokeColor || currentAppState.currentItemStrokeColor,
+            currentItemBackgroundColor: initialData.appState?.currentItemBackgroundColor || currentAppState.currentItemBackgroundColor,
           },
         });
       }
@@ -123,8 +124,7 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
     <div
       className="graphite-canvas-container"
       style={{
-        height: "calc(100dvh - 140px)",
-        minHeight: "500px",
+        height: "100%",
         width: "100%",
         border: "1px solid var(--border-color)",
         borderRadius: "12px",

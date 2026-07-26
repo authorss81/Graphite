@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { PublishModal } from "./PublishModal";
 import { VersionHistoryModal } from "./VersionHistoryModal";
 import { SecurityModal } from "./SecurityModal";
-import { SemanticSearchModal } from "./SemanticSearchModal";
+import { QuickSearchModal } from "./QuickSearchModal";
 import { AIChatPanel } from "./AIChatPanel";
 import { TeamWorkspaceModal } from "./TeamWorkspaceModal";
 import { AuthScreen } from "./AuthScreen";
@@ -14,7 +14,7 @@ interface ModalManagerProps {
   onCloseModal: (modalName: string) => void;
 }
 
-const MODAL_ORDER = ["aiPanel", "search", "publish", "history", "security", "team"];
+const MODAL_ORDER = ["aiPanel", "quickSearch", "search", "publish", "history", "security", "team"];
 
 export function ModalManager({ modals, onCloseModal }: ModalManagerProps) {
   const docId = useNoteStore((s) => s.docId);
@@ -59,9 +59,9 @@ export function ModalManager({ modals, onCloseModal }: ModalManagerProps) {
         onEncryptDoc={(encState) => updateContent(docId, encState)}
         onDecryptDoc={(plainText) => updateContent(docId, plainText)}
       />
-      <SemanticSearchModal
-        isOpen={Boolean(modals["search"])}
-        onClose={() => onCloseModal("search")}
+      <QuickSearchModal
+        isOpen={Boolean(modals["quickSearch"])}
+        onClose={() => onCloseModal("quickSearch")}
       />
       <AIChatPanel
         isOpen={Boolean(modals["aiPanel"])}

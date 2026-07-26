@@ -1,0 +1,55 @@
+name: "CI — Web Build & Tests"
+
+# Runs on every push and pull request (not on tags, those go to android-release.yml)
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore: ["**.md", "plan.md", "work.md"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-build:
+    name: "Build & Test Web App"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: shared-editor/package-lock.json
+
+      - name: Install dependencies
+        working-directory: shared-editor
+        run: npm ci
+
+      - name: Type-check
+        working-directory: shared-editor
+        run: npx tsc --noEmit
+
+      - name: Run unit tests
+        working-directory: shared-editor
+        run: npm test
+
+      - name: Build production bundle
+        working-directory: shared-editor
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: web-dist-${{ github.run_number }}
+          path: shared-editor/dist/
+          retention-days: 7

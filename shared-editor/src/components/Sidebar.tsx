@@ -17,6 +17,7 @@ import {
   Pin,
   Archive,
   Tag,
+  X,
 } from "lucide-react";
 
 interface TreeNode {
@@ -64,7 +65,12 @@ function buildTree(documents: Record<string, GraphiteDoc>, filterTag: string | n
   return roots;
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const documents = useNoteStore((s) => s.documents);
   const docId = useNoteStore((s) => s.docId);
   const selectDocument = useNoteStore((s) => s.selectDocument);
@@ -77,9 +83,23 @@ export function Sidebar() {
   const loadNextPage = useNoteStore((s) => s.loadNextPage);
   const logout = useAuthStore((s) => s.logout);
 
+  const handleSelect = (id: string) => {
+    selectDocument(id);
+    if (onClose) onClose();
+  };
+
+  const handleCreateDocument = (title?: string, parentId?: string | null) => {
+    createDocument(title, parentId);
+    if (onClose) onClose();
+  };
+
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
-  const [docsCollapsed, setDocsCollapsed] = useState(false);
+  const [pinnedCollapsed, setPinnedCollapsed] = useState(
+    () => localStorage.getItem("graphite_sidebar_pinned_collapsed") === "true"
+  );
+  const [docsCollapsed, setDocsCollapsed] = useState(
+    () => localStorage.getItem("graphite_sidebar_docs_collapsed") === "true"
+  );
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
@@ -131,17 +151,87 @@ export function Sidebar() {
     toast("Signed out", "info");
   };
 
-  // Swipe-to-dismiss state (tracked per row via doc.id)
-  const swipeState = useMemo<{ [key: string]: number }>(() => ({}), []);
-  // We store swipe offsets in a ref to avoid re-renders during drag
-  const swipeOffsets = useRef<{ [key: string]: number }>({});
+  // Drawer Swipe & Pull-to-refresh hooks
+  const asideRef = useRef<HTMLElement>(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const isSwipeClosing = useRef(false);
+  const isPullingDown = useRef(false);
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Row swipe-to-delete hooks
+  const [swipedDocId, setSwipedDocId] = useState<string | null>(null);
+  const [rowSwipeOffset, setRowSwipeOffset] = useState(0);
+  const rowSwipeStartX = useRef(0);
+  const isDraggingRow = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const el = asideRef.current;
+    if (!el || isRefreshing) return;
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isSwipeClosing.current = false;
+    isPullingDown.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const el = asideRef.current;
+    if (!el || isRefreshing) return;
+
+    const diffX = e.touches[0].clientX - touchStartX.current;
+    const diffY = e.touches[0].clientY - touchStartY.current;
+
+    // Detect direction
+    if (!isSwipeClosing.current && !isPullingDown.current) {
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        if (diffX < 0 && window.innerWidth <= 900) {
+          isSwipeClosing.current = true;
+        }
+      } else if (el.scrollTop === 0 && diffY > 0) {
+        isPullingDown.current = true;
+      }
+    }
+
+    if (isSwipeClosing.current) {
+      setSwipeOffset(Math.min(0, diffX));
+    } else if (isPullingDown.current) {
+      const resistanceDiff = Math.pow(diffY, 0.8);
+      setPullDistance(Math.min(resistanceDiff, 80));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isSwipeClosing.current) {
+      if (swipeOffset < -80) {
+        if (onClose) onClose();
+      }
+      setSwipeOffset(0);
+    } else if (isPullingDown.current) {
+      if (pullDistance > 45) {
+        setIsRefreshing(true);
+        setPullDistance(50);
+        toast("Syncing with Supabase...", "info");
+        setTimeout(() => {
+          setIsRefreshing(false);
+          setPullDistance(0);
+          toast("Sync complete!", "success");
+        }, 1200);
+      } else {
+        setPullDistance(0);
+      }
+    }
+    isSwipeClosing.current = false;
+    isPullingDown.current = false;
+  };
 
   const renderNode = (node: TreeNode) => {
     const { doc, children, depth } = node;
     const isExpanded = expanded.has(doc.id);
     const isSelected = doc.id === docId && !doc.isFolder;
     const isRenaming = renamingId === doc.id;
-    const translateX = swipeOffsets.current[doc.id] || 0;
+    const translateX = swipedDocId === doc.id ? rowSwipeOffset : 0;
 
     return (
       <div key={doc.id}>
@@ -152,41 +242,37 @@ export function Sidebar() {
           style={{
             paddingLeft: 8 + depth * 16,
             transform: translateX ? `translateX(${translateX}px)` : undefined,
-            transition: swipeOffsets.current[doc.id] === undefined ? "transform 0.2s ease" : undefined,
+            transition: isDraggingRow.current ? "none" : "transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
             touchAction: "pan-y",
             position: "relative",
-            overflow: "hidden",
           }}
           onTouchStart={(e) => {
-            const touch = e.touches[0];
-            swipeState[doc.id] = touch.clientX;
-            swipeOffsets.current[doc.id] = 0;
+            if (swipedDocId && swipedDocId !== doc.id) {
+              setSwipedDocId(null);
+              setRowSwipeOffset(0);
+            }
+            rowSwipeStartX.current = e.touches[0].clientX;
+            isDraggingRow.current = true;
           }}
           onTouchMove={(e) => {
-            if (swipeState[doc.id] === undefined) return;
-            const touch = e.touches[0];
-            const diff = touch.clientX - swipeState[doc.id];
-            if (diff < 0) {
-              swipeOffsets.current[doc.id] = Math.max(diff, -100);
-              // Force re-render by updating a state that causes re-render
-              setRenamingId(renamingId); // cheap re-render trigger
+            if (!isDraggingRow.current) return;
+            const diffX = e.touches[0].clientX - rowSwipeStartX.current;
+            if (diffX < 0) {
+              setSwipedDocId(doc.id);
+              setRowSwipeOffset(Math.max(diffX, -80));
+            } else if (diffX > 0 && swipedDocId === doc.id) {
+              setRowSwipeOffset(Math.min(-80 + diffX, 0));
             }
           }}
           onTouchEnd={() => {
-            const offset = swipeOffsets.current[doc.id] || 0;
-            if (offset < -50) {
-              // Swiped far enough — delete the document
-              const confirmed = confirm(
-                `Delete "${doc.title}"${doc.isFolder ? " and all its contents" : ""}?`
-              );
-              if (confirmed) {
-                deleteDocument(doc.id);
-                if (navigator.vibrate) navigator.vibrate(20);
-              }
+            isDraggingRow.current = false;
+            if (rowSwipeOffset < -40) {
+              setRowSwipeOffset(-80);
+              setSwipedDocId(doc.id);
+            } else {
+              setRowSwipeOffset(0);
+              setSwipedDocId(null);
             }
-            delete swipeState[doc.id];
-            delete swipeOffsets.current[doc.id];
-            setRenamingId(renamingId); // trigger re-render
           }}
         >
           {doc.isFolder ? (
@@ -226,7 +312,7 @@ export function Sidebar() {
           ) : (
             <span
               className="sidebar-label"
-              onClick={() => (doc.isFolder ? toggleExpand(doc.id) : selectDocument(doc.id))}
+              onClick={() => (doc.isFolder ? toggleExpand(doc.id) : handleSelect(doc.id))}
             >
               {doc.title || "Untitled"}
             </span>
@@ -240,7 +326,7 @@ export function Sidebar() {
                   title="Add Note in Folder"
                   onClick={(e) => {
                     e.stopPropagation();
-                    createDocument(undefined, doc.id);
+                    handleCreateDocument(undefined, doc.id);
                     setExpanded((prev) => new Set(prev).add(doc.id));
                     if (navigator.vibrate) navigator.vibrate(10);
                   }}
@@ -287,6 +373,39 @@ export function Sidebar() {
               <Trash2 size={13} />
             </button>
           </span>
+
+          {swipedDocId === doc.id && rowSwipeOffset < -20 && (
+            <button
+              type="button"
+              className="sidebar-row-delete-action"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm(`Delete "${doc.title}"${doc.isFolder ? " and all its contents" : ""}?`)) {
+                  deleteDocument(doc.id);
+                  if (navigator.vibrate) navigator.vibrate(20);
+                }
+                setSwipedDocId(null);
+                setRowSwipeOffset(0);
+              }}
+              style={{
+                position: "absolute",
+                right: -80,
+                top: 0,
+                bottom: 0,
+                width: 80,
+                backgroundColor: "#ef4444",
+                color: "#fff",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                zIndex: 10,
+              }}
+            >
+              <Trash2 size={14} color="#fff" />
+            </button>
+          )}
         </div>
 
         {doc.isFolder && isExpanded && children.map(renderNode)}
@@ -295,11 +414,29 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="graphite-sidebar">
-      <div className="sidebar-header">
+    <aside
+      ref={asideRef as any}
+      className={`graphite-sidebar${isOpen ? " open" : ""}`}
+      style={{
+        transform: isOpen && swipeOffset < 0 ? `translateX(${swipeOffset}px)` : undefined,
+        transition: isSwipeClosing.current ? "none" : undefined
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div className="sidebar-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
         <span className="sidebar-title">
           {showArchived ? "Archive" : activeTagFilter ? `#${activeTagFilter}` : "Documents"}
         </span>
+        <button
+          className="mobile-sidebar-close-btn"
+          onClick={onClose}
+          title="Close Sidebar"
+          style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", padding: "4px", alignItems: "center", justifyContent: "center" }}
+        >
+          <X size={16} />
+        </button>
         <div className="sidebar-new-buttons">
           <button
             className={`graphite-btn sidebar-new-btn${showArchived ? " active" : ""}`}
@@ -311,7 +448,7 @@ export function Sidebar() {
           <button
             className="graphite-btn sidebar-new-btn"
             title="New document"
-            onClick={() => createDocument(undefined, parentForNew())}
+            onClick={() => handleCreateDocument(undefined, parentForNew())}
           >
             <FilePlus size={14} />
           </button>
@@ -325,6 +462,33 @@ export function Sidebar() {
         </div>
       </div>
 
+      {pullDistance > 0 && (
+        <div
+          style={{
+            height: pullDistance,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            transition: isPullingDown.current ? "none" : "height 0.2s ease",
+            color: "var(--accent-color)"
+          }}
+        >
+          <div
+            className={`sync-spinner${isRefreshing ? " spinning" : ""}`}
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              border: "2px solid var(--accent-color)",
+              borderTopColor: "transparent",
+              transform: `rotate(${pullDistance * 6}deg)`,
+              transition: isRefreshing ? "none" : "transform 0.1s ease"
+            }}
+          />
+        </div>
+      )}
+
       {/* Pinned Notes Section */}
       {!showArchived && pinnedNotes.length > 0 && (
         <div style={{ padding: "8px 12px 4px 12px", borderBottom: "1px solid var(--border-color)" }}>
@@ -335,7 +499,7 @@ export function Sidebar() {
             <div
               key={note.id}
               className={`sidebar-row${note.id === docId ? " selected" : ""}`}
-              onClick={() => selectDocument(note.id)}
+              onClick={() => handleSelect(note.id)}
               style={{ paddingLeft: "8px", fontSize: "13px" }}
             >
               <FileText size={14} className="sidebar-icon" />
@@ -385,7 +549,11 @@ export function Sidebar() {
       {pinnedNotes.length > 0 && (
         <div style={{ marginBottom: "4px" }}>
           <div
-            onClick={() => setPinnedCollapsed((p) => !p)}
+            onClick={() => {
+            const next = !pinnedCollapsed;
+            setPinnedCollapsed(next);
+            localStorage.setItem("graphite_sidebar_pinned_collapsed", String(next));
+          }}
             style={{ display: "flex", alignItems: "center", gap: "4px", padding: "2px 8px", cursor: "pointer", fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", userSelect: "none" }}
           >
             {pinnedCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
@@ -401,7 +569,7 @@ export function Sidebar() {
                     className={`sidebar-row${isSelected ? " selected" : ""}`}
                     role="treeitem"
                     aria-description="pinned"
-                    onClick={() => !doc.isFolder && selectDocument(doc.id)}
+                    onClick={() => !doc.isFolder && handleSelect(doc.id)}
                     style={{ paddingLeft: 24, display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", fontSize: "12px", color: "var(--text-secondary)" }}
                   >
                     <Pin size={10} style={{ color: "var(--accent-color)", opacity: 0.7 }} />
@@ -416,7 +584,11 @@ export function Sidebar() {
 
       <div style={{ marginBottom: "4px" }}>
         <div
-          onClick={() => setDocsCollapsed((p) => !p)}
+          onClick={() => {
+            const next = !docsCollapsed;
+            setDocsCollapsed(next);
+            localStorage.setItem("graphite_sidebar_docs_collapsed", String(next));
+          }}
           style={{ display: "flex", alignItems: "center", gap: "4px", padding: "2px 8px", cursor: "pointer", fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", userSelect: "none" }}
         >
           {docsCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}

@@ -5,7 +5,7 @@ function sanitizeHtml(html: string): string {
   if (!html) return "";
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
-  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null, false);
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, null);
   const toRemove: Node[] = [];
   const nodes: Element[] = [];
   let node: Node | null;

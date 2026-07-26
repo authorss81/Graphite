@@ -62,7 +62,11 @@ body {
   padding-bottom: calc(24px + var(--keyboard-height, 0px));
   box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
-  min-height: 400px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-height: 0;
 }
 
 .graphite-editor-container:focus-within {
@@ -73,13 +77,19 @@ body {
 .editor-inner {
   position: relative;
   outline: none;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .editor-input {
-  min-height: 350px;
+  flex: 1;
   outline: none;
   font-size: 16px;
   line-height: 1.6;
+  overflow-y: auto;
+  min-height: 0;
   color: var(--text-primary);
 }
 
@@ -331,25 +341,28 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  min-height: 450px;
-  margin-top: 16px;
+  height: 100%;
+  min-height: 0;
 }
 
 .app-dual-pane > * {
   min-width: 0;
-  overflow: auto;
+  overflow: hidden; /* child containers scroll internally */
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 900px) {
   .app-dual-pane {
     grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
   }
 }
 
 /* App layout (sidebar + detail) */
 .app-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   align-items: stretch;
 }
 
@@ -357,6 +370,11 @@ body {
   flex: 1;
   min-width: 0;
   padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .graphite-sidebar {
@@ -390,21 +408,75 @@ body {
   justify-content: space-around;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+  .graphite-top-nav {
+    display: none !important;
+  }
   .app-layout {
-    flex-direction: column;
+    flex-direction: row;
   }
   .app-main {
     padding: 16px 12px;
     padding-bottom: calc(16px + var(--keyboard-height, 0px) + 72px);
   }
   .graphite-sidebar {
-    width: 100%;
-    height: auto;
-    max-height: 360px;
-    position: relative;
-    border-right: none;
-    border-bottom: 1px solid var(--border-color);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    max-height: none;
+    z-index: 1200;
+    border-right: 1px solid var(--border-color);
+    border-bottom: none;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.5);
+  }
+  .sidebar-open .graphite-sidebar {
+    transform: translateX(0);
+  }
+  .sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 1150;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .sidebar-open .sidebar-overlay {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .graphite-toolbar {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    max-width: 100% !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 6px 8px;
+    gap: 2px;
+  }
+  .graphite-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+  .graphite-toolbar-divider {
+    flex-shrink: 0;
+    margin: 0 2px;
+  }
+  .graphite-toolbar-btn {
+    flex-shrink: 0;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .graphite-bottom-nav {
     display: flex;
@@ -859,6 +931,52 @@ a {
   padding: 0;
 }
 
+.app-dual-pane .excalidraw .App-toolbar,
+.app-dual-pane .excalidraw .Island {
+  padding: 2px !important;
+  gap: 2px !important;
+}
+.app-dual-pane .excalidraw .ToolButton,
+.app-dual-pane .excalidraw .ToolButton__button,
+.app-dual-pane .excalidraw button.ToolButton_type_radio,
+.app-dual-pane .excalidraw button.ToolButton_type_button {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+}
+.app-dual-pane .excalidraw .ToolButton svg,
+.app-dual-pane .excalidraw .ToolButton__button svg,
+.app-dual-pane .excalidraw button.ToolButton_type_radio svg,
+.app-dual-pane .excalidraw button.ToolButton_type_button svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+@media (max-width: 900px) {
+  .excalidraw .App-toolbar,
+  .excalidraw .Island {
+    padding: 2px !important;
+    gap: 2px !important;
+  }
+  .excalidraw .ToolButton,
+  .excalidraw .ToolButton__button,
+  .excalidraw button.ToolButton_type_radio,
+  .excalidraw button.ToolButton_type_button {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+  }
+  .excalidraw .ToolButton svg,
+  .excalidraw .ToolButton__button svg,
+  .excalidraw button.ToolButton_type_radio svg,
+  .excalidraw button.ToolButton_type_button svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
+
 
 /* Slash Command & WikiLink Menu Styles */
 .graphite-wikilink-pill {
@@ -1115,4 +1233,230 @@ a {
   animation: pulseGlow 3s infinite;
 }
 
+/* AppHeader responsive classes */
+.graphite-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 16px;
+  width: 100%;
+  gap: 8px;
+}
 
+/* Utility: visible only on desktop (> 900px) */
+.desktop-only {
+  display: flex;
+}
+@media (max-width: 900px) {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+.header-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 28px;
+  background: linear-gradient(to right, #c084fc, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.header-subtitle {
+  margin: 4px 0 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.desktop-header-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.mobile-header-buttons {
+  display: none;
+  gap: 8px;
+  align-items: center;
+}
+.sidebar-toggle-btn {
+  display: flex;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 8px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+.sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.mobile-action-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  z-index: 1000;
+  min-width: 180px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.mobile-action-dropdown button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.15s ease;
+}
+.mobile-action-dropdown button:hover {
+  background: var(--bg-tertiary);
+}
+
+@media (max-width: 900px) {
+  .graphite-header {
+    padding-bottom: 12px;
+  }
+  .header-title {
+    font-size: 18px !important;
+  }
+  .header-subtitle {
+    font-size: 12px !important;
+  }
+  .desktop-header-buttons {
+    display: none !important;
+  }
+  .mobile-header-buttons {
+    display: flex !important;
+  }
+  .sidebar-toggle-btn {
+    display: flex !important;
+  }
+  .graphite-btn.icon-only {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+  }
+  .mobile-sidebar-close-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 901px) {
+  .graphite-sidebar {
+    width: 280px;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s, opacity 0.3s, border-color 0.3s;
+  }
+  .app-layout:not(.sidebar-open) .graphite-sidebar {
+    width: 0 !important;
+    padding: 0 !important;
+    border-right: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+  }
+}
+
+.graphite-toolbar-dropdown-btn:hover {
+  background: var(--bg-tertiary) !important;
+}
+.graphite-toolbar-dropdown-btn.active {
+  background: var(--bg-accent) !important;
+  color: var(--text-accent-primary) !important;
+}
+
+.sidebar-row {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sidebar-row.swiping {
+  transition: none !important;
+}
+.sync-spinner.spinning {
+  animation: spinnerRotate 0.8s linear infinite !important;
+}
+@keyframes spinnerRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+
+/* ── QuickSearch Modal ─────────────────────────────────── */
+.quick-search-modal {
+  animation: quickSearchIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes quickSearchIn {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Hide mobile close button on desktop */
+.mobile-sidebar-close-btn {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .mobile-sidebar-close-btn {
+    display: inline-flex !important;
+  }
+}
+
+/* ── Collapsible Header ────────────────────────────────── */
+.graphite-header-collapsed .desktop-header-buttons {
+  display: none !important;
+}
+.graphite-header-collapsed .mobile-header-buttons {
+  display: flex !important;
+}
+
+.header-collapse-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.header-collapse-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* ── Sidebar New Buttons – touch targets ───────────────── */
+@media (max-width: 900px) {
+  .sidebar-new-buttons {
+    display: flex;
+    gap: 2px;
+  }
+}
+
+/* ── Split pane – ensure both panels are height-constrained */
+.app-dual-pane .graphite-editor-container {
+  height: 100%;
+  max-height: 100%;
+}

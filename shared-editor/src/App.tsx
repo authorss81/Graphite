@@ -1,4 +1,4 @@
-import { useEffect, useReducer, lazy, Suspense } from "react";
+import { useEffect, useReducer, lazy, Suspense, useState } from "react";
 import { Editor } from "./components/Editor";
 import { Sidebar } from "./components/Sidebar";
 import { AuthScreen } from "./components/AuthScreen";
@@ -37,6 +37,7 @@ export function App() {
   const documents = useNoteStore((s) => s.documents);
   const setActiveTab = useNoteStore((s) => s.setActiveTab);
   const initDocs = useNoteStore((s) => s.initDocs);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth > 900);
 
   const isInitializing = useAuthStore((s) => s.isInitializing);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -45,7 +46,7 @@ export function App() {
   type ModalAction = { modal: string; open: boolean };
   const [modals, dispatch] = useReducer(
     (state: Record<string, boolean>, action: ModalAction) => ({ ...state, [action.modal]: action.open }),
-    { search: false, publish: false, history: false, aiPanel: false, plugins: false, team: false, security: false, quickOpen: false, cheatsheet: false, templates: false }
+    { search: false, quickSearch: false, publish: false, history: false, aiPanel: false, plugins: false, team: false, security: false, quickOpen: false, cheatsheet: false, templates: false }
   );
   const isPluginModalOpen = modals.plugins;
   const openModal = (modal: string) => dispatch({ modal, open: true });
@@ -56,6 +57,63 @@ export function App() {
     window.addEventListener("graphite:open-ai-panel", handler);
     return () => window.removeEventListener("graphite:open-ai-panel", handler);
   }, []);
+
+  // ── Android physical back-button (Phase 35.1) ──────────────────────────
+  // Capacitor fires 'backButton' via the App plugin. We intercept it to:
+  //   1. Close any open modal (topmost first)
+  //   2. Close the sidebar if open
+  //   3. Otherwise let the OS handle it (exit the app)
+  useEffect(() => {
+    const MODAL_PRIORITY = ["quickSearch", "aiPanel", "search", "publish", "history", "security", "team", "plugins", "quickOpen", "cheatsheet", "templates"];
+
+    const handleBackButton = ({ canGoBack }: { canGoBack: boolean }) => {
+      // Check if any modal is open — close topmost one
+      for (const name of MODAL_PRIORITY) {
+        if (modals[name]) {
+          dispatch({ modal: name, open: false });
+          return;
+        }
+      }
+      // Close sidebar on mobile if open
+      if (isSidebarOpen && window.innerWidth <= 900) {
+        setIsSidebarOpen(false);
+        return;
+      }
+      // Nothing to close — allow OS back (exit)
+      if (!canGoBack) {
+        // Minimise app rather than hard-exit when possible
+        import("@capacitor/app").then(({ App }) => App.minimizeApp?.()).catch(() => {});
+      }
+    };
+
+    // Capacitor back button
+    let removeCapacitorListener: (() => void) | null = null;
+    import("@capacitor/app").then(({ App }) => {
+      App.addListener("backButton", handleBackButton).then((handle) => {
+        removeCapacitorListener = () => handle.remove();
+      });
+    }).catch(() => {
+      // Not running in Capacitor — fall back to popstate for browser
+    });
+
+    // Browser popstate fallback (Android Chrome back swipe)
+    const handlePopState = () => {
+      for (const name of MODAL_PRIORITY) {
+        if (modals[name]) {
+          dispatch({ modal: name, open: false });
+          history.pushState(null, "");
+          return;
+        }
+      }
+    };
+    history.pushState(null, "");
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      removeCapacitorListener?.();
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [modals, isSidebarOpen]);
 
   useEffect(() => {
     // Track keyboard height for mobile via visualViewport API
@@ -73,7 +131,7 @@ export function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        dispatch({ modal: "search", open: true });
+        dispatch({ modal: "quickSearch", open: true });
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") {
         e.preventDefault();
@@ -191,12 +249,13 @@ export function App() {
   const currentTitle = documents[docId]?.title ?? "Untitled";
 
   return (
-    <div className="app-layout">
-      <Sidebar />
+    <div className={`app-layout${isSidebarOpen ? " sidebar-open" : ""}`}>
+      <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="app-main">
-        <AppHeader currentTitle={currentTitle} onOpenModal={openModal} />
+        <AppHeader currentTitle={currentTitle} onOpenModal={openModal} onToggleSidebar={() => setIsSidebarOpen((p) => !p)} />
         <AppNav activeTab={activeTab} onSetActiveTab={setActiveTab} />
-        <main style={{ minHeight: "450px", marginTop: "16px" }}>
+        <main style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, marginTop: "16px", overflow: "hidden" }}>
           {activeTab === "editor" && (
             <ErrorBoundary name="Editor">
               <Editor docId={docId} initialState={editorState} />

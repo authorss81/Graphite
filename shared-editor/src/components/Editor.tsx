@@ -42,7 +42,7 @@ import { toast } from "./Toast";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { isPluginActive } from "../utils/pluginSystem";
 import { WordStatsBar } from "./WordStatsBar";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, ChevronUp, ChevronDown } from "lucide-react";
 import { $isCodeNode } from "@lexical/code";
 
 interface EditorProps {
@@ -393,6 +393,7 @@ export function Editor({ docId, initialState }: EditorProps) {
     }
   }, []);
 
+  const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -435,8 +436,54 @@ export function Editor({ docId, initialState }: EditorProps) {
       <ErrorBoundary name="LexicalComposer">
       <LexicalComposer initialConfig={initialConfig}>
         <EditorStateLoader initialState={initialState} />
-        <div className="editor-toolbar-wrap">
-          <EditorToolbar />
+        <div className="editor-toolbar-wrap" style={{ position: "relative", minHeight: isToolbarCollapsed ? "32px" : "auto", display: "flex", flexDirection: "column" }}>
+          {!isToolbarCollapsed ? (
+            <div style={{ display: "flex", width: "100%", alignItems: "center" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <EditorToolbar />
+              </div>
+              <button
+                type="button"
+                className="graphite-toolbar-btn"
+                onClick={() => setIsToolbarCollapsed(true)}
+                title="Collapse Toolbar"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  padding: "4px 8px",
+                  marginLeft: "4px",
+                  display: "flex",
+                  alignItems: "center"
+                }}
+              >
+                <ChevronUp size={16} />
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", width: "100%", justifyContent: "flex-start", padding: "4px 8px", boxSizing: "border-box" }}>
+              <button
+                type="button"
+                className="graphite-toolbar-btn"
+                onClick={() => setIsToolbarCollapsed(false)}
+                title="Expand Toolbar"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  padding: "4px 8px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontSize: "11px"
+                }}
+              >
+                <ChevronDown size={14} /> Expand Toolbar
+              </button>
+            </div>
+          )}
           {isSaving && (
             <span
               style={{

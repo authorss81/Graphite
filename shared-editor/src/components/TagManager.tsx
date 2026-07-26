@@ -50,7 +50,7 @@ export function TagManager() {
         fontSize: "12px",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "nowrap", overflowX: "auto", scrollbarWidth: "none" }}>
         <Tag size={14} color="var(--accent-color)" />
         {currentTags.map((tag) => (
           <span

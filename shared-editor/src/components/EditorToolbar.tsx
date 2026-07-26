@@ -42,6 +42,7 @@ import {
   Redo2,
   Shapes,
   ImageIcon,
+  MoreHorizontal,
 } from "lucide-react";
 
 function ToolbarButton({
@@ -195,6 +196,20 @@ export function EditorToolbar() {
 
   const showPomodoro = isPluginActive("pomodoro-timer");
 
+  const [showMoreFormatting, setShowMoreFormatting] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showMoreFormatting) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreFormatting(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showMoreFormatting]);
+
   return (
     <div className="graphite-toolbar" ref={toolbarRef} style={{ display: "flex", alignItems: "center", width: "100%" }}>
       <ToolbarButton onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)} disabled={!canUndo} title="Undo">
@@ -213,9 +228,6 @@ export function EditorToolbar() {
       <ToolbarButton onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")} active={isUnderline} title="Underline Ctrl+U">
         <Underline size={16} />
       </ToolbarButton>
-      <ToolbarButton onClick={() => editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")} active={isStrikethrough} title="Strikethrough">
-        <Strikethrough size={16} />
-      </ToolbarButton>
       <ToolbarDivider />
       <ToolbarButton onClick={() => formatHeading("h1")} active={blockType === "h1"} title="Heading 1">
         <Heading1 size={16} />
@@ -223,15 +235,9 @@ export function EditorToolbar() {
       <ToolbarButton onClick={() => formatHeading("h2")} active={blockType === "h2"} title="Heading 2">
         <Heading2 size={16} />
       </ToolbarButton>
-      <ToolbarButton onClick={() => formatHeading("h3")} active={blockType === "h3"} title="Heading 3">
-        <Heading3 size={16} />
-      </ToolbarButton>
       <ToolbarDivider />
       <ToolbarButton onClick={() => editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)} active={blockType === "ul"} title="Bullet List">
         <List size={16} />
-      </ToolbarButton>
-      <ToolbarButton onClick={() => editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)} active={blockType === "ol"} title="Ordered List">
-        <ListOrdered size={16} />
       </ToolbarButton>
       <ToolbarDivider />
       <ToolbarButton
@@ -248,11 +254,105 @@ export function EditorToolbar() {
       <ToolbarButton onClick={insertImage} title="Upload Image">
         <ImageIcon size={16} />
       </ToolbarButton>
-      <ToolbarButton onClick={insertCodeBlock} title="Code Block">
-        <Code size={16} />
+      <ToolbarDivider />
+      <ToolbarButton
+        onClick={() => window.dispatchEvent(new CustomEvent("graphite:open-ai-panel"))}
+        title="AI Assistant"
+        style={{ background: "linear-gradient(135deg, #a855f7, #ec4899)", color: "#fff" }}
+      >
+        <Sparkles size={16} />
       </ToolbarButton>
+      <ToolbarDivider />
+
+      {/* More Formatting Dropdown */}
+      <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }} ref={moreMenuRef}>
+        <ToolbarButton
+          onClick={() => setShowMoreFormatting(!showMoreFormatting)}
+          active={showMoreFormatting}
+          title="More Actions"
+        >
+          <MoreHorizontal size={16} />
+        </ToolbarButton>
+        {showMoreFormatting && (
+          <div
+            className="more-formatting-dropdown"
+            style={{
+              position: "absolute",
+              top: "100%",
+              right: 0,
+              marginTop: "6px",
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-color)",
+              borderRadius: "8px",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+              padding: "6px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+              zIndex: 100,
+              minWidth: "160px"
+            }}
+          >
+            <button
+              type="button"
+              className={`graphite-toolbar-dropdown-btn${isStrikethrough ? " active" : ""}`}
+              onClick={() => { editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough"); setShowMoreFormatting(false); }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 12px", background: "none", border: "none", color: "var(--text-primary)", textAlign: "left", cursor: "pointer", borderRadius: "6px" }}
+            >
+              <Strikethrough size={14} />
+              <span style={{ fontSize: "13px" }}>Strikethrough</span>
+            </button>
+            <button
+              type="button"
+              className={`graphite-toolbar-dropdown-btn${blockType === "h3" ? " active" : ""}`}
+              onClick={() => { formatHeading("h3"); setShowMoreFormatting(false); }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 12px", background: "none", border: "none", color: "var(--text-primary)", textAlign: "left", cursor: "pointer", borderRadius: "6px" }}
+            >
+              <Heading3 size={14} />
+              <span style={{ fontSize: "13px" }}>Heading 3</span>
+            </button>
+            <button
+              type="button"
+              className={`graphite-toolbar-dropdown-btn${blockType === "ol" ? " active" : ""}`}
+              onClick={() => { editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined); setShowMoreFormatting(false); }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 12px", background: "none", border: "none", color: "var(--text-primary)", textAlign: "left", cursor: "pointer", borderRadius: "6px" }}
+            >
+              <ListOrdered size={14} />
+              <span style={{ fontSize: "13px" }}>Ordered List</span>
+            </button>
+            <button
+              type="button"
+              className={`graphite-toolbar-dropdown-btn${blockType === "code" ? " active" : ""}`}
+              onClick={() => { insertCodeBlock(); setShowMoreFormatting(false); }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 12px", background: "none", border: "none", color: "var(--text-primary)", textAlign: "left", cursor: "pointer", borderRadius: "6px" }}
+            >
+              <Code size={14} />
+              <span style={{ fontSize: "13px" }}>Code Block</span>
+            </button>
+            <button
+              type="button"
+              className={`graphite-toolbar-dropdown-btn${blockType === "quote" ? " active" : ""}`}
+              onClick={() => { insertQuote(); setShowMoreFormatting(false); }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 12px", background: "none", border: "none", color: "var(--text-primary)", textAlign: "left", cursor: "pointer", borderRadius: "6px" }}
+            >
+              <Quote size={14} />
+              <span style={{ fontSize: "13px" }}>Blockquote</span>
+            </button>
+            <button
+              type="button"
+              className="graphite-toolbar-dropdown-btn"
+              onClick={() => { editor.dispatchCommand(INSERT_CANVAS_COMMAND, undefined); setShowMoreFormatting(false); }}
+              style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", padding: "8px 12px", background: "none", border: "none", color: "var(--text-primary)", textAlign: "left", cursor: "pointer", borderRadius: "6px" }}
+            >
+              <Shapes size={14} />
+              <span style={{ fontSize: "13px" }}>Drawing Canvas</span>
+            </button>
+          </div>
+        )}
+      </div>
+
       {blockType === "code" && (
-        <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+        <div style={{ position: "relative", display: "inline-flex", alignItems: "center", marginLeft: "8px" }}>
           <button
             type="button"
             className="graphite-toolbar-btn"
@@ -328,21 +428,6 @@ export function EditorToolbar() {
           )}
         </div>
       )}
-      <ToolbarButton onClick={insertQuote} title="Blockquote">
-        <Quote size={16} />
-      </ToolbarButton>
-      <ToolbarDivider />
-      <ToolbarButton onClick={() => editor.dispatchCommand(INSERT_CANVAS_COMMAND, undefined)} title="Insert Drawing Canvas">
-        <Shapes size={16} />
-      </ToolbarButton>
-      <ToolbarDivider />
-      <ToolbarButton
-        onClick={() => window.dispatchEvent(new CustomEvent("graphite:open-ai-panel"))}
-        title="AI Assistant"
-        style={{ background: "linear-gradient(135deg, #a855f7, #ec4899)", color: "#fff" }}
-      >
-        <Sparkles size={16} />
-      </ToolbarButton>
 
       {showPomodoro && <PomodoroWidget />}
       <AudioRecording />

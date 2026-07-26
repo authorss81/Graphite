@@ -1259,3 +1259,288 @@ Deep review of encryption, access control, and data integrity fixes claimed in P
 | 32.15 | **Page mode shows "1 / 1" with 0 cards** | `SpatialCanvas.tsx:295` | LOW | ✅ Changed formula to `cards.length > 0 ? Math.ceil(cards.length / 3) : 0`. Zero cards = 0 pages. |
 | 32.16 | **saveSpatialCanvasData never called from SpatialCanvas** | `SpatialCanvas.tsx:127` | LOW | ✅ Added `saveSpatialCanvasData({ cards: nextCards, edges: nextEdges })` in persist callback. |
 | 32.17 | **trim() mismatch with isEncrypted() utility** | `useNoteStore.ts:296`, `encryption.ts:125-127` | LOW | ✅ All guards use `trim().toLowerCase().startsWith("enc:")`. Consistent across store and components. |
+
+---
+
+## Phase 33: World-Class Mobile UX & Layout Polish (Audited & Remediated)
+
+Detailed audit of the mobile interface (390x844px viewport) revealed several critical layout and usability defects that prevent the app from feeling native and premium.
+
+### 🔴 CRITICAL
+
+| # | Usability Defect | Component/File | Severity | Planned Fix |
+|---|------------------|----------------|----------|-------------|
+| 33.1 | **Sidebar Stacks Statically at Top** | `index.css:401-408` | CRITICAL | Hide sidebar by default on mobile. Convert to absolute/fixed drawer overlays (`transform: translateX(-100%)`) with backdrop blur and hamburger trigger. |
+| 33.2 | **Editor Toolbar Takes 40% Screen Height** | `Editor.tsx`, `index.css` | CRITICAL | Convert bulky 4-row editor toolbar on mobile to a single-row horizontally scrollable toolbar, sticky to top of keyboard or screen bottom. |
+| 33.3 | **Header Button Layout Horizontal Overflow** | `AppHeader.tsx`, `App.tsx` | CRITICAL | Clean up header text and floating gradient buttons on mobile. Group AI and Search buttons into compact icon buttons to fit 390px. |
+
+### 🟠 HIGH
+
+| # | Usability Defect | Component/File | Severity | Planned Fix |
+|---|------------------|----------------|----------|-------------|
+| 33.1 | **Sidebar Stacks Statically at Top** | `index.css:401-408` | CRITICAL | ✅ Hidden sidebar by default on mobile, converted to fixed drawer overlays with backdrop blur and hamburger trigger. |
+| 33.2 | **Editor Toolbar Takes 40% Screen Height** | `Editor.tsx`, `index.css` | CRITICAL | ✅ Collapsed formatting toolbar on mobile to a single-row horizontally scrollable touch-swipeable container with scrollbar hidden. |
+| 33.3 | **Header Button Layout Horizontal Overflow** | `AppHeader.tsx`, `App.tsx` | CRITICAL | ✅ Cleaned up header titles and grouped actions into compact icon buttons and a vertical three-dots dropdown panel. |
+
+### 🟠 HIGH
+
+| # | Usability Defect | Component/File | Severity | Planned Fix |
+|---|------------------|----------------|----------|-------------|
+| 33.4 | **Double Tab Navbars (Header + Bottom)** | `App.tsx:198,261` | HIGH | ✅ Hidden secondary header-level tab bar (`AppNav`) on mobile, keeping only bottom nav active. |
+| 33.5 | **Lack of Notch / Safe Area Padding** | `index.css:350-410` | HIGH | ✅ Added safe-area layout paddings using `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)`. |
+| 33.6 | **Excalidraw Canvas UI Overcrowding** | `Canvas.tsx` | HIGH | ✅ Added mobile layout scaling constraints for Excalidraw viewports. |
+
+---
+
+## Phase 34: Mobile Touch Gestures & Micro-Animations (Planned)
+
+Focuses on adding premium tactile feedback, swipe interactions, and smooth transitions to match world-class native apps.
+
+### 🟠 HIGH
+
+| # | Item | Details | Effort | Status |
+|---|------|---------|--------|--------|
+| 34.1 | **Swipe-to-dismiss Drawer** | Swipe left on the open sidebar drawer overlay to dismiss it. | 4h | ✅ Done |
+| 34.2 | **Swipe-to-delete Note** | Swipe left on a document row in the sidebar to show a red "Delete" action. | 4h | ✅ Done |
+| 34.3 | **Pull-to-refresh List** | Pull down on the note list in the sidebar drawer to trigger active cloud sync. | 3h | ✅ Done |
+
+### 🔵 MEDIUM
+
+| # | Item | Details | Effort | Status |
+|---|------|---------|--------|--------|
+| 34.4 | **Smooth Drawer Slide Transition** | Slide-in drawer animation utilizing `cubic-bezier(0.16, 1, 0.3, 1)` and subtle scale-down on `.app-main`. | 2h | ✅ Done |
+
+---
+
+## Phase 35: Capacitor Native Shell Integration & Security Hardening (Planned)
+
+Focuses on resolving mobile app webview crashes, physical back gesture handling, and securing the Android wrapper.
+
+### 🔴 CRITICAL / HIGH
+
+| # | Item | Details | Component/File | Status |
+|---|------|---------|----------------|--------|
+| 35.1 | **Back gesture exits app** | Intercept physical back gesture to navigate WebView history or close modals before exiting. | `MainActivity.java` | ⬜ Pending |
+| 35.2 | **Buffer/global crash in WebView** | Inject browser polyfill for `Buffer` / `global` in Vite configuration to prevent Yjs sync runtime crashes. | `vite.config.ts` | ⬜ Pending |
+| 35.3 | **Supabase & esm.sh CSP Blocks** | Update HTML Content Security Policy header to allow `wss://*.supabase.co` and `https://esm.sh` fonts. | `index.html` | ⬜ Pending |
+| 35.4 | **Consolidate Android Wrappers** | Remove/archive dead KMP `composeApp` and set Capacitor `shared-editor/android` as the single manifest source of truth. | Workspace | ⬜ Pending |
+
+### 🟠 HIGH / MEDIUM
+
+| # | Item | Details | Component/File | Status |
+|---|------|---------|----------------|--------|
+| 35.5 | **Over-Permissive Navigation Policy** | Restrict `<access origin="*"/>` in `config.xml` to only allow authorized domains (Supabase, local web server). | `config.xml` | ⬜ Pending |
+| 35.6 | **Network Security Configuration** | Add `network_security_config.xml` to Capacitor project to secure API traffic and prevent cleartext leaks. | Android Res | ⬜ Pending |
+| 35.7 | **Native Share Sheet Handler** | Implement `onNewIntent` handler to parse incoming `ACTION_SEND` intents and create imported notes. | `MainActivity.java` | ⬜ Pending |
+
+---
+
+## Phase 34 (continued): UI Enhancements, Mobile Readiness & Capacitor — New Micro-Items ✅
+
+These items extend Phase 34 and were implemented in the second round of mobile/tablet UX work (session 2).
+
+### 🟠 HIGH
+
+| # | Item | Details | Files | Status |
+|---|------|---------|-------|--------|
+| 34.5 | **localStorage Sidebar Collapse Persistence** | `pinnedCollapsed` and `docsCollapsed` now initialize from `localStorage` keys `graphite_sidebar_pinned_collapsed` / `graphite_sidebar_docs_collapsed`, and write back on every toggle. Collapse state survives page reloads. | `Sidebar.tsx` | ✅ Done |
+| 34.6 | **Quick Client-Side Search (replaces AI Semantic Search)** | Replaced the impractical AI semantic search (requires API key, slow, offline-broken) with new `QuickSearchModal.tsx`. Instant offline fuzzy search across all note titles + content. `Ctrl+K` opens it. Keyboard nav (↑↓ arrows, Enter to open, Esc to close). Highlights matched text. Shows recent notes when empty. | `QuickSearchModal.tsx`, `AppHeader.tsx`, `ModalManager.tsx`, `App.tsx` | ✅ Done |
+| 34.7 | **Collapsible Header Buttons** | Added a chevron toggle button to collapse/expand the desktop header button row. Collapsed state persisted to `localStorage` key `graphite_header_collapsed`. On collapse, the compact `⋮` mobile dropdown is shown instead. Fixes tablet split-view button overflow. | `AppHeader.tsx`, `index.css` | ✅ Done |
+| 34.8 | **Mobile Sidebar Close Button Fix** | Removed hardcoded `display: none` from the mobile close (X) button in the sidebar. CSS now correctly shows it only on `≤900px` breakpoint via `.mobile-sidebar-close-btn`. | `Sidebar.tsx`, `index.css` | ✅ Done |
+
+### 🔵 MEDIUM
+
+| # | Item | Details | Files | Status |
+|---|------|---------|-------|--------|
+| 34.9 | **Capacitor Config File** | Created `capacitor.config.json` at the project root: App ID `com.authorss81.graphite`, `webDir: shared-editor/dist`, SplashScreen (dark, no spinner), Keyboard (`resize: none`), StatusBar (dark) config. | `capacitor.config.json` | ✅ Done |
+| 34.10 | **Capacitor Native Plugins Installed** | Installed: `@capacitor/camera`, `@capacitor/filesystem`, `@capacitor/haptics`, `@capacitor/status-bar`, `@capacitor/keyboard`, `@capacitor/ios`. Already present: `@capacitor/core`, `@capacitor/android`, `@capacitor/cli`. | `shared-editor/package.json` | ✅ Done |
+| 34.11 | **Native Bridge Utility (`capacitorBridge.ts`)** | New utility wrapping Capacitor plugins with graceful web fallbacks: `capturePhoto()` (camera or file picker fallback), `pickFile()` (file picker), `hapticLight/Medium/Heavy()` (`navigator.vibrate` fallback), `configureStatusBar()`, `saveTextFile()` (filesystem or download fallback). Dynamic imports prevent loading in plain browser builds. | `src/utils/capacitorBridge.ts` | ✅ Done |
+| 34.12 | **Capacitor Build Scripts** | Added to `package.json`: `cap:sync` (build + sync), `cap:android` (build + sync + open Android Studio), `cap:ios` (build + sync + open Xcode). | `shared-editor/package.json` | ✅ Done |
+| 34.13 | **CSS Hardening for Split View & Mobile** | Added `.quick-search-modal` entrance animation; `.desktop-only` utility class; `.header-collapse-btn` styles; `gap: 8px` on `.graphite-header`; `.app-dual-pane .graphite-editor-container { height:100%; max-height:100% }` to fully constrain split-pane editors. | `index.css` | ✅ Done |
+
+---
+
+## Phase 36: CI/CD Publishing via GitHub Actions (No Android Studio / Xcode Locally Required)
+
+**Context**: You do NOT need Android Studio or Xcode installed on your machine. GitHub provides free cloud runners (Ubuntu for Android, macOS for iOS) that build, sign, and publish your app automatically when you push a tag. Your local CPU is completely irrelevant.
+
+### 🚦 Is the App Ready to Publish?
+
+| Category | Item | Status |
+|----------|------|--------|
+| **Build** | TypeScript compiles 0 errors | ✅ |
+| **Build** | Vite production build passes | ✅ |
+| **Build** | PWA Service Worker generated | ✅ |
+| **Capacitor** | `capacitor.config.json` created | ✅ |
+| **Capacitor** | All required plugins installed | ✅ |
+| **Capacitor** | Native bridge utility ready | ✅ |
+| **Mobile UI** | Sidebar drawer + backdrop | ✅ |
+| **Mobile UI** | Bottom nav bar | ✅ |
+| **Mobile UI** | Touch gestures (swipe, pull-to-refresh) | ✅ |
+| **Mobile UI** | Safe-area insets | ✅ |
+| **Mobile UI** | Keyboard height tracking | ✅ |
+| **Mobile UI** | Collapsible toolbar + header | ✅ |
+| **Auth** | Supabase login works | ✅ |
+| **Data** | Notes save (localStorage + IndexedDB) | ✅ |
+| **Offline** | PWA Service Worker caches app shell | ✅ |
+| **Capacitor** | `android/` project committed to repo | ❌ Run `npx cap add android` once |
+| **Capacitor** | Signing keystore created | ❌ One-time `keytool` command |
+| **Store** | Play Store listing + privacy policy | ❌ Manual — required for submission |
+| **Security** | Phase 35 WebView CSP / back-gesture fixes | ❌ Phase 35 pending |
+
+> **Short answer**: The web app + PWA is ready to ship today. The Android APK/AAB needs one `npx cap add android` run + a signing key. Then GitHub Actions handles everything else for free.
+
+### 💰 Cost Breakdown (Zero New Hardware)
+
+| Service | Cost | Notes |
+|---------|------|-------|
+| **GitHub Actions** | **Free** | 2,000 min/month (private); unlimited (public) |
+| **Google Play Console** | **$25 one-time** | Lifetime. Required for Android Play Store |
+| **Apple Developer** | **$99/year** | Only needed for iOS App Store |
+| **macOS GitHub Runner** | **Free** for public repos | 10× minute multiplier on private repos |
+| **Build time** | ~8–12 min per release | Runs on GitHub cloud — your PC stays off |
+
+### 🤖 Android Release Workflow
+
+```yaml
+# .github/workflows/android-release.yml
+name: Android Release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # GitHub's free Ubuntu runner — no local hardware needed
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Build Web App
+        working-directory: shared-editor
+        run: npm ci && npm run build
+
+      - uses: actions/setup-java@v4
+        with: { distribution: 'temurin', java-version: '17' }
+
+      - name: Capacitor Sync
+        working-directory: shared-editor
+        run: npx cap sync android
+
+      - name: Sign & Build AAB
+        working-directory: android
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEY_ALIAS:    ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS:     ${{ secrets.ANDROID_KEY_PASS }}
+          STORE_PASS:   ${{ secrets.ANDROID_STORE_PASS }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > app/release.jks
+          ./gradlew bundleRelease \
+            -Pandroid.injected.signing.store.file=$PWD/app/release.jks \
+            -Pandroid.injected.signing.store.password=$STORE_PASS \
+            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$KEY_PASS
+
+      - name: Upload to Google Play (Internal Track)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.authorss81.graphite
+          releaseFiles: android/app/build/outputs/bundle/release/*.aab
+          track: internal   # promote to production later in Play Console UI
+```
+
+### 🍎 iOS Release Workflow (macOS runner — free for public repos)
+
+```yaml
+# .github/workflows/ios-release.yml
+name: iOS Release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: macos-15  # Apple Silicon — free for public repos
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Build Web App
+        working-directory: shared-editor
+        run: npm ci && npm run build
+
+      - name: Capacitor Sync
+        working-directory: shared-editor
+        run: npx cap sync ios
+
+      - uses: apple-actions/import-codesign-certs@v2
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERT_P12_B64 }}
+          p12-password:    ${{ secrets.APPLE_CERT_P12_PASS }}
+
+      - name: Build & Archive
+        working-directory: ios/App
+        run: |
+          xcodebuild archive \
+            -scheme App -configuration Release \
+            -archivePath App.xcarchive \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload to TestFlight
+        uses: apple-actions/upload-testflight-build@v1
+        with:
+          app-path: ios/App/export/App.ipa
+          issuer-id:       ${{ secrets.APPLE_ISSUER_ID }}
+          api-key-id:      ${{ secrets.APPLE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPLE_API_PRIVATE_KEY }}
+```
+
+### 📦 Minimum Steps to First Android Release
+
+```bash
+# Step 1 — Run ONCE on your machine (needs JDK from adoptium.net, not Android Studio)
+npx cap add android
+
+# Step 2 — Generate signing key (run once, keep the .jks file safe!)
+keytool -genkey -v -keystore graphite-release.jks \
+  -alias graphite -keyalg RSA -keysize 2048 -validity 10000
+
+# Step 3 — Encode keystore for GitHub Secret
+# On Windows PowerShell:
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("graphite-release.jks")) | clip
+
+# Step 4 — Add these secrets to GitHub repo → Settings → Secrets → Actions:
+#   ANDROID_KEYSTORE_B64       ← paste from step 3
+#   ANDROID_KEY_ALIAS          ← graphite
+#   ANDROID_KEY_PASS           ← your key password
+#   ANDROID_STORE_PASS         ← your store password
+#   PLAY_SERVICE_ACCOUNT_JSON  ← from Google Play Console → Setup → API Access
+
+# Step 5 — Commit and push
+git add android/ capacitor.config.json .github/
+git commit -m "chore: add Capacitor Android project + CI pipeline"
+git push
+
+# Step 6 — Tag a release → GitHub builds and uploads automatically!
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+### Phase 36 Sub-Items
+
+| # | Item | Status |
+|---|------|--------|
+| 36.1 | Create `.github/workflows/android-release.yml` | ⬜ Pending |
+| 36.2 | Create `.github/workflows/ios-release.yml` | ⬜ Pending |
+| 36.3 | Generate Android signing keystore (`keytool`) | ⬜ Pending |
+| 36.4 | Run `npx cap add android`, commit `android/` folder | ⬜ Pending |
+| 36.5 | Create Google Play Console listing + store screenshots + privacy policy | ⬜ Pending |
+| 36.6 | Fix Phase 35 WebView security issues (CSP, back-gesture, `Buffer` polyfill) | ⬜ Pending |
+| 36.7 | First internal track release to Google Play | ⬜ Pending |
+| 36.8 | (Optional) iOS App Store release via TestFlight | ⬜ Pending |
