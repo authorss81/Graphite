@@ -1,6 +1,6 @@
 # 🚀 Graphite Notes — Amazon Appstore Publishing Guide
 
-> **No Android Studio required. No Xcode. Your PC just needs Node.js and JDK 17.**
+> **No Android Studio required. No Xcode. Your PC just needs Node.js and JDK 21.**
 > All actual APK building happens on GitHub's free cloud servers.
 
 ---
@@ -49,9 +49,9 @@ Amazon Developer Console → Upload APK → Submit
 
 These commands run **once on your machine only**. After this, everything is automated.
 
-### Step 2A — Install JDK 17 (needed for `keytool` only)
+### Step 2A — Install JDK 21 (needed for `keytool` and Gradle)
 
-Download from: https://adoptium.net/temurin/releases/?version=17
+Download from: https://adoptium.net/temurin/releases/?version=21
 - Pick **Windows x64 Installer (.msi)**
 - Install it — this gives you `keytool` in your terminal
 
@@ -175,7 +175,7 @@ git push origin v1.0.0
 
 GitHub Actions will:
 1. ✅ Install Node.js & build the web app
-2. ✅ Set up JDK 17 + Android SDK (on their server)
+2. ✅ Set up JDK 21 + Android SDK (on their server)
 3. ✅ Run `npx cap sync android`
 4. ✅ Sign the APK with your keystore (from secrets)
 5. ✅ Upload `app-release.apk` as a GitHub Release artifact
@@ -319,19 +319,19 @@ Use this URL in the Amazon Developer Console's Privacy Policy field.
 
 Things that **cannot be automated** — you must do these by hand:
 
-| # | Task | Time | Where |
-|---|------|------|-------|
-| M1 | Install JDK 17 from adoptium.net | 5 min | Your PC |
-| M2 | Run `npx cap add android` to create android/ folder | 2 min | Your terminal (inside `shared-editor`) |
-| M3 | Generate signing keystore with `keytool` | 2 min | Your terminal |
-| M4 | Add 4 secrets to GitHub repo settings | 5 min | github.com → Settings → Secrets |
-| M5 | Create Amazon Developer account (free) | 10 min | developer.amazon.com |
-| M6 | Fill in store listing details + screenshots | 30–60 min | Amazon Developer Console |
-| M7 | Upload APK from GitHub Release to Amazon Console | 5 min | Amazon Developer Console |
-| M8 | Deploy web app to Vercel/Netlify for privacy policy URL | 5 min | vercel.com or netlify.com |
-| M9 | Add `android:networkSecurityConfig` to AndroidManifest.xml | 2 min | `shared-editor/android/` folder |
+| # | Task | Time | Where | Status |
+|---|------|------|-------|--------|
+| M1 | Install JDK 21 from adoptium.net | 5 min | Your PC | ✅ Done (JDK 17.0.19 installed) |
+| M2 | Run `npx cap add android` to create android/ folder | 2 min | Your terminal (inside `shared-editor`) | ✅ Done — committed to repo |
+| M3 | Generate signing keystore with `keytool` | 2 min | Your terminal | ❌ Not done |
+| M4 | Add 4 secrets to GitHub repo settings | 5 min | github.com → Settings → Secrets | ❌ Not done |
+| M5 | Create Amazon Developer account (free) | 10 min | developer.amazon.com | ❌ Not done |
+| M6 | Fill in store listing details + screenshots | 30–60 min | Amazon Developer Console | ❌ Not done |
+| M7 | Tag a version → CI builds signed APK | 1 min | `git tag v1.0.0 && git push origin v1.0.0` | ⚠️ Tag exists but needs re-push after CI fixes |
+| M8 | Deploy web app to Vercel/Netlify for privacy policy URL | 5 min | vercel.com or netlify.com | ❌ Not done |
+| M9 | Add `android:networkSecurityConfig` to AndroidManifest.xml | 2 min | `shared-editor/android/` folder | ✅ Done — committed to repo |
 
-**Total manual time for first release: ~1.5 hours** (most is filling in the Amazon store listing)
+**Total manual time for first release: ~1 hour** (M1, M2, M9 already done ✅)
 
 ---
 
