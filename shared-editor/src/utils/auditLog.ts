@@ -133,6 +133,10 @@ export async function logAuditEvent(
 
 export function getAuditLog(filter?: { category?: AuditCategory; docId?: string }): AuditEvent[] {
   let events = loadRaw();
+  // Run chain verification on read; warn if tampered
+  verifyAuditChain().then((valid) => {
+    if (!valid) console.warn("Audit log chain integrity check FAILED — log may have been tampered with");
+  }).catch(() => {});
   if (filter?.category) events = events.filter((e) => e.category === filter.category);
   if (filter?.docId) events = events.filter((e) => e.docId === filter.docId);
   return events.sort((a, b) => b.ts - a.ts); // newest first

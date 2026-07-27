@@ -17,6 +17,7 @@ export interface GraphiteDoc {
 const STORAGE_KEY = "graphite_docs_v1";
 // ~4MB safe limit (localStorage quota is 5MB total; leave 1MB for other keys)
 const MAX_BYTES = 4 * 1024 * 1024;
+const MAX_DOC_BYTES = 1 * 1024 * 1024; // 1MB per document
 
 export function newDocId(): string {
   try {
@@ -92,6 +93,11 @@ export function saveDocs(docs: Record<string, GraphiteDoc>): void {
 
     for (const [id, incoming] of Object.entries(docs)) {
       const diskDoc = diskDocs[id];
+      // Skip incoming doc if its editorState exceeds per-doc limit
+      if (incoming.editorState && new Blob([incoming.editorState]).size > MAX_DOC_BYTES) {
+        console.warn(`Doc ${id} exceeds 1MB limit, skipping`);
+        continue;
+      }
       if (!diskDoc || incoming.updatedAt >= diskDoc.updatedAt) {
         merged[id] = incoming;
       }

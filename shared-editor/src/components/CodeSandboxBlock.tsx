@@ -8,6 +8,8 @@ const doubled = numbers.map(n => n * 2);
 console.log("Doubled numbers:", doubled);
 return "Result: " + doubled.reduce((a, b) => a + b, 0);`);
 
+  const MAX_CODE_LENGTH = 50000;
+
   const [output, setOutput] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -143,7 +145,7 @@ return "Result: " + doubled.reduce((a, b) => a + b, 0);`);
 
       <textarea
         value={code}
-        onChange={(e) => setCode(e.target.value)}
+        onChange={(e) => setCode(e.target.value.slice(0, MAX_CODE_LENGTH))}
         rows={6}
         style={{
           width: "100%",

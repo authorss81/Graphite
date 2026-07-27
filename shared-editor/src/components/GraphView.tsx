@@ -313,7 +313,7 @@ export function GraphView() {
         ctx.textAlign = "center";
         ctx.shadowBlur = 0;
         const title = n.title.length > 20 ? n.title.slice(0, 18) + "…" : n.title;
-        ctx.fillText(title, n.x, n.y + n.radius + 14);
+        ctx.fillText(title.slice(0, 80), n.x, n.y + n.radius + 14);
       }
 
       ctx.restore();

@@ -29,7 +29,7 @@ export interface JsonCanvas {
 }
 
 function generateId(): string {
-  return "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  return "n" + crypto.randomUUID().slice(0, 12);
 }
 
 // Export internal spatial canvas data to JSON Canvas format
@@ -72,6 +72,8 @@ export function importFromJsonCanvas(json: string): { cards: any[]; edges: any[]
     if (canvas.nodes.length > 1000) return null;
 
     const cards = canvas.nodes.slice(0, 1000).map((n: JsonCanvasNode) => {
+      // Validate numeric fields for NaN/Infinity
+      const validNum = (v: any, fallback: number) => typeof v === "number" && isFinite(v) ? v : fallback;
       let imageUrl: string | undefined;
       if (n.file) {
         try {
@@ -83,10 +85,10 @@ export function importFromJsonCanvas(json: string): { cards: any[]; edges: any[]
         id: n.id,
         docId: n.id,
         type: n.type === "group" ? "group" : "note",
-        x: n.x,
-        y: n.y,
-        width: n.width,
-        height: n.height,
+        x: validNum(n.x, 0),
+        y: validNum(n.y, 0),
+        width: validNum(n.width, 200),
+        height: validNum(n.height, 100),
         title: n.text || n.label || "",
         content: n.text || "",
         color: n.color || undefined,

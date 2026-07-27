@@ -444,8 +444,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const { documents } = get();
     if (!documents[id]) return;
     const cur = documents[id];
-    const cleanTag = tag.trim().replace(/^#/, "");
-    if (!cleanTag) return;
+    const cleanTag = tag.trim().replace(/^#/, "").replace(/[^a-z0-9\-_\.#@]/gi, "").slice(0, 50);
+    if (!cleanTag || cleanTag.includes("..")) return;
     const existing = cur.tags || [];
     if (existing.includes(cleanTag)) return;
     const updated = { ...cur, tags: [...existing, cleanTag], updatedAt: Date.now() };

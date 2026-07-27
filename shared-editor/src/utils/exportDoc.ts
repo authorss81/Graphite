@@ -119,11 +119,12 @@ export function editorStateToHtml(editorState: string, title: string = "Document
 }
 
 export function downloadAsFile(content: string, filename: string, mime: string = "text/markdown") {
+  const safeName = filename.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 200);
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename;
+  a.download = safeName;
   a.click();
   URL.revokeObjectURL(url);
 }

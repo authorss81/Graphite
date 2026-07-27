@@ -1,3 +1,9 @@
+/**
+ * Graphite Team Workspace — shared docs, permissions & threaded comments.
+ * NOTE: Workspace data and comment content are stored in IndexedDB in plaintext.
+ * This data is NOT E2E encrypted. Do not store sensitive information in
+ * workspace names, member displays, or comment content.
+ */
 import { openDB, type IDBPDatabase } from "idb";
 
 export type WorkspaceRole = "admin" | "editor" | "viewer";
@@ -44,7 +50,12 @@ export interface Comment {
 let dbPromise: Promise<IDBPDatabase> | null = null;
 const commentsChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("graphite-comments") : null;
 
-function getCurrentUserId(): string {
+function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
+}
+
+const MAX_NAME_LENGTH = 200;
+const MAX_CONTENT_LENGTH = 10000;
   try {
     const raw = localStorage.getItem("graphite_current_user");
     if (raw) {
@@ -141,8 +152,10 @@ export async function saveWorkspaces(workspaces: Workspace[]): Promise<void> {
 }
 
 export async function createWorkspace(name: string, ownerId: string, ownerName: string, ownerEmail: string): Promise<Workspace> {
+  const cleanName = name.trim().slice(0, MAX_NAME_LENGTH);
+  if (!cleanName) throw new Error("Workspace name is required");
   const ws: Workspace = {
-    id: "ws_" + crypto.randomUUID().slice(0, 8),
+    id: "ws_" + crypto.randomUUID().replace(/-/g, "").slice(0, 16),
     name,
     description: "",
     createdAt: Date.now(),
@@ -177,10 +190,14 @@ export async function deleteWorkspace(id: string, userId?: string): Promise<void
 export async function addMemberToWorkspace(wsId: string, member: Omit<WorkspaceMember, "joinedAt">, userId?: string): Promise<void> {
   const uid = userId || getCurrentUserId();
   await requireAdmin(wsId, uid);
+  const cleanEmail = member.email.trim().slice(0, 254);
+  if (!validateEmail(cleanEmail)) throw new Error("Invalid email address");
+  const cleanDisplayName = member.displayName.trim().slice(0, MAX_NAME_LENGTH);
+  if (!cleanDisplayName) throw new Error("Display name is required");
   const db = await getDB();
   const ws = await db.get("workspaces", wsId);
   if (ws && !ws.members.some((m) => m.userId === member.userId)) {
-    ws.members.push({ ...member, joinedAt: Date.now() });
+    ws.members.push({ ...member, email: cleanEmail, displayName: cleanDisplayName, joinedAt: Date.now() });
     await db.put("workspaces", ws);
   }
 }
@@ -232,15 +249,17 @@ export async function getDocComments(docId: string): Promise<Comment[]> {
 }
 
 export async function addComment(docId: string, authorId: string, authorName: string, content: string, parentId?: string, blockId?: string): Promise<Comment> {
-  const mentions = parseMentions(content);
+  const cleanContent = content.trim().slice(0, MAX_CONTENT_LENGTH);
+  if (!cleanContent) throw new Error("Comment content is required");
+  const mentions = parseMentions(cleanContent);
   const comment: Comment = {
-    id: "cmt_" + crypto.randomUUID().slice(0, 8),
+    id: "cmt_" + crypto.randomUUID().replace(/-/g, "").slice(0, 16),
     docId,
     blockId,
     authorId,
-    authorName,
+    authorName: authorName.trim().slice(0, 100),
     authorColor: randomAvatarColor(),
-    content,
+    content: cleanContent,
     mentions,
     createdAt: Date.now(),
     parentId,

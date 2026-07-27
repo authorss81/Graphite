@@ -1,3 +1,8 @@
+/**
+ * Spatial Canvas Storage — saved to localStorage and synced to Supabase canvas_edges table.
+ * NOTE: RLS should be enabled on canvas_edges table with policy:
+ *   CREATE POLICY user_isolation ON canvas_edges FOR ALL USING (auth.uid() = user_id);
+ */
 import { supabase, isSupabaseAvailable } from "./supabase";
 
 export interface SpatialCard {

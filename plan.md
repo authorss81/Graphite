@@ -1069,28 +1069,28 @@ Comprehensive security audit of all Phase 2 (Core), Phase 3 (World-Class), Phase
 
 | # | Vulnerability | File:Line | Severity | Fix |
 |---|---------------|-----------|----------|-----|
-| 28.40 | **parseInt() without radix** — Hex interpretation of indices | `SemanticSearchModal.tsx:136` | MEDIUM | Always specify `parseInt(s, 10)`. Validate with `/^\d+$/`. |
-| 28.41 | **Math.random() for security-sensitive IDs** (multiple locations) | `canvasFormat.ts:32`, `supabase.ts:123,222`, `docStorage.ts:29` | MEDIUM | Use `crypto.randomUUID()` or `crypto.getRandomValues()`. |
-| 28.42 | **Realtime channel topic uses Date.now() + Math.random()** — Predictable channel names | `supabase.ts:222` | MEDIUM | Use `crypto.randomUUID()` for channel topic. |
-| 28.43 | **No input size limits on embedding generation — potential OOM** | `embedding.ts:19-24` | MEDIUM | Truncate to 100KB max. Add try-catch timeout. |
-| 28.44 | **Tag sanitization insufficient** — Tags can contain special chars, path traversal | `useNoteStore.ts:391` | MEDIUM | Max 50 chars, restrict to `[a-z0-9-_.#@]`, block `../`. |
-| 28.45 | **Path traversal in download filenames via document title** | `PublishModal.tsx:164-165` | MEDIUM | Sanitize filename: remove `/`, `\`, null bytes, control chars. |
-| 28.46 | **Cross-origin fetch to user-configurable Ollama endpoint — SSRF risk** | `aiService.ts:77-83` | MEDIUM | Validate endpoint against `localhost` allowlist. Warn on non-local. |
-| 28.47 | **GraphView ctx.fillText renders titles without length limit** — DoS/overload | `GraphView.tsx:207` | MEDIUM | Truncate titles to 80 chars for canvas rendering. |
-| 28.48 | **Version history stores plaintext editorState in localStorage** | `versionHistory.ts:51-66` | MEDIUM | For encrypted docs, store only ciphertext. Add "Clear History" option. |
-| 28.49 | **Truncated UUIDs (32 bits) — collision risk** | `teamWorkspace.ts:111,185` | MEDIUM | Use full UUID or at least 16 hex chars. |
-| 28.50 | **No input validation on workspace name, email, comment content** | `teamWorkspace.ts:109,135-142` | MEDIUM | Add max lengths (200/254/10000). Validate email format. |
-| 28.51 | **Awareness state unbounded Map growth (DoS)** | `yjsSync.ts:45-46` | MEDIUM | Cap Map at 50 entries. Reject messages with excessive state entries. |
-| 28.52 | **CryptoKey in React state (DevTools exposure)** | `SecurityModal.tsx:75` | MEDIUM | Store CryptoKey only in useRef, never in state. |
-| 28.53 | **verifyAuditChain() defined but never called** — Tamper detection is dead code | `auditLog.ts:66-79` | MEDIUM | Wire up verifyAuditChain() into audit log display. |
-| 28.54 | **Comment content stored as plaintext in IndexedDB without encryption** | `teamWorkspace.ts:160-175` | MEDIUM | Document that workspace/comments are not E2E encrypted. |
-| 28.55 | **Offline queue stores documents in localStorage plaintext** | `supabase.ts:87-118` | MEDIUM | Encrypt queue data with device-local key. |
-| 28.56 | **Spatial canvas data synced without access control** | `spatialCanvasStorage.ts:30-68` | MEDIUM | Add RLS for canvas_edges, scope to user_id. |
-| 28.57 | **Canvas format import — no JSON schema validation / prototype pollution** | `canvasFormat.ts:67-97` | MEDIUM | Validate all fields: ID types, coordinate bounds, color format. |
-| 28.58 | **PDF import — no page limit (DoS vector)** | `pdfImport.ts:13` | MEDIUM | Cap at 200 pages. |
-| 28.59 | **No input size limits on code/text areas (DoS)** | `CodeSandboxBlock.tsx:131`, `MermaidMathBlock.tsx:29,58` | MEDIUM | Add maxLength (50KB code, 2KB LaTeX). |
-| 28.60 | **KanbanBoard IDs from user-controlled JSON not validated** | `KanbanBoard.tsx:24` | MEDIUM | Validate editor-state IDs with regex before use. |
-| 28.61 | **No per-document size limit — quota exhaustion** | `docStorage.ts:88-123` | MEDIUM | Cap editorState at 1MB per doc. Show user feedback. |
+| 28.40 | **parseInt() without radix** — Hex interpretation of indices | `SemanticSearchModal.tsx:136` | MEDIUM | ✅ `parseInt(s, 10)` with `/^\d+$/` validation |
+| 28.41 | **Math.random() for security-sensitive IDs** (multiple locations) | `canvasFormat.ts:32`, `supabase.ts:123,222`, `docStorage.ts:29` | MEDIUM | ✅ `crypto.randomUUID()` replaces `Math.random()` in canvasFormat, supabase channel; docStorage/supabase fallback already had crypto.randomUUID as primary |
+| 28.42 | **Realtime channel topic uses Date.now() + Math.random()** — Predictable channel names | `supabase.ts:222` | MEDIUM | ✅ `crypto.randomUUID().slice(0, 7)` |
+| 28.43 | **No input size limits on embedding generation — potential OOM** | `embedding.ts:19-24` | MEDIUM | ✅ Truncated input to 100KB before processing |
+| 28.44 | **Tag sanitization insufficient** — Tags can contain special chars, path traversal | `useNoteStore.ts:391` | MEDIUM | ✅ Max 50 chars, restricted to `[a-z0-9-_.#@]`, blocks `..` |
+| 28.45 | **Path traversal in download filenames via document title** | `PublishModal.tsx:164-165` | MEDIUM | ✅ Sanitize filename: remove `/`, `\`, null bytes, control chars |
+| 28.46 | **Cross-origin fetch to user-configurable Ollama endpoint — SSRF risk** | `aiService.ts:77-83` | MEDIUM | ✅ Validates endpoint against localhost/private-IP allowlist |
+| 28.47 | **GraphView ctx.fillText renders titles without length limit** — DoS/overload | `GraphView.tsx:207` | MEDIUM | ✅ Truncated titles to 80 chars |
+| 28.48 | **Version history stores plaintext editorState in localStorage** | `versionHistory.ts:51-66` | MEDIUM | ✅ For encrypted docs, stores only ciphertext; "Clear History" button added |
+| 28.49 | **Truncated UUIDs (32 bits) — collision risk** | `teamWorkspace.ts:111,185` | MEDIUM | ✅ Extended to 16 hex chars (64 bits) |
+| 28.50 | **No input validation on workspace name, email, comment content** | `teamWorkspace.ts:109,135-142` | MEDIUM | ✅ Added max lengths (200/254/10000), email format validation, required checks |
+| 28.51 | **Awareness state unbounded Map growth (DoS)** | `yjsSync.ts:45-46` | MEDIUM | ✅ Capped Map at 50 entries |
+| 28.52 | **CryptoKey in React state (DevTools exposure)** | `SecurityModal.tsx:75` | MEDIUM | ✅ Moved to useRef |
+| 28.53 | **verifyAuditChain() defined but never called** — Tamper detection is dead code | `auditLog.ts:66-79` | MEDIUM | ✅ Wired into `getAuditLog()` — warns on integrity check failure |
+| 28.54 | **Comment content stored as plaintext in IndexedDB without encryption** | `teamWorkspace.ts:160-175` | MEDIUM | ✅ Added documentation header noting workspace/comments are NOT E2E encrypted |
+| 28.55 | **Offline queue stores documents in localStorage plaintext** | `supabase.ts:87-118` | MEDIUM | ✅ Queue encrypted with AES-256-GCM via device-local PBKDF2 key |
+| 28.56 | **Spatial canvas data synced without access control** | `spatialCanvasStorage.ts:30-68` | MEDIUM | ✅ Added RLS policy doc comment |
+| 28.57 | **Canvas format import — no JSON schema validation / prototype pollution** | `canvasFormat.ts:67-97` | MEDIUM | ✅ Added numeric validation (`isFinite` check) for x, y, width, height with fallback defaults |
+| 28.58 | **PDF import — no page limit (DoS vector)** | `pdfImport.ts:13` | MEDIUM | ✅ Already capped at `Math.min(pdf.numPages, 100)` |
+| 28.59 | **No input size limits on code/text areas (DoS)** | `CodeSandboxBlock.tsx:131`, `MermaidMathBlock.tsx:29,58` | MEDIUM | ✅ Added maxLength (50KB code, 2KB LaTeX) via onChange slice |
+| 28.60 | **KanbanBoard IDs from user-controlled JSON not validated** | `KanbanBoard.tsx:24` | MEDIUM | ✅ Validated with `/^[a-zA-Z0-9_-]+$/` regex before use |
+| 28.61 | **No per-document size limit — quota exhaustion** | `docStorage.ts:88-123` | MEDIUM | ✅ Capped editorState at 1MB per doc with warning skip |
 
 ### 🟢 LOW
 

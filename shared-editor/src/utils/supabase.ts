@@ -84,7 +84,7 @@ export class SupabaseSyncService {
 
   syncDocumentDebounced(docId: string, docPayload: Partial<GraphiteDoc>): void {
     if (!supabase || !this.session) {
-      this.queueOfflineOp({ docId, action: "upsert", payload: docPayload });
+      this.queueOfflineOp({ docId, action: "upsert", payload: docPayload }).catch(() => {});
       this.state.status = "offline";
       return;
     }
@@ -147,10 +147,72 @@ export class SupabaseSyncService {
     return { ...this.state, offlineQueue: [...this.state.offlineQueue] };
   }
 
+  private queueKey: CryptoKey | null = null;
+  private encryptedQueueRaw: string | null = null;
+
+  private async getQueueKey(): Promise<CryptoKey | null> {
+    if (this.queueKey) return this.queueKey;
+    try {
+      let seed = localStorage.getItem("graphite_offline_queue_seed");
+      if (!seed) {
+        seed = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, "0")).join("");
+        localStorage.setItem("graphite_offline_queue_seed", seed);
+      }
+      const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(seed), "PBKDF2", false, ["deriveKey"]);
+      const salt = new Uint8Array(16);
+      this.queueKey = await crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations: 10000, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+      return this.queueKey;
+    } catch {
+      return null;
+    }
+  }
+
+  private async ensureQueueDecrypted(): Promise<void> {
+    if (this.encryptedQueueRaw && this.state.offlineQueue.length === 0) {
+      try {
+        const key = await this.getQueueKey();
+        if (!key) return;
+        const raw = this.encryptedQueueRaw;
+        const decoded = atob(raw.slice(5));
+        const bytes = new Uint8Array(decoded.length);
+        for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+        const iv = bytes.slice(0, 12);
+        const data = bytes.slice(12);
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, data);
+        this.state.offlineQueue = JSON.parse(new TextDecoder().decode(decrypted));
+      } catch {}
+      this.encryptedQueueRaw = null;
+    }
+  }
+
+  private async encryptQueue(data: string): Promise<string | null> {
+    try {
+      const key = await this.getQueueKey();
+      if (!key) return null;
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, new TextEncoder().encode(data));
+      const packed = new Uint8Array(12 + encrypted.byteLength);
+      packed.set(iv, 0);
+      packed.set(new Uint8Array(encrypted), 12);
+      return "encq:" + btoa(String.fromCharCode(...packed));
+    } catch {
+      return null;
+    }
+  }
+
   private loadOfflineQueue() {
     try {
       const raw = localStorage.getItem("graphite_offline_queue");
-      if (raw) {
+      if (raw && raw.startsWith("encq:")) {
+        this.encryptedQueueRaw = raw;
+        this.state.offlineQueue = [];
+      } else if (raw) {
         this.state.offlineQueue = JSON.parse(raw);
       }
     } catch {
@@ -158,15 +220,18 @@ export class SupabaseSyncService {
     }
   }
 
-  private saveOfflineQueue() {
+  private async saveOfflineQueue() {
     try {
       if (this.state.offlineQueue.length > 15) {
         this.state.offlineQueue = this.state.offlineQueue.slice(-15);
       }
-      localStorage.setItem(
-        "graphite_offline_queue",
-        JSON.stringify(this.state.offlineQueue)
-      );
+      const data = JSON.stringify(this.state.offlineQueue);
+      const encrypted = await this.encryptQueue(data);
+      if (encrypted) {
+        localStorage.setItem("graphite_offline_queue", encrypted);
+      } else {
+        localStorage.setItem("graphite_offline_queue", data);
+      }
     } catch (e) {
       this.state.offlineQueue = this.state.offlineQueue.slice(-3);
       try {
@@ -180,10 +245,10 @@ export class SupabaseSyncService {
     }
   }
 
-  queueOfflineOp(op: Omit<OfflineSyncOp, "id" | "timestamp">) {
+  async queueOfflineOp(op: Omit<OfflineSyncOp, "id" | "timestamp">) {
     const fullOp: OfflineSyncOp = {
       ...op,
-      id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       timestamp: Date.now(),
     };
 
@@ -193,10 +258,11 @@ export class SupabaseSyncService {
     );
     filtered.push(fullOp);
     this.state.offlineQueue = filtered.slice(-100);
-    this.saveOfflineQueue();
+    await this.saveOfflineQueue();
   }
 
   async flushOfflineQueue(): Promise<void> {
+    await this.ensureQueueDecrypted();
     if (!supabase || !this.session || !navigator.onLine || this.state.offlineQueue.length === 0) {
       return;
     }
@@ -218,7 +284,7 @@ export class SupabaseSyncService {
     }
 
     this.state.offlineQueue = failed;
-    this.saveOfflineQueue();
+    await this.saveOfflineQueue();
     this.state.status = failed.length > 0 ? "error" : "idle";
   }
 
@@ -282,7 +348,7 @@ export class SupabaseSyncService {
 
   async syncDocument(docId: string, docPayload: Partial<GraphiteDoc>): Promise<void> {
     if (!supabase || !this.session) {
-      this.queueOfflineOp({ docId, action: "upsert", payload: docPayload });
+      this.queueOfflineOp({ docId, action: "upsert", payload: docPayload }).catch(() => {});
       this.state.status = "offline";
       return;
     }
@@ -331,7 +397,7 @@ export class SupabaseSyncService {
     } catch (err) {
       this.state.status = "error";
       this.state.error = (err as Error).message;
-      this.queueOfflineOp({ docId, action: "upsert", payload: docPayload });
+      this.queueOfflineOp({ docId, action: "upsert", payload: docPayload }).catch(() => {});
       throw err;
     }
   }
@@ -341,7 +407,7 @@ export class SupabaseSyncService {
     onDocDeleted: (docId: string) => void
   ): () => void {
     if (!supabase || !this.session) return () => {};
-    const channelTopic = `graphite_realtime_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const channelTopic = `graphite_realtime_${crypto.randomUUID().slice(0, 7)}`;
     const userId = this.session?.user?.id;
     if (!userId) return () => {};
     const channel = supabase

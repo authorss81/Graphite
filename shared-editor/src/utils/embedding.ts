@@ -17,15 +17,16 @@ async function getExtractor() {
 }
 
 export async function generateEmbedding(text: string): Promise<number[]> {
+  const truncated = text.slice(0, 100000);
   const pipe = await getExtractor();
   if (pipe) {
-    const result = await pipe(text, { pooling: "mean", normalize: true });
+    const result = await pipe(truncated, { pooling: "mean", normalize: true });
     return Array.from(result.data) as number[];
   }
 
   // Fallback: simple hash-based embedding (offline/no-wasm)
   const vector = new Array(VECTOR_DIM).fill(0);
-  const tokens = text.toLowerCase().replace(/[^\w\s]/g, " ").split(/\s+/).filter((w) => w.length > 1);
+  const tokens = truncated.toLowerCase().replace(/[^\w\s]/g, " ").split(/\s+/).filter((w) => w.length > 1);
   if (tokens.length === 0) return vector;
   const tfMap = new Map<string, number>();
   for (const token of tokens) tfMap.set(token, (tfMap.get(token) || 0) + 1);

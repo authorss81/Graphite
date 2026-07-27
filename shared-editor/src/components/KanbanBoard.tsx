@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import { CheckCircle2, Circle, Clock, FileText } from "lucide-react";
 
+const VALID_ID_REGEX = /^[a-zA-Z0-9_-]+$/;
+
 interface ChecklistItem {
   id: string;
   text: string;
@@ -21,7 +23,7 @@ function extractChecklists(editorState: string): ChecklistItem[] {
     const items: ChecklistItem[] = [];
     const traverse = (node: any) => {
       if (typeof node.checked === "boolean") {
-        items.push({ id: node.id || crypto.randomUUID(), text: node.text || "", checked: node.checked });
+        items.push({ id: node.id && VALID_ID_REGEX.test(node.id) ? node.id : crypto.randomUUID(), text: node.text || "", checked: node.checked });
       }
       if (node.children) node.children.forEach(traverse);
     };
