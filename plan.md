@@ -38,6 +38,15 @@ Replace fake implementations and build competitive features.
 | 11 | **Phase 2** | Competitive (Match Notion/Obsidian): block editor, graph view, AI semantic search, publish/share, version history, tags, spatial canvas | Ongoing | ✅ Mostly complete |
 | 12 | **Phase 3** | World-Class: real-time multiplayer (Yjs), AI writing assistant, plugin system, advanced blocks, team workspace, desktop/mobile native | Long-term | ✅ 3.2 AI done, 3.4 advanced blocks mostly done, 3.6 encryption done |
 
+### 🔴 Priority 4 — Critical Findings from Phase 38 Audit
+Fix CRITICAL/HIGH items found in independent audit of Phase 12/13/15/24/25.
+
+| Order | Phase | Focus | Severity |
+|-------|-------|-------|----------|
+| 18 | **Phase 38** | Phase 12/13/15/24/25 Audit — 18 findings: stale drag, auth bypass (isAuthenticated always true), Capacitor listener leak, simulation rebuild, missing Escape cleanup, stale onClose | 🔴 CRITICAL |
+| 19 | **Phase 39** | Phase 29-37 Audit — 21 findings: SVG script sanitizeHtml bypass, Worker sandbox prototype chain, PluginSandbox origin null bug, missing ios/ dir, layering violations, duplicate pinned sections, missing library validation, case inconsistencies in encryption guards | 🔴 CRITICAL |
+| 20 | **Phase 40** | Strategic Recommendations — 100+ items across competitive analysis, user acquisition growth strategy (18 items), performance optimization (22 items), UX/polish improvements (26 items) | 📋 Strategic |
+
 ### 🟢 Priority 3 — Canvas, Graph, Testing, Polish
 
 | Order | Phase | Focus | Est. Effort |
@@ -49,7 +58,7 @@ Replace fake implementations and build competitive features.
 | 17 | **Phase 17** | Competitive Research: database block, canvas format, block linking, mobile perf, plugins, daily journal, slides, templates | 138h |
 
 ### ✅ Completed Phases (Reference)
-Phases 0, 1, 2, 4, 5, 6, 7, 8, 9, 11, 14, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32 — see below for details.
+Phases 0, 1, 2, 4, 5, 6, 7, 8, 9, 11, 14, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 37 — see below for details.
 
 ---
 
@@ -1589,15 +1598,228 @@ git push
 git tag v1.0.0 && git push origin v1.0.0
 ```
 
+---
+
+## Phase 38: Independent Audit — Phase 12/13/15/24/25 Findings (July 2026)
+
+Independent audit of Phases 12 (Spatial Canvas), 13 (Graph View), 15 (Testing/CI), 24 (Architecture), and 25/26 (UX/Design). Findings that are NOT already documented in earlier phases.
+
+### 🔴 CRITICAL
+
+| # | Vulnerability | File:Line | Severity | Status |
+|---|---------------|-----------|----------|--------|
+| 38.1 | **Stale `cardsRef` on drag-end — drag position lost** — `handleMouseUpCanvas` reads `cards` from closure, not latest ref; final drag position of card is discarded | `SpatialCanvas.tsx:466` | CRITICAL | ⬜ Pending |
+| 38.2 | **arriseGrid div-by-zero when canvas has 0 cards in page mode** — `Math.ceil(cards.length / 3)` with empty array causes `totalPages = 0`, leading to `width / 0` in grid calculation | `SpatialCanvas.tsx:310-313` | CRITICAL | ⬜ Pending |
+| 38.3 | **`isAuthenticated` always returns `true` in `useAuthStore`** — Auth guard is a no-op; `AuthScreen` is bypassed entirely. User sees protected content regardless of auth state | `store/useAuthStore.ts` | CRITICAL | ⬜ Pending |
+| 38.4 | **Capacitor `appUrlOpen` listener leak on every modal change** — New listener registered on every `App.tsx` render because `addListener` is called inside component body, not in `useEffect` with cleanup | `App.tsx` | CRITICAL | ⬜ Pending |
+
+### 🟠 HIGH
+
+| # | Vulnerability | File:Line | Severity | Status |
+|---|---------------|-----------|----------|--------|
+| 38.5 | **React key on non-unique `index` vs `id` in card rendering** — `cards.map((card, idx) => <Card key={idx} .../>)` causes stale DOM when cards are reordered/filtered | `SpatialCanvas.tsx:347` | HIGH | ⬜ Pending |
+| 38.6 | **Stale useState updater closures per-card drag handler** — Drag handlers created in render capture stale state values, causing incorrect positions on rapid drags | `SpatialCanvas.tsx:400-440` | HIGH | ⬜ Pending |
+| 38.7 | **GraphView simulation fully rebuilt on every zoom/pan** — Zoom/pan state changes trigger useEffect that re-creates entire d3 simulation, losing pinned nodes and force state | `GraphView.tsx:228-343` | HIGH | ⬜ Pending |
+| 38.8 | **`getState()` calls bypass React reactivity in multiple handlers** — 18 `.getState()` calls remain across 7 files; components don't re-render on state changes | Multiple files | HIGH | ⬜ Pending |
+| 38.9 | **Missing deps in `handleKeyDown` refs** — Keyboard handler captures stale refs; shortcut keys may fire on wrong doc or fail silently | `App.tsx` | HIGH | ⬜ Pending |
+| 38.10 | **Stale `onClose` closure in `SemanticSearchModal`** — `onClose` captured at modal creation time; if parent changes handler between opens, stale reference persists | `SemanticSearchModal.tsx` | HIGH | ⬜ Pending |
+| 38.11 | **`TeamWorkspaceModal` missing backdrop click handler** — Clicking outside the modal does not close it; user must find X button | `TeamWorkspaceModal.tsx` | HIGH | ⬜ Pending |
+| 38.12 | **All modals lack `useEffect` cleanup for Escape listeners** — Event listeners registered but never removed on unmount; multiple listeners accumulate on re-open | All modal files | HIGH | ⬜ Pending |
+
+### 🔵 MEDIUM
+
+| # | Vulnerability | File:Line | Severity | Status |
+|---|---------------|-----------|----------|--------|
+| 38.13 | **Excalidraw import uses `NodeFilter` without cap** — Filtering thousands of nodes blocks main thread | `SpatialCanvas.tsx` | MEDIUM | ⬜ Pending |
+| 38.14 | **`rect` bounds not validated in `getIntersectingCards`** — Negative/NaN dimensions produce incorrect intersection results | `SpatialCanvas.tsx` | MEDIUM | ⬜ Pending |
+| 38.15 | **GraphView text measurement no cache** — `measureText()` called per-node per-frame; no memoization causes layout thrash | `GraphView.tsx` | MEDIUM | ⬜ Pending |
+| 38.16 | **Replay test doesn't test what it claims** — `verifyRecoveryCode` replay test uses hardcoded code array without verifying `markCodeUsed` blocks reuse | `encryption.test.ts` | MEDIUM | ⬜ Pending |
+| 38.17 | **No size limit on `getLocalCommits`** — Fetching all commits for doc with thousands of versions causes OOM | `versionHistory.ts` | MEDIUM | ⬜ Pending |
+| 38.18 | **Missing `aria-label` on many buttons** — Export trigger, zoom controls, card action buttons lack accessible labels | Multiple component files | MEDIUM | ⬜ Pending |
+
+### 🟢 LOW
+
+| # | Vulnerability | File:Line | Severity | Status |
+|---|---------------|-----------|----------|--------|
+| 38.19 | **Node radius from `docIds.length` could overflow** — Graph node radius grows proportionally to `docIds.length`; large number of links produces oversized nodes that break layout | `GraphView.tsx` | LOW | ⬜ Pending |
+
 ### Phase 36 Sub-Items
 
 | # | Item | Status |
 |---|------|--------|
 | 36.1 | Create `.github/workflows/android-release.yml` | ✅ Done |
 | 36.2 | Create `.github/workflows/ios-release.yml` | ✅ Done |
-| 36.3 | Generate Android signing keystore (`keytool`) | ⬜ Pending |
-| 36.4 | Run `npx cap add android`, commit `android/` folder | ⬜ Pending |
+| 36.3 | Generate Android signing keystore (`keytool`) | ✅ Done (graphite-release.jks exists, gitignored) |
+| 36.4 | Run `npx cap add android`, commit `android/` folder | ✅ Done (shared-editor/android/ exists with full Capacitor project) |
 | 36.5 | Create Google Play Console listing + store screenshots + privacy policy | ⬜ Pending |
-| 36.6 | Fix Phase 35 WebView security issues (CSP, back-gesture, `Buffer` polyfill) | ⬜ Pending |
+| 36.6 | Fix Phase 35 WebView security issues (CSP, back-gesture, `Buffer` polyfill) | ⚠️ Partial — 35.2/3/5/6 done; 35.1/4/7 pending |
 | 36.7 | First internal track release to Google Play | ⬜ Pending |
 | 36.8 | (Optional) iOS App Store release via TestFlight | ⬜ Pending |
+
+---
+
+## Phase 39: Independent Audit — Phase 29/30/31/32/33/34/35/36/37 Findings (July 2026)
+
+Independent audit of remaining phases. All items below are NEW findings NOT documented in earlier phases.
+
+### 🔴 CRITICAL
+
+| # | Vulnerability | File:Line | Severity | Status |
+|---|---------------|-----------|----------|--------|
+| 39.1 | **SVG `<script>` elements bypass `sanitizeHtml` in MermaidMathBlock** — `el.tagName === "SCRIPT"` is case-sensitive; SVG-namespace `<script>` has lowercase `tagName`, so script elements embedded in Mermaid/KaTeX SVG output survive sanitization and execute via `dangerouslySetInnerHTML` | `MermaidMathBlock.tsx:16` | CRITICAL | ⬜ Pending |
+| 39.2 | **Web Worker sandbox bypass via prototype chain in CodeSandbox** — `self.fetch = undefined` only shadows the property; original `fetch`/`XMLHttpRequest`/`WebSocket` accessible via `Object.getPrototypeOf(Object.getPrototypeOf(self))`. `EventSource` not deleted at all — provides outbound HTTP via SSE | `CodeSandboxBlock.tsx:29-39` | CRITICAL | ⬜ Pending |
+| 39.3 | **PluginSandbox origin check uses `null` primitive instead of `"null"` string** — `if (event.origin !== null) return;` always true because sandboxed iframe origin is the string `"null"`. All plugin messages rejected — **plugin system completely non-functional** | `PluginSandbox.tsx:19` | CRITICAL | ⬜ Pending |
+| 39.4 | **`shared-editor/ios/` directory does not exist** — `npx cap add ios` never ran. iOS release workflow (ios-release.yml:29) references `shared-editor/ios/App` which doesn't exist — **iOS CI will fail immediately** | `.github/workflows/ios-release.yml:29` | CRITICAL | ⬜ Pending |
+| 39.5 | **Phase 29.7 layering violation still not fixed** — `store/useNoteStore.ts` still imports `toast` from `"../components/Toast"`. Also `utils/auth.ts:2` has same violation. `toast()` should live in store or utils | `store/useNoteStore.ts:7`, `utils/auth.ts:2` | CRITICAL | ⬜ Pending |
+| 39.6 | **Phase 29.10 double store subscriptions not fixed** — Both `App.tsx:37-38` and `AppHeader.tsx:14-15` subscribe to identical `docId`/`editorState` slices. Every keystroke renders App (needlessly recomputing `currentTitle`) AND AppHeader independently via own subscription, bypassing React.memo | `App.tsx:37-38`, `AppHeader.tsx:14-15` | CRITICAL | ⬜ Pending |
+
+### 🟠 HIGH
+
+| # | Vulnerability | File:Line | Severity | Status |
+|---|---------------|-----------|----------|--------|
+| 39.7 | **Phase 29.11 tab order inconsistency not fixed** — Top nav order: editor→canvas→split→spatial→graph→kanban→meta. Bottom nav order: editor→split→canvas→spatial→graph→kanban→meta. Canvas/Split swapped, inconsistent navigation | `AppNav.tsx:21`, `AppBottomNav.tsx:12-18` | HIGH | ⬜ Pending |
+| 39.8 | **Duplicate pinned notes sections in Sidebar** — Lines 499-516 render non-collapsible "Pinned Notes" section (when `!showArchived`). Lines 555-588 render collapsible "Pinned (N)" accordion. Both render simultaneously — every pinned note appears twice | `Sidebar.tsx:499-516,555-588` | HIGH | ⬜ Pending |
+| 39.9 | **ExcalidrawCanvasComponent missing library validation** — Has own `saveLibrary()` at lines 21-24 that lacks `Array.isArray()` check, `.filter()` for non-objects, and `.slice(0, 500)` cap present in `Canvas.tsx:16-22`. Attacker with malicious `.excalidraw` file can exhaust localStorage quota | `ExcalidrawCanvasComponent.tsx:21-24` | HIGH | ⬜ Pending |
+
+### 🔵 MEDIUM
+
+| # | Vulnerability | File:Line | Severity | Status |
+|---|---------------|-----------|----------|--------|
+| 39.10 | **`isEncrypted()` in `encryption.ts` lacks `.toLowerCase()`** — Uses `payload.startsWith("enc:")` without `.toLowerCase()`, while all component guards use `.trim().toLowerCase()`. If uppercase `"ENC:"` ever appears, utility won't recognize it | `encryption.ts:127` | MEDIUM | ⬜ Pending |
+| 39.11 | **Editor.tsx encryption guards lack `.toLowerCase()` in 6 locations** — All use `.trim().startsWith("enc:")` without `.toLowerCase()`. If prefix is ever uppercase, guards fail to block editing of encrypted content | `Editor.tsx:152,367,374,383,405,536` | MEDIUM | ⬜ Pending |
+| 39.12 | **`renderLexicalContent` encrypted check lacks `.toLowerCase()`** — Uses `raw.trim().startsWith("enc:")` without `.toLowerCase()`. Uppercase prefix renders encrypted content as plaintext in card preview | `SpatialCanvas.tsx:18` | MEDIUM | ⬜ Pending |
+| 39.13 | **Pull-to-refresh has no timeout/abort mechanism** — `fetchAndMergeDocs()` is an async promise with no timeout. If network hangs, `isRefreshing` stays `true` forever, permanently blocking future pull gestures and sidebar drawer | `Sidebar.tsx:216-226` | MEDIUM | ⬜ Pending |
+| 39.14 | **Back gesture exits app (35.1 unresolved)** — No `onBackPressed()`, `dispatchKeyEvent()`, or back-gesture interception exists. Physical back button immediately exits app instead of navigating WebView history or closing modals | `MainActivity.java` | MEDIUM | ⬜ Pending |
+| 39.15 | **composeApp consolidation not done (35.4 unresolved)** — `composeApp/` still fully exists with its own AndroidManifest (insecure `allowBackup="true"`), Kotlin sources, `build.gradle.kts`. `settings.gradle.kts:17` still includes it. Duplicate manifests cause confusion | `composeApp/`, `settings.gradle.kts:17` | MEDIUM | ⬜ Pending |
+| 39.16 | **Share sheet handler not implemented (35.7 unresolved)** — No `onNewIntent()` override, no `ACTION_SEND` intent-filter on Capacitor activity. Share from other apps does nothing | `MainActivity.java` | MEDIUM | ⬜ Pending |
+
+### 🟢 LOW
+
+| # | Vulnerability | File:Line | Severity | Status |
+|---|---------------|-----------|----------|--------|
+| 39.17 | `highlightText()` regex `g` flag causes intermittent match highlighting | `QuickSearchModal.tsx:100-113` | LOW | ⬜ Pending |
+| 39.18 | Non-passive touch listeners cause scroll jank warnings | `Sidebar.tsx:430-432` | LOW | ⬜ Pending |
+| 39.19 | `SemanticSearchModal.tsx` orphaned dead code (replaced by QuickSearchModal) | `SemanticSearchModal.tsx` | LOW | ⬜ Pending |
+| 39.20 | Export dropdown menu items (and many buttons) lack `type="button"` | `AppHeader.tsx:152-154` | LOW | ⬜ Pending |
+| 39.21 | Export dropdown menu items lack `e.stopPropagation()` — harmless double-close | `AppHeader.tsx:152-154` | LOW | ⬜ Pending |
+
+---
+
+## Phase 40: Strategic Recommendations — Competitive Analysis, Growth, Performance, UX (July 2026)
+
+Comprehensive research across competitive analysis, user acquisition, performance optimization, and UX polish. All items are recommendations for the product roadmap.
+
+### 40.1 Differentiators (Lean Into These)
+
+Graphite's unique strengths that no competitor fully matches. Double down on these.
+
+| # | Differentiator | Description | Effort | Impact |
+|---|----------------|-------------|--------|--------|
+| D1 | **Unified Document + Canvas Workspace** | Blend rich text (Lexical) + inline Excalidraw canvas + spatial whiteboard in one app. No competitor does this: Obsidian needs plugin, Notion has limited drawing, Logseq has separate whiteboards. Make canvas blocks easily inserted in docs, bidirectional drag-and-drop between canvas cards and text blocks | Medium | High |
+| D2 | **Executable Code Sandbox** | Web Worker code execution inside notes (unique). Expand to Python via Pyodide, SQL, output rendering (charts/tables), inline execution within documents | Large | High |
+| D3 | **E2E Encryption as Core Feature** | AES-256-GCM + WebAuthn hardware key support. Market as "the only note app with zero-knowledge encryption + local Git + open-source". Make encryption seamless and default | Medium | High |
+| D4 | **Built-in AI + Local LLM** | First-party AI with Ollama/transformers.js (works offline, free, private). Notion charges $20/user/mo. Add local semantic search, AI flashcards, AI-suggested connections, on-device RAG | Large | High |
+| D5 | **Git-Based Version History** | isomorphic-git commits on every save. Push to GitHub/GitLab, visual diffs, branching per document | Medium | High |
+| D6 | **Open Canvas Format (.graphite-canvas)** | Interoperable, git-diffable canvas files. Allow import/export to Obsidian Excalidraw format and JSON Canvas spec | Medium | Medium |
+
+### 40.2 Critical Catch-Up Features (Required for Competitiveness)
+
+Features competitors have that Graphite must implement to be viable.
+
+| # | Feature | Why | Effort | Impact |
+|---|---------|-----|--------|--------|
+| C1 | **Database / Spreadsheet Block** | Single biggest gap vs Notion. Table/board/calendar/gallery/list views, column types, sort/filter. Start with table + board; add calendar/gallery v2 | XLarge | High |
+| C2 | **Real Plugin Ecosystem** | Obsidian has 2700+ plugins. Fix sandbox origin bug (39.3), ship marketplace, create public API, dev docs, discovery UI | XLarge | High |
+| C3 | **True Cloud Sync (Server Required)** | Current sync is local-only with fake Supabase wiring. Need real multi-device sync via Yjs CRDT relay | Large | High |
+| C4 | **First-Class Mobile Apps** | PWA not enough vs Notion/Obsidian native apps. Push notifications, share sheet, widgets, biometric auth, offline-first | XLarge | High |
+| C5 | **Quick Switcher with Deep Search** | Cmd+P should search titles, content, headings, block IDs, symbols, commands, recent files, tabs. Add fuzzy matching and search operators | Medium | High |
+| C6 | **Dual-Pane / Split View** | Tab-based only (one view at a time). Add resizable split: editor+graph, editor+canvas, editor+backlinks | Medium | High |
+| C7 | **Tabbed Multi-Document** | Currently single-document view. Add browser-style tabs with drag reorder, pinning, persistence | Large | High |
+| C8 | **Command Palette** | Ctrl+Shift+P for all actions: navigation, export, toggles, plugin commands. Integrate with plugin system | Large | High |
+| C9 | **Global Undo/Redo** | Undo/redo works only inside editor. Document create/rename/delete/move has no undo. Implement global action history | Large | High |
+| C10 | **Outliner / Block-Focused Mode** | Logseq/Roam core workflow. Add indent/outdent, collapse/expand hierarchy, zoom into block. Every block gets a UUID | Large | High |
+| C11 | **PDF Annotation** | PDF import exists but no annotation. Add highlight, underline, comment → graph-linked blocks. PDF.js already in deps | Large | High |
+| C12 | **Unlinked Mentions** | Auto-detect when note title appears without `[[link]]`. Surface in backlinks panel | Small | Medium |
+| C13 | **Web Clipper** | Browser extension to save pages as notes. Skipped in Phase 11.8, every competitor has one | Medium | Medium |
+| C14 | **Public API + Integrations** | REST API for programmatic note creation, Zapier/Make integration, webhook triggers | XLarge | Medium |
+
+### 40.3 User Acquisition Strategy
+
+| # | Action | Channel | Description | Effort | Priority |
+|---|--------|---------|-------------|--------|----------|
+| G1 | **Create README.md** | GitHub | No README exists. Add hero GIF, feature table vs competitors, 5-step quick-start, star CTA | Small | Now |
+| G2 | **Launch Discord server** | Community | Central hub for users/contributors. Daily builds, feedback, showcase channel | Small | Now |
+| G3 | **Good First Issues + CONTRIBUTING.md** | GitHub | Label 5-10 beginner issues, create contributor ladder, reply to all PRs within 24h | Small | Now |
+| G4 | **"Why I Built Graphite" blog post** | Dev.to/HN/Medium | Technical honest post. "Show HN: open-source Notion alternative with local-first E2EE" | Small | Now |
+| G5 | **Coordinated launch window** | Multi-channel | Seed stars → Product Hunt (Day 0) → Show HN (Day 1) → Reddit r/selfhosted (Day 2). All within 48h | Medium | Now |
+| G6 | **Product Hunt launch** | PH | Self-hunt, maker comment immediately, reply every comment within 24h | Medium | Now |
+| G7 | **Show HN** | HN | Title: "Show HN: Graphite Studio — open-source note-taking with inline canvas & E2EE" | Small | Now |
+| G8 | **Reddit posts** | r/selfhosted, r/opensource, r/NoteTaking | Write like a colleague, not marketing. AFFiNE got 2K+ stars from Reddit alone month 1 | Medium | Now |
+| G9 | **Ship working cloud sync** | Core blocker | Pro tier ($6/mo) needs cloud sync. Currently 90% stubs. Without this, conversion funnel doesn't exist | Large | Now |
+| G10 | **Self-host guide** | r/selfhosted | Docker Compose + 5-step guide. Eliminates "what if you go under?" objection | Medium | Now |
+| G11 | **PWA to app stores** | PWABuilder | Package for Microsoft Store (free), Google Play ($25 TWA), iOS ($99/yr). PWA already has vite-plugin-pwa | Medium | Now |
+| G12 | **Weekly demo videos** | X/LinkedIn/YouTube | 30-60s screen recordings of specific features. Cadence > quality for compounding | Medium | Next |
+| G13 | **Tutorial series** | Blog/YouTube | "Getting Started", "Using Spatial Canvas", "Building a Knowledge Graph" | Medium | Next |
+| G14 | **Newsletter outreach** | TLDR/JS Weekly/Console | 60K-200K devs each. One mention > weeks of social media | Small | Next |
+| G15 | **Obsidian importer tool** | Migration | One-click import from Obsidian vault (.md files + folder structure). Targets exact ICP with switching intent | Medium | Next |
+| G16 | **awesome-* list submissions** | GitHub | Submit to awesome-selfhosted, awesome-notes, awesome-productivity. Permanent SEO backlinks | Small | Next |
+| G17 | **MCP server (AI integration)** | Developer | Let Cursor/Claude/VS Code read/write notes via Model Context Protocol | Medium | Next |
+| G18 | **Excalidraw ecosystem cross-promotion** | Partnership | Publish "How Graphite uses Excalidraw". Obsidian Excalidraw plugin has 5M+ installs — those users are ICP | Small | Next |
+
+### 40.4 Performance Optimization
+
+| # | Issue | Current Behavior | Fix | Effort | Impact |
+|---|-------|-----------------|-----|--------|--------|
+| P1 | **No lazy loading for tab views** | GraphView, SpatialCanvas, KanbanBoard, all modals eagerly imported in App.tsx | React.lazy() + Suspense for all tab views and modal components. Reduces initial JS by ~40% | Medium | High |
+| P2 | **No Vite manualChunks** | All large deps (Lexical, Excalidraw, d3, mermaid, katex, pdfjs) in single monolithic chunk | Add manualChunks in vite.config.ts: vendor-lexical, vendor-excalidraw, vendor-d3, vendor-mermaid, vendor-pdf, vendor-transformers | Small | High |
+| P3 | **No React.memo on any component** | Store changes re-render entire tree including deeply nested children | Wrap GraphView, SpatialCanvas, KanbanBoard, InfoTab, Sidebar, Editor, AppHeader in React.memo. Use atomic Zustand selectors | Medium | High |
+| P4 | **SpatialCanvas no viewport culling** | Renders ALL cards (DOM nodes + SVG edges + minimap) even off-screen | Implement viewport culling via IntersectionObserver or math. Only render cards in visible viewport | Large | High |
+| P5 | **GraphView simulation restarts on every nodes change** | Any store change creates new nodes array reference, killing simulation | Deep compare or use stable `simKey` counter. Only restart on actual topology change | Small | Medium |
+| P6 | **GraphView RAF runs continuously** | RAF loop unconditional as long as `mounted` is true, even when simulation settled | Stop RAF when `simulation.alpha() <= alphaMin()`. Only resume on interaction | Small | Medium |
+| P7 | **`parseStats()` runs per keystroke** | Full-lexical-AST traversal on every typed character for word/char/backlink counts | Throttle to once per second during typing. Cache and return stale stats during bursts | Small | Medium |
+| P8 | **Excalidraw CSS eagerly loaded** | `@excalidraw/excalidraw/index.css` in main.tsx adds ~200KB CSS to critical path | Move Excalidraw CSS import into lazy-loaded Canvas component | Small | Medium |
+| P9 | **Google Fonts render-blocking** | 3 font families loaded with no `display=swap`, blocking first paint | Add `&display=swap`, preconnect, or self-host via @fontsource packages | Small | Medium |
+| P10 | **Editor plugins registered eagerly** | All 6 plugins + 7 nodes registered on every Editor mount even when not needed | Register only CoreNodes eagerly. On-demand registration for canvas/image/code blocks | Medium | Medium |
+| P11 | **`renderLexicalContent` per-card per frame** | Parses JSON AST for every card on every render | Memoize per card ID. Extract Card into memoized sub-component | Small | Medium |
+| P12 | **autoSuggestTags on every save** | Hits AI service on every 300ms debounce flush for untagged docs | Add per-session cooldown flag. Debounce tag suggestions at 30s interval | Small | Medium |
+| P13 | **Full-text re-index on every documents change** | App.tsx re-indexes ALL docs on every store mutation, O(n) per keystroke | Only re-index changed doc. Debounce entire operation to 2s. Move to Web Worker | Small | Medium |
+| P14 | **No compression plugin** | Production builds serve uncompressed JS/CSS | Add vite-plugin-compression with Brotli + gzip | Small | Medium |
+| P15 | **No `prefers-reduced-motion`** | All 20+ CSS animations run on mobile causing jank | Add reduce-motion media query disabling animations/transitions for accessibility and perf | Small | Medium |
+| P16 | **Inline arrow functions on every card button** | 7 inline onClick handlers per card × 100+ cards = 700 new functions per render | Extract Card as React.memo sub-component with useCallback handlers or event delegation | Medium | Medium |
+| P17 | **PDF import sync blocks main thread** | pdfjs-dist (~6MB) loaded and executed synchronously on PDF drop | Lazy-import pdfImport, show loading spinner. Add 10MB mobile size limit | Small | Medium |
+| P18 | **Restart simulation on every zoom/pan** | Zoom/pan state changes rebuild d3 simulation, losing pinned nodes | Decouple zoom/pan from simulation via useRef for camera state during interactions | Small | Medium |
+| P19 | **Inline style causes full repaint on zoom** | `backgroundSize` changes on every zoom via inline style | Use CSS custom property `--zoom` and `will-change: transform` for GPU layer promotion | Small | Low |
+| P20 | **GraphView mouse handler creates objects at 60fps** | `{ x, y }` object literal on every mousemove triggers re-render | Use refs during drag/pan, commit to Zustand state only on mouseup | Small | Low |
+| P21 | **PWA cache max 3MB may miss Excalidraw chunk** | Excalidraw individual chunks can exceed 3MB limit | Increase to 6MB or use runtimeCaching instead of precaching for canvas chunk | Small | Low |
+| P22 | **Move graph layouts + Excalidraw library to IndexedDB** | localStorage synchronous reads block main thread | Use idbStorage.ts for non-blocking async get/set | Small | Low |
+
+### 40.5 UX & Polish Improvements
+
+| # | Issue | Current State | Fix | Effort | Impact |
+|---|-------|--------------|-----|--------|--------|
+| U1 | **No first-run experience** | App lands on blank editor or auth screen with no guidance | Welcome wizard on first launch: use-case selection, template picker, quick-start tips | Medium | High |
+| U2 | **Empty states are text-only** | "Enter some text…", empty backlinks/search/graph have no guidance | Illustrated empty states with actionable CTAs ("Create your first note", "Link notes to see them here") | Small | High |
+| U3 | **Slash command no discoverability** | No hint that typing `/` opens a menu | Add "+" button on empty block left margin (like Notion). Show pill hint on first use | Small | High |
+| U4 | **No back/forward history** | No in-app navigation history. Browser back exits app | Implement navigation history stack. Alt+←/→ shortcuts | Large | High |
+| U5 | **No light mode** | Entire app is dark-only CSS | Implement `[data-theme="light"]` theme. Detect via `prefers-color-scheme` | Large | High |
+| U6 | **Missing aria-labels on ~40% of buttons** | Export, zoom, card action buttons lack `aria-label` | Audit all icon-only buttons, add descriptive `aria-label` to each | Medium | High |
+| U7 | **Incomplete focus trapping** | QuickSearchModal missing `aria-modal="true"`. Some modals still lack trap | Implement FocusTrap component. `aria-modal="true"` + `role="dialog"` on all modals | Medium | High |
+| U8 | **Modals not bottom sheets on mobile** | Centered card modals are cramped on 390px screens | On <600px, render as bottom sheets: slide up, rounded top corners, full-width, max 85% height | Medium | High |
+| U9 | **Save indicator missing "Saved" state** | Only "Saving..." shown, never transitions to "Saved" | Add `isSaved` state with 2s green checkmark after debounce completes | Small | High |
+| U10 | **No skip-to-content link** | Tab cycles through sidebar/header before editor. No skip for keyboard users | Visually-hidden "Skip to content" as first focusable element | Small | High |
+| U11 | **Thumb-zone unoptimized** | Primary actions (new doc, search) in header, unreachable one-handed on large phones | Move to bottom nav or add FAB near bottom-right | Medium | High |
+| U12 | **No block menu (+ button)** | Only `/` command exists for inserting blocks | Notion-style "+" button on block hover left gutter | Medium | High |
+| U13 | **Toasts lack icons and actions** | Bare text, no icon, no undo action, no type badge | Add icon per type, optional "Undo" action button, swipe-to-dismiss | Small | High |
+| U14 | **No breadcrumbs** | No contextual path indicator showing doc location in folder tree | Breadcrumb bar above editor showing full folder path, clickable | Medium | Medium |
+| U15 | **Slash menu flat list** | 20+ options with no grouping. No category headers | Add sticky category dividers: "Basic", "Media", "AI", "Advanced" | Small | Medium |
+| U16 | **Template preview missing** | Template shows name+description but no rendered content preview | Add preview pane using read-only Lexical view or rendered Markdown | Medium | Medium |
+| U17 | **No consistent spacing system** | Padding/margin values are arbitrary (16/20/24/12/14/10/8px) with no tokens | Define spacing scale (4/8/12/16/24/32/48px) in CSS vars. Audit and replace hardcoded values | Medium | Medium |
+| U18 | **No recent docs in sidebar** | Sidebar shows folder tree but no "Recent" section | Add "Recent" section above folder tree showing last 5-8 opened docs | Small | Medium |
+| U19 | **Contrast ratio may fail WCAG AA** | `--text-muted: hsl(225,10%,55%)` on `--bg-primary: hsl(225,20%,9%)` ≈ 4.2:1 | Audit all text/background pairs, lighten `--text-muted` to 60%+ lightness | Small | High |
+| U20 | **Toast lacks `aria-live` region** | `role="alert"` without `aria-live="polite"`. Screen readers may not announce | Add `aria-live="polite"` to toast container. Focus on critical error toasts | Small | Medium |
+| U21 | **No offline indicator** | PWA works offline but gives no connectivity status | Add online/offline badge in header. Queue counter for pending offline changes | Small | Medium |
+| U22 | **Drag handle mouse-only** | Block drag requires mousemove. No touch support, no visual drop indicator | Add onTouchStart/Move/End. Long-press activates. Blue line drop indicator between blocks | Medium | Medium |
+| U23 | **Auto-suggest tags per session** | Tags suggested on every save for untagged docs. Add cooldown | Already covered by P12. Ensure tag suggestion fires max 1x per doc per session | Small | Low |
+| U24 | **Heavy inline styles** | ~40% of component styling uses inline `style={{}}` props | Migrate to CSS classes. Create utility classes for dropdowns, menus, dividers | Large | Medium |
+| U25 | **Scrollbar styling** | Default OS scrollbars throughout dark app | Custom `::-webkit-scrollbar` styles: thin, rounded, transparent track, subtle accent thumb | Small | Medium |
+| U26 | **Block color/highlight** | No text highlight/marker | Add highlight format (yellow/green/blue/pink). Toolbar button + `/highlight` command | Small | Medium |
