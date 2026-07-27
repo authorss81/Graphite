@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { decodeBase64, encodeBase64 } from "./bridge";
 import type { GraphiteDoc } from "./docStorage";
+import { logToNative } from "./bridge";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as
@@ -49,6 +50,7 @@ export class SupabaseSyncService {
     offlineQueue: [],
   };
   private session: any = null;
+  private onPullCallback: ((docs: Record<string, GraphiteDoc>) => void) | null = null;
 
   private constructor() {
     this.loadOfflineQueue();
@@ -57,12 +59,14 @@ export class SupabaseSyncService {
         this.session = session;
         if (session) {
           this.flushOfflineQueue().catch(console.error);
+          this.autoPull().catch(console.error);
         }
       });
       supabase.auth.onAuthStateChange((_event, session) => {
         this.session = session;
         if (session) {
           this.flushOfflineQueue().catch(console.error);
+          this.autoPull().catch(console.error);
         }
       });
     }
@@ -70,6 +74,21 @@ export class SupabaseSyncService {
       window.addEventListener("online", () => {
         this.flushOfflineQueue().catch(console.error);
       });
+    }
+  }
+
+  setOnPullCallback(cb: (docs: Record<string, GraphiteDoc>) => void) {
+    this.onPullCallback = cb;
+  }
+
+  private async autoPull() {
+    try {
+      const docs = await this.pullFromSupabase();
+      if (this.onPullCallback && Object.keys(docs).length > 0) {
+        this.onPullCallback(docs);
+      }
+    } catch (err) {
+      logToNative("warn", `auto-pull failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -159,6 +178,58 @@ export class SupabaseSyncService {
     this.state.status = failed.length > 0 ? "error" : "idle";
   }
 
+  async pullFromSupabase(): Promise<Record<string, GraphiteDoc>> {
+    if (!supabase || !this.session) return {};
+
+    const { data: nodes, error: nodeError } = await supabase
+      .from("note_nodes")
+      .select("*");
+
+    if (nodeError) throw nodeError;
+    if (!nodes || nodes.length === 0) return {};
+
+    const noteIds = nodes.map((n: any) => n.id);
+    const { data: blocks, error: blockError } = await supabase
+      .from("block_entities")
+      .select("*")
+      .in("note_id", noteIds)
+      .eq("type", "document_content");
+
+    if (blockError) throw blockError;
+
+    const docs: Record<string, GraphiteDoc> = {};
+    for (const node of nodes) {
+      const block = blocks?.find((b: any) => b.note_id === node.id);
+      let editorState = "";
+      let canvasData = null;
+
+      if (block?.content) {
+        try {
+          const parsed = JSON.parse(block.content);
+          editorState = parsed.editorState
+            ? decodeBase64(parsed.editorState)
+            : "";
+          canvasData = parsed.canvasData || null;
+        } catch {}
+      }
+
+      docs[node.id] = {
+        id: node.id,
+        title: node.title || "Untitled",
+        isFolder: node.is_folder || false,
+        parentId: node.parent_id || null,
+        updatedAt: new Date(node.updated_at || Date.now()).getTime(),
+        editorState,
+        canvasData,
+        tags: node.tags || [],
+        isPinned: node.is_pinned || false,
+        isArchived: node.is_archived || false,
+      };
+    }
+
+    return docs;
+  }
+
   async syncDocument(docId: string, docPayload: Partial<GraphiteDoc>): Promise<void> {
     if (!supabase || !this.session) {
       this.queueOfflineOp({ docId, action: "upsert", payload: docPayload });
@@ -177,6 +248,7 @@ export class SupabaseSyncService {
       const nodePromise = supabase.from("note_nodes").upsert([
         {
           id: docId,
+          user_id: this.session.user.id,
           title: docPayload.title || "Untitled",
           is_folder: docPayload.isFolder || false,
           parent_id: docPayload.parentId || null,

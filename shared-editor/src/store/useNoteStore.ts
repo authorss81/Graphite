@@ -86,6 +86,7 @@ interface NoteStore {
   updateDocMetadata: (id: string, updates: Partial<Pick<GraphiteDoc, "tags" | "properties">>) => void;
   setSpatialData: (cards: SpatialCard[], edges: SpatialEdge[]) => void;
   loadNextPage: () => void;
+  fetchAndMergeDocs: () => Promise<void>;
 }
 
 function persistAndSet(documents: Record<string, GraphiteDoc>, extra: Partial<NoteStore> = {}) {
@@ -112,6 +113,34 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setGitStatus: (status) => set({ gitStatus: status }),
+
+  fetchAndMergeDocs: async () => {
+    const syncService = SupabaseSyncService.getInstance();
+    const remoteDocs = await syncService.pullFromSupabase();
+    if (Object.keys(remoteDocs).length === 0) return;
+
+    const merged = { ...get().documents };
+    for (const [id, remoteDoc] of Object.entries(remoteDocs)) {
+      const local = merged[id];
+      if (!local || remoteDoc.updatedAt > local.updatedAt) {
+        merged[id] = remoteDoc;
+      }
+    }
+    saveDocs(merged);
+    const state: Partial<NoteStore> = { documents: merged, docTotal: Object.keys(merged).length };
+    const currentDoc = merged[get().docId];
+    if (currentDoc) {
+      state.editorState = currentDoc.editorState;
+      state.canvasData = currentDoc.canvasData;
+      const stats = parseStats(currentDoc.editorState);
+      state.wordCount = stats.wordCount;
+      state.charCount = stats.charCount;
+      state.backlinks = stats.backlinks;
+      state.totalTodos = stats.totalTodos;
+      state.completedTodos = stats.completedTodos;
+    }
+    set(state as any);
+  },
 
   initDocs: () => {
     let documents = loadDocs();
@@ -144,11 +173,44 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       ...parseStats(current.editorState),
     });
 
+    // Register auto-pull callback (fired after auth state change in SupabaseSyncService)
+    const syncService = SupabaseSyncService.getInstance();
+    syncService.setOnPullCallback(() => {
+      get().fetchAndMergeDocs();
+    });
+
+    // Try immediate pull if session already exists
+    syncService.pullFromSupabase().then((remoteDocs) => {
+      if (Object.keys(remoteDocs).length === 0) return;
+      const merged = { ...get().documents };
+      for (const [id, remoteDoc] of Object.entries(remoteDocs)) {
+        const local = merged[id];
+        if (!local || remoteDoc.updatedAt > local.updatedAt) {
+          merged[id] = remoteDoc;
+        }
+      }
+      saveDocs(merged);
+      const state: Partial<NoteStore> = { documents: merged, docTotal: Object.keys(merged).length };
+      const currentDoc = merged[get().docId];
+      if (currentDoc) {
+        state.editorState = currentDoc.editorState;
+        state.canvasData = currentDoc.canvasData;
+        const stats = parseStats(currentDoc.editorState);
+        state.wordCount = stats.wordCount;
+        state.charCount = stats.charCount;
+        state.backlinks = stats.backlinks;
+        state.totalTodos = stats.totalTodos;
+        state.completedTodos = stats.completedTodos;
+      }
+      set(state as any);
+    }).catch((err) => {
+      console.error("[Sync] initial pull failed:", err);
+    });
+
     // Subscribe to Supabase Realtime updates, clean up previous subscription
     if (unsubscribeRealtime) {
       unsubscribeRealtime();
     }
-    const syncService = SupabaseSyncService.getInstance();
     unsubscribeRealtime = syncService.subscribeRealtime(
       (updatedId, partialDoc) => {
         const currentDocs = get().documents;

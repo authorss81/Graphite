@@ -213,11 +213,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         setIsRefreshing(true);
         setPullDistance(50);
         toast("Syncing with Supabase...", "info");
-        setTimeout(() => {
-          setIsRefreshing(false);
-          setPullDistance(0);
-          toast("Sync complete!", "success");
-        }, 1200);
+        useNoteStore.getState().fetchAndMergeDocs()
+          .then(() => {
+            setIsRefreshing(false);
+            setPullDistance(0);
+            toast("Sync complete!", "success");
+          })
+          .catch((err) => {
+            setIsRefreshing(false);
+            setPullDistance(0);
+            toast("Sync failed: " + (err instanceof Error ? err.message : String(err)), "error");
+          });
       } else {
         setPullDistance(0);
       }
