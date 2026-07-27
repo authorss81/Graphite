@@ -1032,6 +1032,20 @@ a {
 }
 
 
+/* Slide animations for presentation mode */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideOutLeft {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-40px); }
+}
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(40px); }
+}
+
 /* Slash Command & WikiLink Menu Styles */
 .graphite-wikilink-pill {
   color: var(--accent-color);

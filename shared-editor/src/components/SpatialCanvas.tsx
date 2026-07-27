@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNoteStore } from "../store/useNoteStore";
 import type { SpatialCard, SpatialEdge } from "../utils/spatialCanvasStorage";
-import { Move, ArrowUpRight, ExternalLink, Trash2, Download, Upload, Layout, InfinityIcon, Search, Palette, Grid3X3, Minimize2, CheckSquare } from "lucide-react";
+import { Move, ArrowUpRight, ExternalLink, Trash2, Download, Upload, Layout, InfinityIcon, Search, Palette, Grid3X3, Minimize2, CheckSquare, Pen, Play, Monitor, X } from "lucide-react";
 import { ZoomControls } from "./ZoomControls";
 import { exportToJsonCanvas, importFromJsonCanvas, downloadCanvasFile, uploadCanvasFile } from "../utils/canvasFormat";
 import { saveSpatialCanvasData } from "../utils/spatialCanvasStorage";
@@ -96,6 +96,56 @@ export function SpatialCanvas() {
   // ── Color picker state ─────────────────────────────────────────────────
   const [colorPickerCardId, setColorPickerCardId] = useState<string | null>(null);
 
+  // ── Presentation / Slides mode ─────────────────────────────────────────
+  const [presentMode, setPresentMode] = useState(false);
+  const [presentCardIndex, setPresentCardIndex] = useState(0);
+  const [presentTransition, setPresentTransition] = useState<"none" | "slide-left" | "slide-right">("none");
+
+  useEffect(() => {
+    if (!presentMode) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "ArrowDown") { e.preventDefault(); nextSlide(); }
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); prevSlide(); }
+      else if (e.key === "Escape") { e.preventDefault(); exitPresentMode(); }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [presentMode, presentCardIndex, cards.length]);
+
+  const enterPresentMode = useCallback((cardId?: string) => {
+    const idx = cardId ? cards.findIndex(c => c.id === cardId) : 0;
+    if (idx >= 0) {
+      setPresentCardIndex(idx);
+      setPresentTransition("none");
+      setPresentMode(true);
+    }
+  }, [cards]);
+
+  const exitPresentMode = useCallback(() => {
+    setPresentMode(false);
+    setPresentTransition("none");
+  }, []);
+
+  const nextSlide = useCallback(() => {
+    if (presentCardIndex < cards.length - 1) {
+      setPresentTransition("slide-left");
+      setTimeout(() => {
+        setPresentCardIndex(i => i + 1);
+        setPresentTransition("none");
+      }, 200);
+    }
+  }, [presentCardIndex, cards.length]);
+
+  const prevSlide = useCallback(() => {
+    if (presentCardIndex > 0) {
+      setPresentTransition("slide-right");
+      setTimeout(() => {
+        setPresentCardIndex(i => i - 1);
+        setPresentTransition("none");
+      }, 200);
+    }
+  }, [presentCardIndex]);
+
   useEffect(() => {
     if (storeCards.length === 0 && Object.values(documents).some((d) => !d.isFolder)) {
       const docs = Object.values(documents).filter((d) => !d.isFolder);
@@ -133,6 +183,60 @@ export function SpatialCanvas() {
     setSpatialData(nextCards, nextEdges);
     saveSpatialCanvasData({ cards: nextCards, edges: nextEdges });
   }, [setSpatialData]);
+
+  // ── Nested canvases: sub-canvas per card ──────────────────────────────
+  const [expandedSubCanvas, setExpandedSubCanvas] = useState<string | null>(null);
+  const [subCanvasData, setSubCanvasData] = useState<Record<string, { cards: SpatialCard[]; edges: SpatialEdge[] }>>({});
+
+  const toggleSubCanvas = useCallback((cardId: string) => {
+    if (expandedSubCanvas === cardId) {
+      setExpandedSubCanvas(null);
+    } else {
+      if (!subCanvasData[cardId]) {
+        setSubCanvasData(prev => ({
+          ...prev,
+          [cardId]: {
+            cards: [
+              { id: `sub_${cardId}_1`, docId: `sub_${cardId}_1`, title: "Sub note 1", x: 20, y: 20, width: 200, height: 140 },
+            ],
+            edges: [],
+          }
+        }));
+      }
+      setExpandedSubCanvas(cardId);
+    }
+  }, [expandedSubCanvas, subCanvasData]);
+
+  const updateSubCanvas = useCallback((cardId: string, subCards: SpatialCard[], subEdges: SpatialEdge[]) => {
+    setSubCanvasData(prev => ({ ...prev, [cardId]: { cards: subCards, edges: subEdges } }));
+  }, []);
+
+  // ── Smart auto-resize: fit card to content ────────────────────────────
+  const fitCardToContent = useCallback((card: SpatialCard) => {
+    const doc = documents[card.docId];
+    const content = doc?.editorState || card.content || "";
+    const estLines = Math.ceil(content.length / 60);
+    const estHeader = 40;
+    const estPadding = 16;
+    const lineHeight = 16;
+    const minH = 100;
+    const maxH = 500;
+    const optimalH = Math.min(maxH, Math.max(minH, estHeader + estPadding + estLines * lineHeight));
+    const optimalW = Math.min(400, Math.max(200, Math.min(400, content.length * 0.4 + 160)));
+    return { width: Math.round(optimalW), height: Math.round(optimalH) };
+  }, [documents]);
+
+  const fitCardById = useCallback((cardId: string) => {
+    const card = cards.find(c => c.id === cardId);
+    if (!card) return;
+    const size = fitCardToContent(card);
+    persist(cards.map(c => c.id === cardId ? { ...c, width: size.width, height: size.height } : c), edges);
+  }, [cards, edges, persist, fitCardToContent]);
+
+  const fitAllCards = useCallback(() => {
+    const updated = cards.map(c => ({ ...c, ...fitCardToContent(c) }));
+    persist(updated, edges);
+  }, [cards, edges, persist, fitCardToContent]);
 
   const addNoteToCanvas = (docId: string) => {
     const doc = documents[docId];
@@ -298,6 +402,37 @@ export function SpatialCanvas() {
 
   const totalPages = pageMode && cards.length > 0 ? Math.ceil(cards.length / 3) : 0;
 
+  // ── Stylus / pointer support ──────────────────────────────────────────
+  const [stylusMode, setStylusMode] = useState(false);
+  const [pointerPressure, setPointerPressure] = useState(0);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    const isStylus = e.pointerType === "pen";
+    setStylusMode(isStylus);
+    setPointerPressure(e.pressure || 0);
+    if (isStylus) {
+      e.preventDefault();
+      isPanningRef.current = false;
+      setDraggedCardId(null);
+      return;
+    }
+    handleMouseDownCanvas(e as unknown as React.MouseEvent);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (e.pointerType === "pen") {
+      setPointerPressure(e.pressure || 0);
+      return;
+    }
+    handleMouseMoveCanvas(e as unknown as React.MouseEvent);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setStylusMode(false);
+    setPointerPressure(0);
+    handleMouseUpCanvas();
+  };
+
   // ── Mouse handlers ─────────────────────────────────────────────────────
   const handleMouseDownCanvas = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget || (e.target as HTMLElement).closest("svg")) {
@@ -373,6 +508,9 @@ export function SpatialCanvas() {
       <div
         ref={dropAreaRef}
         className="graphite-spatial-canvas"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
         onMouseDown={handleMouseDownCanvas}
         onMouseMove={handleMouseMoveCanvas}
         onMouseUp={handleMouseUpCanvas}
@@ -397,12 +535,19 @@ export function SpatialCanvas() {
           <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}><Move size={14} /> Spatial</span>
           <div style={{ width: 1, background: "var(--border-color)", margin: "0 2px" }} />
           <button type="button" onClick={arrangeGrid} title="Arrange All (grid)" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "3px" }}><Grid3X3 size={14} /> Arrange</button>
+          <button type="button" onClick={fitAllCards} title="Fit all cards to content" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "3px" }}><Minimize2 size={14} /> Fit Cards</button>
           <button type="button" onClick={() => downloadCanvasFile(exportToJsonCanvas(cards, edges), "spatial-canvas.graphite-canvas")} title="Export" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "3px" }}><Download size={14} /></button>
           <button type="button" onClick={async () => { const json = await uploadCanvasFile(); if (!json) return; const imported = importFromJsonCanvas(json); if (imported) persist(imported.cards, imported.edges); }} title="Import" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "3px" }}><Upload size={14} /></button>
           <div style={{ width: 1, background: "var(--border-color)", margin: "0 2px" }} />
           <button type="button" onClick={() => { setPageMode((p) => !p); setOffset({ x: 0, y: 0 }); setZoomLevel(1); }} title="Toggle page mode" style={{ background: pageMode ? "var(--accent-color)" : "none", border: "none", cursor: "pointer", color: pageMode ? "#fff" : "var(--text-muted)", padding: "4px 8px", fontSize: "12px", display: "flex", alignItems: "center", gap: "3px", borderRadius: "6px" }}>
             {pageMode ? <Layout size={14} /> : <InfinityIcon size={14} />} {pageMode ? "Page" : "Infinite"}
           </button>
+          {stylusMode && (
+            <span style={{ display: "flex", alignItems: "center", gap: "3px", fontSize: "11px", color: "#10b981", fontWeight: 500 }}>
+              <Pen size={12} /> Stylus {pointerPressure > 0 ? `(${Math.round(pointerPressure * 100)}%)` : ""}
+            </span>
+          )}
+          <button type="button" onClick={() => enterPresentMode()} title="Present slideshow" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "3px" }}><Play size={14} /> Present</button>
           <button type="button" onClick={() => setShowMinimap((p) => !p)} title="Toggle minimap" style={{ background: "none", border: "none", cursor: "pointer", color: showMinimap ? "var(--accent-color)" : "var(--text-muted)", padding: "4px" }}><Minimize2 size={14} /></button>
           <div style={{ width: 1, background: "var(--border-color)", margin: "0 2px" }} />
           <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
@@ -558,8 +703,11 @@ export function SpatialCanvas() {
                       </span>
                       <div style={{ display: "flex", alignItems: "center", gap: "2px", flexShrink: 0 }}>
                         <button type="button" className="graphite-toolbar-btn" title="Card color" onClick={(e) => { e.stopPropagation(); setColorPickerCardId(colorPickerCardId === card.id ? null : card.id); }} style={{ padding: "2px", color: "var(--text-muted)" }}><Palette size={12} /></button>
+                        <button type="button" className="graphite-toolbar-btn" title="Present this card" onClick={(e) => { e.stopPropagation(); enterPresentMode(card.id); }} style={{ padding: "2px" }}><Play size={12} /></button>
+                        <button type="button" className="graphite-toolbar-btn" title="Nested canvas" onClick={(e) => { e.stopPropagation(); toggleSubCanvas(card.id); }} style={{ padding: "2px", color: expandedSubCanvas === card.id ? "var(--accent-color)" : "var(--text-muted)" }}><Monitor size={12} /></button>
                         <button type="button" className="graphite-toolbar-btn" title="Connect arrow" onClick={(e) => { e.stopPropagation(); setConnectingFromId(card.id); }} style={{ padding: "2px", color: connectingFromId === card.id ? "#a855f7" : "var(--text-muted)" }}><ArrowUpRight size={12} /></button>
                         <button type="button" className="graphite-toolbar-btn" title="Open in Editor" onClick={(e) => { e.stopPropagation(); handleOpenDoc(card.docId); }} style={{ padding: "2px" }}><ExternalLink size={12} /></button>
+                        <button type="button" className="graphite-toolbar-btn" title="Fit to content" onClick={(e) => { e.stopPropagation(); fitCardById(card.id); }} style={{ padding: "2px" }}><Minimize2 size={12} /></button>
                         <button type="button" className="graphite-toolbar-btn" title="Remove" onClick={(e) => { e.stopPropagation(); removeCard(card.id); }} style={{ padding: "2px" }}><Trash2 size={12} color="#f87171" /></button>
                       </div>
                     </div>
@@ -570,6 +718,20 @@ export function SpatialCanvas() {
                           <div key={clr} onClick={() => setCardColor(card.id, clr)} style={{ width: 14, height: 14, borderRadius: "50%", background: clr, cursor: "pointer", border: card.color === clr ? "2px solid #fff" : "2px solid transparent" }} />
                         ))}
                         <div onClick={() => setCardColor(card.id, "")} style={{ width: 14, height: 14, borderRadius: "50%", background: "transparent", cursor: "pointer", border: "2px dashed var(--text-muted)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", color: "var(--text-muted)" }}>✕</div>
+                      </div>
+                    )}
+                    {/* Nested sub-canvas */}
+                    {expandedSubCanvas === card.id && subCanvasData[card.id] && (
+                      <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 100, width: 320, height: 240, background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "8px", boxShadow: "0 8px 32px rgba(0,0,0,0.5)", overflow: "hidden" }}>
+                        <div style={{ fontSize: "10px", padding: "4px 8px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid var(--border-color)", color: "var(--text-muted)", fontWeight: 600 }}>Sub-canvas</div>
+                        {subCanvasData[card.id].cards.map(subCard => (
+                          <div
+                            key={subCard.id}
+                            style={{ position: "absolute", top: subCard.y, left: subCard.x, width: subCard.width, height: subCard.height, background: "var(--bg-tertiary)", border: "1px solid var(--border-color)", borderRadius: "6px", padding: "4px 8px", fontSize: "10px", color: "var(--text-primary)", display: "flex", alignItems: "center", cursor: "pointer", overflow: "hidden" }}
+                          >
+                            {subCard.title}
+                          </div>
+                        ))}
                       </div>
                     )}
                     {/* Rich content */}
@@ -605,6 +767,87 @@ export function SpatialCanvas() {
             );
           })}
         </div>
+
+        {/* ── Presentation / Slides overlay ── */}
+        {presentMode && cards[presentCardIndex] && (
+          <div
+            style={{
+              position: "fixed", inset: 0, zIndex: 10000,
+              background: "#0a0a0f",
+              display: "flex", flexDirection: "column",
+              animation: presentTransition === "slide-left" ? "slideOutLeft 0.2s ease" :
+                          presentTransition === "slide-right" ? "slideOutRight 0.2s ease" : "fadeIn 0.25s ease",
+            }}
+          >
+            {/* Top bar */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+              <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+                Slide {presentCardIndex + 1} of {cards.length}
+              </span>
+              <button type="button" onClick={exitPresentMode} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "6px" }}><X size={18} /></button>
+            </div>
+            {/* Slide content */}
+            <div
+              key={cards[presentCardIndex].id}
+              style={{
+                flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "40px",
+                animation: "fadeIn 0.3s ease",
+              }}
+            >
+              <div
+                style={{
+                  width: "min(80vw, 900px)", height: "min(70vh, 600px)",
+                  background: "var(--bg-secondary)",
+                  borderRadius: "16px", border: "1px solid var(--border-color)",
+                  overflow: "hidden", display: "flex", flexDirection: "column",
+                  boxShadow: "0 24px 80px rgba(0,0,0,0.6)",
+                }}
+              >
+                {(() => {
+                  const card = cards[presentCardIndex];
+                  const doc = documents[card.docId];
+                  const content = renderLexicalContent(doc?.editorState);
+                  const cardColor = getCardColor(card);
+                  return (
+                    <>
+                      <div style={{ padding: "20px 28px", background: cardColor !== "transparent" ? cardColor : "rgba(255,255,255,0.03)", borderBottom: "1px solid var(--border-color)" }}>
+                        <h2 style={{ margin: 0, fontSize: "24px", fontWeight: 700, color: cardColor !== "transparent" ? "#fff" : "var(--text-primary)" }}>{card.title}</h2>
+                      </div>
+                      <div style={{ flex: 1, padding: "24px 28px", overflow: "auto", fontSize: "15px", lineHeight: "1.7", color: "var(--text-secondary)" }}>
+                        {card.imageUrl ? (
+                          <img src={card.imageUrl} alt={card.title} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: "8px" }} />
+                        ) : content.segments.length > 0 ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                            {content.segments.map((seg, i) => {
+                              if (seg.type.startsWith("h")) return <div key={i} style={{ fontWeight: 700, fontSize: "18px", color: "var(--text-primary)", marginTop: "12px" }}>{seg.text}</div>;
+                              if (seg.type === "bold") return <span key={i} style={{ fontWeight: 700 }}>{seg.text}</span>;
+                              if (seg.type === "li") return <div key={i} style={{ display: "flex", gap: "8px" }}><span style={{ color: "var(--accent-color)" }}>•</span><span>{seg.text}</span></div>;
+                              if (seg.type === "checked") return <div key={i} style={{ display: "flex", gap: "8px", color: "var(--text-muted)", textDecoration: "line-through" }}><span>☑</span><span>{seg.text}</span></div>;
+                              if (seg.type === "unchecked") return <div key={i} style={{ display: "flex", gap: "8px" }}><span>☐</span><span>{seg.text}</span></div>;
+                              return <div key={i}>{seg.text}</div>;
+                            })}
+                          </div>
+                        ) : (
+                          <div style={{ fontStyle: "italic", color: "var(--text-muted)" }}>{card.content || "No content"}</div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+            {/* Navigation */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", background: "rgba(255,255,255,0.03)", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+              <button type="button" onClick={prevSlide} disabled={presentCardIndex <= 0} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", color: "var(--text-primary)", padding: "8px 20px", cursor: "pointer", fontSize: "14px", opacity: presentCardIndex <= 0 ? 0.4 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                ◀ Previous
+              </button>
+              <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Arrow keys or click to navigate</span>
+              <button type="button" onClick={nextSlide} disabled={presentCardIndex >= cards.length - 1} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", color: "var(--text-primary)", padding: "8px 20px", cursor: "pointer", fontSize: "14px", opacity: presentCardIndex >= cards.length - 1 ? 0.4 : 1, display: "flex", alignItems: "center", gap: "6px" }}>
+                Next ▶
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
