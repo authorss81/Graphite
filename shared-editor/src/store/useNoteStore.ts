@@ -384,7 +384,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       canvasData: nextCanvasData,
     });
     createDocCommit(docId, cur.title, nextEditorState, nextCanvasData);
-    SupabaseSyncService.getInstance().syncDocument(docId, next).catch((err) => { console.error("[Sync] update failed:", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
+    SupabaseSyncService.getInstance().syncDocumentDebounced(docId, next);
   },
 
   updateContentForDoc: (targetDocId, editorState, canvasData) => {
@@ -417,7 +417,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
 
     createDocCommit(targetDocId, next.title, nextEditorState, nextCanvasData);
-    SupabaseSyncService.getInstance().syncDocument(targetDocId, next).catch((err) => { console.error("[Sync] updateForDoc failed:", err); toast("Sync error: " + (err instanceof Error ? err.message : String(err)), "error"); });
+    SupabaseSyncService.getInstance().syncDocumentDebounced(targetDocId, next);
   },
 
   togglePinDocument: (id) => {

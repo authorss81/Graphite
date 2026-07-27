@@ -51,6 +51,8 @@ export class SupabaseSyncService {
   };
   private session: any = null;
   private onPullCallback: ((docs: Record<string, GraphiteDoc>) => void) | null = null;
+  private pendingSyncs: Map<string, { payload: Partial<GraphiteDoc>; timer: ReturnType<typeof setTimeout> }> = new Map();
+  private readonly DEBOUNCE_MS = 500;
 
   private constructor() {
     this.loadOfflineQueue();
@@ -73,6 +75,48 @@ export class SupabaseSyncService {
     if (typeof window !== "undefined") {
       window.addEventListener("online", () => {
         this.flushOfflineQueue().catch(console.error);
+      });
+      window.addEventListener("beforeunload", () => {
+        this.flushPendingSyncs();
+      });
+    }
+  }
+
+  syncDocumentDebounced(docId: string, docPayload: Partial<GraphiteDoc>): void {
+    if (!supabase || !this.session) {
+      this.queueOfflineOp({ docId, action: "upsert", payload: docPayload });
+      this.state.status = "offline";
+      return;
+    }
+
+    const existing = this.pendingSyncs.get(docId);
+    if (existing) {
+      clearTimeout(existing.timer);
+      existing.payload = { ...existing.payload, ...docPayload, updatedAt: Date.now() };
+    }
+
+    const payload = existing ? existing.payload : { ...docPayload, updatedAt: Date.now() };
+    const timer = setTimeout(() => {
+      this.pendingSyncs.delete(docId);
+      this.syncDocument(docId, payload).catch((err) => {
+        console.error("[Sync] debounced sync failed:", err);
+      });
+    }, this.DEBOUNCE_MS);
+
+    if (existing) {
+      existing.timer = timer;
+    } else {
+      this.pendingSyncs.set(docId, { payload, timer });
+    }
+  }
+
+  flushPendingSyncs(): void {
+    const entries = Array.from(this.pendingSyncs.entries());
+    this.pendingSyncs.clear();
+    for (const [docId, { payload, timer }] of entries) {
+      clearTimeout(timer);
+      this.syncDocument(docId, payload).catch((err) => {
+        console.error(`[Sync] flush failed for ${docId}:`, err);
       });
     }
   }
