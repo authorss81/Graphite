@@ -362,6 +362,45 @@ The workflow already runs `npm run build` — add this step to deploy to Vercel:
 
 ---
 
+## 11. Verification-Free & Anonymous Android App Stores
+
+If you want to distribute Graphite without undergoing official ID verification, passport uploads, or tax registration (which Google Play, Apple App Store, and occasionally Amazon Developer Console require), you can publish your APK on these free, verification-free alternative platforms:
+
+### Option A: GitHub Releases (Best & Easiest)
+Since you already have the GitHub Actions release workflow configured in your repo, this is already fully automated!
+- **Verification needed**: None (just your normal GitHub account).
+- **How it works**: When you push a git tag (e.g. `git tag v1.0.0 && git push origin v1.0.0`), GitHub Actions compiles the signed production APK and attaches it to the releases tab on your repository.
+- **User experience**: You share the release link. Users download the `.apk` directly and install it.
+
+### Option B: Aptoide (Largest Alternative Store)
+Aptoide is a massive alternative app store with over 300 million users. They do not require ID verification or tax forms for free apps.
+- **Verification needed**: None.
+- **How to publish**:
+  1. Register for a free developer account at [Aptoide Connect](https://connect.aptoide.com/).
+  2. Create your own personal store name (e.g., `authorss81.aptoide.com`).
+  3. Upload the `app-release.apk` directly through their developer console.
+  4. The app is live instantly after an automated security scan.
+
+### Option C: Itch.io (Indie Tools & Games Store)
+Itch.io is a popular distribution platform for indie games and creator tools. It does not require any identity verification (KYC) to host free projects.
+- **Verification needed**: None (only needed if you request paid downloads).
+- **How to publish**:
+  1. Register for a free account on [itch.io](https://itch.io/) and verify your email.
+  2. Click **Create new project**. Set classification to **Tool** and type to **Downloadable**.
+  3. Upload the `app-release.apk` file and set the price to Free.
+
+### Option D: IzzyOnDroid / F-Droid (FOSS Index)
+IzzyOnDroid is a repository that hosts free and open-source Android apps. It does not require developer identity verification or KYC.
+- **Verification needed**: None (only a check to ensure your repo is open-source and tracker-free).
+- **How to publish**:
+  1. Go to the [IzzyOnDroid Submission Page](https://apt.izzysoft.de/fdroid/).
+  2. Submit your public GitHub repository URL.
+  3. Their system will scan your code and automatically build/package the APK directly from your GitHub releases every time you make a tag.
+
+> ⚠️ **Important Security Note on Google's Verification Mandate**: Beginning September 2026, Google is globally rolling out a mandatory developer verification requirement across all certified Android devices (devices with Google Play Services). If you distribute your APK outside of Google Play (such as via Aptoide or direct link), Google Play Protect may warn or block installations unless your app's package name and signing key are registered in the Google Developer Console. F-Droid and GitHub downloads are unaffected on uncertified/de-Googled devices.
+
+---
+
 ## Summary
 
 | What | Cost | Time |
