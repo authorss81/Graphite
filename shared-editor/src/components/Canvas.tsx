@@ -2,18 +2,59 @@ import { useMemo, useRef, useCallback, useEffect } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import { logToNative } from "../utils/bridge";
 
+const LIBRARY_KEY = "graphite_excalidraw_library";
+
+function loadLibrary(): any[] {
+  try {
+    const raw = localStorage.getItem(LIBRARY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLibrary(items: any[]) {
+  try {
+    localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+  } catch {}
+}
+
 interface CanvasProps {
   initialData?: any;
   onChange?: (data: any) => void;
 }
 
-// Compute a fast fingerprint of the canvas elements and styles to detect actual changes
+const BRUSH_PROPS = [
+  "viewBackgroundColor",
+  "currentItemStrokeColor",
+  "currentItemBackgroundColor",
+  "currentItemFillStyle",
+  "currentItemStrokeWidth",
+  "currentItemStrokeStyle",
+  "currentItemRoughness",
+  "currentItemOpacity",
+  "currentItemFontFamily",
+  "currentItemFontSize",
+  "currentItemTextAlign",
+  "currentItemRoundness",
+  "currentItemArrowType",
+] as const;
+
+function pickBrushState(appState: any): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const k of BRUSH_PROPS) {
+    if (appState?.[k] !== undefined) out[k] = appState[k];
+  }
+  return out;
+}
+
 function getCanvasFingerprint(elements: readonly any[], appState: any): string {
   let versionSum = 0;
   for (let i = 0; i < elements.length; i++) {
     versionSum += elements[i].version || 0;
   }
-  return `${elements.length}_${versionSum}_${appState?.viewBackgroundColor || ""}_${appState?.currentItemStrokeColor || ""}_${appState?.currentItemBackgroundColor || ""}`;
+  const brush = pickBrushState(appState);
+  return `${elements.length}_${versionSum}_${JSON.stringify(brush)}`;
 }
 
 export function Canvas({ initialData, onChange }: CanvasProps) {
@@ -22,11 +63,9 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
 
   const excalidrawAPIRef = useRef<any>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  // Track the last saved state to prevent infinite update loops
   const lastFingerprintRef = useRef<string>("");
+  const libraryLoadedRef = useRef(false);
 
-  // Initialize fingerprint from incoming data
   useEffect(() => {
     if (initialData) {
       lastFingerprintRef.current = getCanvasFingerprint(
@@ -36,22 +75,25 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
     }
   }, [initialData]);
 
-  const initialCanvasData = useMemo(() => ({
-    elements: initialData?.elements || [],
-    files: initialData?.files || undefined,
-    appState: {
-      viewBackgroundColor: initialData?.appState?.viewBackgroundColor || "#1e1e24",
-      currentItemStrokeColor: initialData?.appState?.currentItemStrokeColor,
-      currentItemBackgroundColor: initialData?.appState?.currentItemBackgroundColor,
-    },
-    scrollToContent: true,
-  }), [initialData]);
+  const savedLibrary = useMemo(() => loadLibrary(), []);
 
-  // Handle updates from user interaction
+  const initialCanvasData = useMemo(() => {
+    const brush = pickBrushState(initialData?.appState);
+    return {
+      elements: initialData?.elements || [],
+      files: initialData?.files || undefined,
+      libraryItems: savedLibrary,
+      appState: {
+        viewBackgroundColor: initialData?.appState?.viewBackgroundColor || "#1e1e24",
+        ...brush,
+      },
+      scrollToContent: true,
+    };
+  }, [initialData, savedLibrary]);
+
   const handleCanvasChange = useCallback((elements: readonly any[], appState: any, files: any) => {
     const fingerprint = getCanvasFingerprint(elements, appState);
-    
-    // Skip if nothing changed (prevents loop from updateScene triggers)
+
     if (fingerprint === lastFingerprintRef.current) {
       return;
     }
@@ -63,13 +105,13 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
     }
 
     debounceTimerRef.current = setTimeout(() => {
+      const brush = pickBrushState(appState);
       const dataToSave = {
         elements: [...elements],
         files,
         appState: {
+          ...brush,
           viewBackgroundColor: appState?.viewBackgroundColor || "#1e1e24",
-          currentItemStrokeColor: appState?.currentItemStrokeColor,
-          currentItemBackgroundColor: appState?.currentItemBackgroundColor,
         },
         timestamp: Date.now(),
       };
@@ -78,32 +120,46 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
     }, 200);
   }, []);
 
-  // Update Excalidraw scene when document changes externally
+  const handleLibraryChange = useCallback((libraryItems: any[]) => {
+    saveLibrary(libraryItems);
+  }, []);
+
+  const generateIdForFile = useCallback((file: File) => {
+    return `file_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  }, []);
+
   useEffect(() => {
     if (excalidrawAPIRef.current && initialData) {
       const newFingerprint = getCanvasFingerprint(
         initialData.elements || [],
         initialData.appState
       );
-      // Only call updateScene if it actually differs from what is currently loaded
       if (newFingerprint !== lastFingerprintRef.current) {
         lastFingerprintRef.current = newFingerprint;
         const currentAppState = excalidrawAPIRef.current.getAppState ? excalidrawAPIRef.current.getAppState() : {};
+        const brush = pickBrushState(initialData.appState);
         excalidrawAPIRef.current.updateScene({
           elements: initialData.elements || [],
           files: initialData.files,
           appState: {
             ...currentAppState,
+            ...brush,
             viewBackgroundColor: initialData.appState?.viewBackgroundColor || currentAppState.viewBackgroundColor || "#1e1e24",
-            currentItemStrokeColor: initialData.appState?.currentItemStrokeColor || currentAppState.currentItemStrokeColor,
-            currentItemBackgroundColor: initialData.appState?.currentItemBackgroundColor || currentAppState.currentItemBackgroundColor,
           },
         });
       }
     }
   }, [initialData]);
 
-  // Clean up debounce timer on unmount
+  useEffect(() => {
+    if (excalidrawAPIRef.current && !libraryLoadedRef.current && savedLibrary.length > 0) {
+      libraryLoadedRef.current = true;
+      excalidrawAPIRef.current.updateLibrary({
+        libraryItems: savedLibrary,
+      });
+    }
+  }, [savedLibrary]);
+
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
@@ -117,6 +173,10 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
       loadScene: false,
       saveToActiveFile: false,
       export: false as const,
+      saveAsImage: true,
+    },
+    tools: {
+      image: true,
     },
   }), []);
 
@@ -138,6 +198,8 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
         excalidrawAPI={(api) => { excalidrawAPIRef.current = api; }}
         initialData={initialCanvasData}
         onChange={handleCanvasChange}
+        onLibraryChange={handleLibraryChange}
+        generateIdForFile={generateIdForFile}
         UIOptions={uiOptions}
         detectScroll={true}
       />

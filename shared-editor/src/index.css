@@ -977,6 +977,60 @@ a {
   }
 }
 
+/* Excalidraw welcome screen (Made with Excalidraw logo) */
+.excalidraw .welcome-screen-center,
+.excalidraw .welcome-screen-decor {
+  display: none !important;
+}
+/* Library sidebar styling */
+.excalidraw .library-menu {
+  background: var(--bg-secondary) !important;
+  border-left: 1px solid var(--border-color) !important;
+}
+.excalidraw .library-menu .library-menu-items-container {
+  background: transparent !important;
+}
+
+/* Excalidraw image import button */
+.excalidraw .App-toolbar .ToolButton_type_button[title*="Image"],
+.excalidraw button[aria-label*="Image"],
+.excalidraw label[title*="Image"] {
+  display: flex !important;
+}
+
+/* Canvas brush presets button group */
+.canvas-brush-presets {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  align-items: center;
+}
+.canvas-brush-preset-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+}
+.canvas-brush-preset-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+}
+.canvas-brush-preset-btn.active {
+  border-color: var(--accent-color);
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent-color);
+}
+
 
 /* Slash Command & WikiLink Menu Styles */
 .graphite-wikilink-pill {

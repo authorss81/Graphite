@@ -7,9 +7,50 @@ const Excalidraw = lazy(() =>
   import("@excalidraw/excalidraw").then((m) => ({ default: m.Excalidraw })),
 );
 
+const LIBRARY_KEY = "graphite_excalidraw_library";
+
+function loadLibrary(): any[] {
+  try {
+    const raw = localStorage.getItem(LIBRARY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLibrary(items: any[]) {
+  try {
+    localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+  } catch {}
+}
+
 interface Props {
   nodeKey: string;
   data: CanvasData;
+}
+
+const BRUSH_PROPS = [
+  "viewBackgroundColor",
+  "currentItemStrokeColor",
+  "currentItemBackgroundColor",
+  "currentItemFillStyle",
+  "currentItemStrokeWidth",
+  "currentItemStrokeStyle",
+  "currentItemRoughness",
+  "currentItemOpacity",
+  "currentItemFontFamily",
+  "currentItemFontSize",
+  "currentItemTextAlign",
+  "currentItemRoundness",
+  "currentItemArrowType",
+] as const;
+
+function pickBrushState(appState: any): Record<string, any> {
+  const out: Record<string, any> = {};
+  for (const k of BRUSH_PROPS) {
+    if (appState?.[k] !== undefined) out[k] = appState[k];
+  }
+  return out;
 }
 
 export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
@@ -18,20 +59,18 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const nodeKeyRef = useRef(nodeKey);
   nodeKeyRef.current = nodeKey;
+  const excalidrawAPIRef = useRef<any>(null);
+  const libraryLoadedRef = useRef(false);
 
-  // Stroke buffering state
   const stateRef = useRef<{
     elements: any[];
     files: any;
-    appState: { viewBackgroundColor: string };
+    appState: Record<string, any>;
     timestamp: number;
   } | null>(null);
   const isDrawingRef = useRef(false);
   const commitLaterRef = useRef(false);
 
-
-
-  // Track drawing state via pointer events on container
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -42,7 +81,6 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
 
     const handlePointerUp = () => {
       if (isDrawingRef.current && commitLaterRef.current) {
-        // Commit the buffered state
         if (stateRef.current) {
           const currentData = stateRef.current;
           editor.update(() => {
@@ -59,7 +97,6 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
 
     const handlePointerLeave = () => {
       if (isDrawingRef.current && commitLaterRef.current) {
-        // Commit on leave as well
         if (stateRef.current) {
           const currentData = stateRef.current;
           editor.update(() => {
@@ -84,40 +121,53 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
     };
   }, [editor]);
 
-  // Clean up timer on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
 
-  const initialCanvasData = useMemo(() => ({
-    elements: data?.elements || [],
-    files: data?.files || undefined,
-    appState: {
-      viewBackgroundColor: data?.appState?.viewBackgroundColor || "#1e1e24",
-    },
-    scrollToContent: true,
-  }), [data]);
+  const savedLibrary = useMemo(() => loadLibrary(), []);
+
+  useEffect(() => {
+    if (excalidrawAPIRef.current && !libraryLoadedRef.current && savedLibrary.length > 0) {
+      libraryLoadedRef.current = true;
+      excalidrawAPIRef.current.updateLibrary({
+        libraryItems: savedLibrary,
+      });
+    }
+  }, [savedLibrary]);
+
+  const initialCanvasData = useMemo(() => {
+    const brush = pickBrushState(data?.appState);
+    return {
+      elements: data?.elements || [],
+      files: data?.files || undefined,
+      libraryItems: savedLibrary,
+      appState: {
+        viewBackgroundColor: data?.appState?.viewBackgroundColor || "#1e1e24",
+        ...brush,
+      },
+      scrollToContent: true,
+    };
+  }, [data, savedLibrary]);
 
   const onChange = useCallback(
     (elements: readonly any[], appState: any, files: any) => {
-      // Buffer the latest update instead of debouncing for every mouse move
-      // This prevents frame drops during drawing and defers actual commit
+      const brush = pickBrushState(appState);
       stateRef.current = {
         elements: [...elements],
         files,
         appState: {
+          ...brush,
           viewBackgroundColor: appState?.viewBackgroundColor || "#1e1e24",
         },
         timestamp: Date.now()
       };
-      
-      // For drawing strokes, commit on pointerUp instead of during drag
+
       if (isDrawingRef.current) {
         commitLaterRef.current = true;
       } else {
-        // For immediate updates (not drawing), commit with minimal debounce
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => {
           if (stateRef.current) {
@@ -135,11 +185,23 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
     [editor],
   );
 
+  const handleLibraryChange = useCallback((libraryItems: any[]) => {
+    saveLibrary(libraryItems);
+  }, []);
+
+  const generateIdForFile = useCallback((file: File) => {
+    return `file_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  }, []);
+
   const uiOptions = useMemo(() => ({
     canvasActions: {
       loadScene: false,
       saveToActiveFile: false,
       export: false as const,
+      saveAsImage: true,
+    },
+    tools: {
+      image: true,
     },
   }), []);
 
@@ -176,8 +238,11 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
       >
         <Excalidraw
           theme="dark"
+          excalidrawAPI={(api) => { excalidrawAPIRef.current = api; }}
           initialData={initialCanvasData}
           onChange={onChange}
+          onLibraryChange={handleLibraryChange}
+          generateIdForFile={generateIdForFile}
           UIOptions={uiOptions}
           detectScroll={true}
         />
