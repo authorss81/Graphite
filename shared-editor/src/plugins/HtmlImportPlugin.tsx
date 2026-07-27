@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $generateNodesFromDOM } from "@lexical/html";
 import { $getSelection, $isRangeSelection, PASTE_COMMAND, COMMAND_PRIORITY_LOW } from "lexical";
+import DOMPurify from "dompurify";
 
 export function HtmlImportPlugin() {
   const [editor] = useLexicalComposerContext();
@@ -17,7 +18,8 @@ export function HtmlImportPlugin() {
         if (html.trim() === "<br>" || html.trim() === "<br/>") return false;
 
         const parser = new DOMParser();
-        const dom = parser.parseFromString(html, "text/html");
+        const sanitized = DOMPurify.sanitize(html);
+        const dom = parser.parseFromString(sanitized, "text/html");
         const nodes = $generateNodesFromDOM(editor, dom);
         if (nodes.length === 0) return false;
 

@@ -106,7 +106,7 @@ export function TeamWorkspaceModal({
     if (!selectedWs || !inviteEmail.trim()) return;
     const displayName = inviteEmail.split("@")[0];
     await addMemberToWorkspace(selectedWs.id, {
-      userId: "user_" + Math.random().toString(36).slice(2, 8),
+      userId: "user_" + crypto.randomUUID().slice(0, 8),
       displayName,
       email: inviteEmail.trim(),
       avatarColor: randomAvatarColor(),

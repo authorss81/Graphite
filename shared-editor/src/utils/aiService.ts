@@ -74,6 +74,14 @@ async function* streamAnthropic(prompt: string, systemMsg: string, config: AICon
   }
 }
 
+function sanitizePrompt(input: string): string {
+  return input.replace(/^(User|Assistant|System):\s*/gim, "").slice(0, 8000);
+}
+
+function sanitizeOutput(output: string): string {
+  return output.replace(/<script[\s\S]*?<\/script>/gi, "").slice(0, 50000);
+}
+
 function isValidLocalEndpoint(endpoint: string): boolean {
   try {
     const url = new URL(endpoint);
@@ -129,23 +137,24 @@ function getStreamer(config: AIConfig): typeof streamOpenAI {
 
 export async function* streamLLM(prompt: string, contextText: string): AsyncGenerator<string> {
   const config = await getConfig();
+  const safePrompt = sanitizePrompt(prompt);
   const systemMsg = `You are Graphite AI, a helpful note-taking assistant. Use the following note context to answer accurately.\n\nNote Context:\n${contextText.slice(0, 8000)}`;
   const streamer = getStreamer(config);
 
   if (config.provider === "openai" && !config.openaiKey) {
-    return fallbackResponse(prompt, contextText);
+    return fallbackResponse(safePrompt, contextText);
   }
   if (config.provider === "anthropic" && !config.anthropicKey) {
-    return fallbackResponse(prompt, contextText);
+    return fallbackResponse(safePrompt, contextText);
   }
 
   try {
-    for await (const chunk of streamer(prompt, systemMsg, config)) {
-      yield chunk;
+    for await (const chunk of streamer(safePrompt, systemMsg, config)) {
+      yield sanitizeOutput(chunk);
     }
     return;
   } catch {
-    return fallbackResponse(prompt, contextText);
+    return fallbackResponse(safePrompt, contextText);
   }
 }
 

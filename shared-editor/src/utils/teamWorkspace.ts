@@ -134,7 +134,6 @@ export async function loadWorkspaces(): Promise<Workspace[]> {
 export async function saveWorkspaces(workspaces: Workspace[]): Promise<void> {
   const db = await getDB();
   const tx = db.transaction("workspaces", "readwrite");
-  await tx.store.clear();
   for (const ws of workspaces) {
     await tx.store.put(ws);
   }
@@ -153,53 +152,62 @@ export async function createWorkspace(name: string, ownerId: string, ownerName: 
     ],
     docIds: [],
   };
-  const all = await loadWorkspaces();
-  await saveWorkspaces([...all, ws]);
+  const db = await getDB();
+  await db.put("workspaces", ws);
   return ws;
 }
 
 export async function updateWorkspace(id: string, patch: Partial<Workspace>, userId?: string): Promise<void> {
   const uid = userId || getCurrentUserId();
   await requireAdmin(id, uid);
-  const all = await loadWorkspaces();
-  await saveWorkspaces(all.map((w) => (w.id === id ? { ...w, ...patch } : w)));
+  const db = await getDB();
+  const ws = await db.get("workspaces", id);
+  if (ws) {
+    await db.put("workspaces", { ...ws, ...patch });
+  }
 }
 
 export async function deleteWorkspace(id: string, userId?: string): Promise<void> {
   const uid = userId || getCurrentUserId();
   await requireOwnerOrAdmin(id, uid);
-  await saveWorkspaces((await loadWorkspaces()).filter((w) => w.id !== id));
+  const db = await getDB();
+  await db.delete("workspaces", id);
 }
 
 export async function addMemberToWorkspace(wsId: string, member: Omit<WorkspaceMember, "joinedAt">, userId?: string): Promise<void> {
   const uid = userId || getCurrentUserId();
   await requireAdmin(wsId, uid);
-  const all = await loadWorkspaces();
-  await saveWorkspaces(
-    all.map((w) => {
-      if (w.id !== wsId) return w;
-      if (w.members.some((m) => m.userId === member.userId)) return w;
-      return { ...w, members: [...w.members, { ...member, joinedAt: Date.now() }] };
-    })
-  );
+  const db = await getDB();
+  const ws = await db.get("workspaces", wsId);
+  if (ws && !ws.members.some((m) => m.userId === member.userId)) {
+    ws.members.push({ ...member, joinedAt: Date.now() });
+    await db.put("workspaces", ws);
+  }
 }
 
 export async function updateMemberRole(wsId: string, targetUserId: string, role: WorkspaceRole, userId?: string): Promise<void> {
   const uid = userId || getCurrentUserId();
   await requireAdmin(wsId, uid);
-  const all = await loadWorkspaces();
-  await saveWorkspaces(
-    all.map((w) => (w.id !== wsId ? w : { ...w, members: w.members.map((m) => (m.userId === targetUserId ? { ...m, role } : m)) }))
-  );
+  const db = await getDB();
+  const ws = await db.get("workspaces", wsId);
+  if (ws) {
+    const idx = ws.members.findIndex((m) => m.userId === targetUserId);
+    if (idx !== -1) {
+      ws.members[idx].role = role;
+      await db.put("workspaces", ws);
+    }
+  }
 }
 
 export async function removeMemberFromWorkspace(wsId: string, targetUserId: string, userId?: string): Promise<void> {
   const uid = userId || getCurrentUserId();
   await requireAdmin(wsId, uid);
-  const all = await loadWorkspaces();
-  await saveWorkspaces(
-    all.map((w) => (w.id !== wsId ? w : { ...w, members: w.members.filter((m) => m.userId !== targetUserId) }))
-  );
+  const db = await getDB();
+  const ws = await db.get("workspaces", wsId);
+  if (ws) {
+    ws.members = ws.members.filter((m) => m.userId !== targetUserId);
+    await db.put("workspaces", ws);
+  }
 }
 
 export async function loadComments(): Promise<Comment[]> {
@@ -211,7 +219,6 @@ export async function loadComments(): Promise<Comment[]> {
 export async function saveComments(comments: Comment[]): Promise<void> {
   const db = await getDB();
   const tx = db.transaction("comments", "readwrite");
-  await tx.store.clear();
   for (const c of comments) {
     await tx.store.put(c);
   }
@@ -239,17 +246,23 @@ export async function addComment(docId: string, authorId: string, authorName: st
     parentId,
     resolved: false,
   };
-  await saveComments([...(await loadComments()), comment]);
+  const db = await getDB();
+  await db.put("comments", comment);
   return comment;
 }
 
 export async function resolveComment(id: string): Promise<void> {
-  const all = await loadComments();
-  await saveComments(all.map((c) => (c.id === id ? { ...c, resolved: true } : c)));
+  const db = await getDB();
+  const c = await db.get("comments", id);
+  if (c) {
+    c.resolved = true;
+    await db.put("comments", c);
+  }
 }
 
 export async function deleteComment(id: string): Promise<void> {
-  await saveComments((await loadComments()).filter((c) => c.id !== id));
+  const db = await getDB();
+  await db.delete("comments", id);
 }
 
 export function subscribeToComments(callback: (comments: Comment[]) => void): () => void {

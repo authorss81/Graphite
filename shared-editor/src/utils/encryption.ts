@@ -326,16 +326,40 @@ export async function deriveKeyWithHardware(passphrase: string, salt: Uint8Array
   const enc = new TextEncoder();
   let keyMaterial = passphrase;
 
-  if (isHardwareKeyEnabled()) {
-    const stored = localStorage.getItem(WEBAUTHN_KEY_STORAGE);
-    if (stored) {
-      try {
-        const cred: WebAuthnCredential = JSON.parse(stored);
-        keyMaterial = passphrase + cred.id + cred.rawId;
-      } catch {
-        console.warn("deriveKeyWithHardware: failed to parse stored credential, falling back to passphrase-only");
-      }
-    } else {
+  const stored = localStorage.getItem(WEBAUTHN_KEY_STORAGE);
+  if (stored) {
+    try {
+      const cred: WebAuthnCredential = JSON.parse(stored);
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          allowCredentials: [{
+            id: base64ToBuf(cred.rawId),
+            type: "public-key",
+            transports: ["usb", "nfc", "ble", "internal"],
+          }],
+          userVerification: "required",
+          timeout: 60000,
+        },
+      });
+      if (!assertion) throw new Error("WebAuthn assertion failed");
+      const pubKeyAssertion = assertion as PublicKeyCredential;
+      // Mix assertion response bytes (authenticatorData + signature) into key material
+      // These bytes are not stored in localStorage — produced fresh by hardware key each time
+      const authData = new Uint8Array(pubKeyAssertion.response.authenticatorData);
+      const sig = new Uint8Array(pubKeyAssertion.response.signature);
+      const combined = new Uint8Array(authData.length + sig.length);
+      combined.set(authData, 0);
+      combined.set(sig, authData.length);
+      const assertionHash = await crypto.subtle.digest("SHA-256", combined);
+      keyMaterial = passphrase + bufToBase64(assertionHash);
+    } catch (err) {
+      console.warn("deriveKeyWithHardware: WebAuthn assertion failed, falling back to passphrase-only", err);
+    }
+  } else {
+    const enabled = localStorage.getItem(WEBAUTHN_ENABLED_KEY);
+    if (enabled === "true") {
       console.warn("deriveKeyWithHardware: hardware key is enabled but no credential stored, falling back to passphrase-only");
     }
   }
