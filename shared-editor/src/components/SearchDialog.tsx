@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNoteStore } from "../store/useNoteStore";
-import { searchIndex, type SearchResult, indexDocument } from "../utils/searchIndex";
+import { searchIndex, type SearchResult, indexDocument, extractSearchText } from "../utils/searchIndex";
 import { Search, FileText, RefreshCw, X } from "lucide-react";
 
 interface SearchDialogProps {
@@ -123,9 +123,7 @@ export async function reindexAll() {
   const docs = useNoteStore.getState().documents;
   for (const doc of Object.values(docs)) {
     if (doc.isFolder || doc.isArchived || doc.editorState?.trim().toLowerCase().startsWith("enc:")) continue;
-    const plain = doc.editorState
-      ? doc.editorState.replace(/<[^>]*>/g, "").replace(/\\n/g, " ")
-      : "";
+    const plain = extractSearchText(doc.editorState);
     await indexDocument(doc.id, doc.title || "Untitled", plain, doc.tags || []);
   }
 }

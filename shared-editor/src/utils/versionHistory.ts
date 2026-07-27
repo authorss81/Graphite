@@ -163,28 +163,57 @@ export function generateHumanCommitMessage(docTitle: string, oldText: string, ne
   return `Edited "${title}"`;
 }
 
-export async function createDocCommit(docId: string, docTitle: string, editorState: string, canvasData: any, message?: string): Promise<DocCommit> {
+const _commitTimers: Record<string, ReturnType<typeof setTimeout>> = {};
+const _commitQueue: Record<string, () => void> = {};
+
+export function flushPendingCommits() {
+  for (const id of Object.keys(_commitTimers)) {
+    clearTimeout(_commitTimers[id]);
+    _commitQueue[id]?.();
+  }
+}
+
+export function scheduleDocCommit(docId: string, docTitle: string, editorState: string, canvasData: any) {
+  if (_commitTimers[docId]) clearTimeout(_commitTimers[docId]);
+  _commitQueue[docId] = () => {
+    delete _commitTimers[docId];
+    delete _commitQueue[docId];
+    createDocCommit(docId, docTitle, editorState, canvasData);
+  };
+  _commitTimers[docId] = setTimeout(_commitQueue[docId]!, 2000);
+}
+
+export async function createDocCommit(docId: string, docTitle: string, editorState: string, canvasData: any, message?: string): Promise<DocCommit | null> {
   const map = loadHistoryMap();
   const list = map[docId] || [];
   const prevCommit = list[0];
 
   const autoMessage = message || generateHumanCommitMessage(docTitle, prevCommit?.editorState || "", editorState, canvasData);
 
+  let commitId = "manual-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+
   const fs = getGitFS();
-  await ensureGitRepo();
-  const filePath = `${docId}.md`;
-  const noteText = extractHumanText(editorState);
-  await fs.promises.writeFile(`${GIT_DIR}/${filePath}`, noteText || editorState);
-  await git.add({ fs, dir: GIT_DIR, filepath: filePath });
-  const realCommitHash = await git.commit({
-    fs,
-    dir: GIT_DIR,
-    message: autoMessage,
-    author: {
-      name: "Graphite User",
-      email: "user@graphite.local",
-    },
-  });
+  if (fs) {
+    try {
+      await ensureGitRepo();
+      const filePath = `${docId}.md`;
+      const noteText = extractHumanText(editorState);
+      await fs.promises.writeFile(`${GIT_DIR}/${filePath}`, noteText || editorState);
+      await git.add({ fs, dir: GIT_DIR, filepath: filePath });
+      const realHash = await git.commit({
+        fs,
+        dir: GIT_DIR,
+        message: autoMessage,
+        author: {
+          name: "Graphite User",
+          email: "user@graphite.local",
+        },
+      });
+      commitId = realHash;
+    } catch {
+      // Git commit failed, fall back to timestamp-based ID
+    }
+  }
 
   // Deduplicate: skip save if no change
   if (prevCommit && prevCommit.editorState === editorState && JSON.stringify(prevCommit.canvasData) === JSON.stringify(canvasData)) {
@@ -192,7 +221,7 @@ export async function createDocCommit(docId: string, docTitle: string, editorSta
   }
 
   const commit: DocCommit = {
-    commitId: realCommitHash,
+    commitId,
     docId,
     docTitle: docTitle || "Untitled",
     timestamp: Date.now(),
@@ -204,7 +233,7 @@ export async function createDocCommit(docId: string, docTitle: string, editorSta
   map[docId] = [commit, ...list].slice(0, 50);
   saveHistoryMap(map);
 
-  sendUpdateToNative(docId, realCommitHash);
+  sendUpdateToNative(docId, commitId);
   return commit;
 }
 

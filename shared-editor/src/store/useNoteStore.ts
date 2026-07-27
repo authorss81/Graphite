@@ -3,7 +3,7 @@ import type { GraphiteDoc } from "../utils/docStorage";
 import { newDocId, loadDocs, saveDocs, loadDocsPaginated } from "../utils/docStorage";
 import type { SpatialCard, SpatialEdge } from "../utils/spatialCanvasStorage";
 import { SupabaseSyncService } from "../utils/supabase";
-import { createDocCommit } from "../utils/versionHistory";
+import { scheduleDocCommit, flushPendingCommits } from "../utils/versionHistory";
 import { toast } from "../components/Toast";
 
 let unsubscribeRealtime: (() => void) | null = null;
@@ -383,7 +383,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       completedTodos: stats.completedTodos,
       canvasData: nextCanvasData,
     });
-    createDocCommit(docId, cur.title, nextEditorState, nextCanvasData);
+    scheduleDocCommit(docId, cur.title, nextEditorState, nextCanvasData);
     SupabaseSyncService.getInstance().syncDocumentDebounced(docId, next);
   },
 
@@ -416,7 +416,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       set({ documents: nextDocs });
     }
 
-    createDocCommit(targetDocId, next.title, nextEditorState, nextCanvasData);
+    scheduleDocCommit(targetDocId, next.title, nextEditorState, nextCanvasData);
     SupabaseSyncService.getInstance().syncDocumentDebounced(targetDocId, next);
   },
 

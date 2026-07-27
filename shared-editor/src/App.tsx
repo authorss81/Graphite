@@ -21,7 +21,8 @@ import { AppHeader } from "./components/AppHeader";
 import { AppNav } from "./components/AppNav";
 import { AppBottomNav } from "./components/AppBottomNav";
 import { InfoTab } from "./components/InfoTab";
-import { indexDocument } from "./utils/searchIndex";
+import { indexDocument, extractSearchText } from "./utils/searchIndex";
+import { flushPendingCommits } from "./utils/versionHistory";
 
 import { applyPluginEffects } from "./utils/pluginSystem";
 
@@ -131,6 +132,9 @@ export function App() {
     handleViewportResize();
 
     applyPluginEffects();
+
+    const handleBeforeUnload = () => flushPendingCommits();
+    window.addEventListener("beforeunload", handleBeforeUnload);
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -150,6 +154,7 @@ export function App() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("keydown", handleKeyDown);
       window.visualViewport?.removeEventListener("resize", handleViewportResize);
     };
@@ -228,9 +233,7 @@ export function App() {
     const docs = documents;
     for (const doc of Object.values(docs)) {
       if (doc.isFolder || doc.isArchived) continue;
-      const plain = doc.editorState
-        ? doc.editorState.replace(/<[^>]*>/g, "").replace(/\\n/g, " ")
-        : "";
+    const plain = extractSearchText(doc.editorState);
       indexDocument(doc.id, doc.title || "Untitled", plain, doc.tags || []);
     }
   }, [documents]);

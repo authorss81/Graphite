@@ -26,6 +26,29 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+export function extractSearchText(editorState: string): string {
+  if (!editorState) return "";
+  try {
+    const parsed = JSON.parse(editorState);
+    const parts: string[] = [];
+    const walk = (node: any) => {
+      if (!node) return;
+      if (node.text) parts.push(node.text);
+      if (node.children) node.children.forEach(walk);
+      if (node.content) {
+        try {
+          const c = JSON.parse(node.content);
+          walk(c);
+        } catch {}
+      }
+    };
+    if (parsed.root) walk(parsed.root);
+    return parts.join(" ");
+  } catch {
+    return editorState.replace(/<[^>]*>/g, "").replace(/\\n/g, " ").trim();
+  }
+}
+
 export async function indexDocument(id: string, title: string, text: string, tags: string[] = []) {
   try {
     const db = await openDB();
