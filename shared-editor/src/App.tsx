@@ -25,8 +25,11 @@ import { indexDocument } from "./utils/searchIndex";
 
 import { applyPluginEffects } from "./utils/pluginSystem";
 
+const loadCanvas = () =>
+  import("./components/Canvas").then((m) => ({ default: m.Canvas }));
+
 const Canvas = lazy(() =>
-  import("./components/Canvas").then((m) => ({ default: m.Canvas })),
+  loadCanvas().catch(() => new Promise((resolve) => setTimeout(resolve, 300)).then(loadCanvas))
 );
 
 export function App() {
