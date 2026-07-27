@@ -51,6 +51,7 @@ export function AudioRecording() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
+    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
     if (timerRef.current) clearInterval(timerRef.current);
     setRecording(false);
     setDuration(0);

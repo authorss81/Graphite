@@ -12,7 +12,7 @@ export function DailyJournal() {
 
   const todayDocs = useMemo(() => {
     const today = formatDate(new Date());
-    return Object.values(documents).filter((d: any) => !d.isFolder && d.title && d.title.includes(today));
+    return Object.values(documents).filter((d: any) => !d.isFolder && d.title && (d.properties?.dailyNoteDate === today || d.title.includes(today)));
   }, [documents]);
 
   const recentDocs = useMemo(() => {

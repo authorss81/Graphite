@@ -38,7 +38,8 @@ export async function extractTextFromPdf(file: File): Promise<string> {
 }
 
 export function pdfToMarkdown(text: string, fileName: string): string {
+  const safeName = fileName.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 200);
   const lines = text.split("\n").filter((l) => l.trim());
-  const header = lines[0] || fileName.replace(/\.pdf$/i, "");
-  return `# ${header}\n\n> Imported from ${fileName}\n\n${lines.slice(1).map((l) => l.trim()).join("\n\n")}`;
+  const header = lines[0] || safeName.replace(/\.pdf$/i, "");
+  return `# ${header}\n\n> Imported from ${safeName}\n\n${lines.slice(1).map((l) => l.trim()).join("\n\n")}`;
 }

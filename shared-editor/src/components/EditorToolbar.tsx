@@ -410,6 +410,8 @@ export function EditorToolbar() {
                     background: codeLanguage === lang ? "var(--bg-tertiary)" : "transparent",
                   }}
                   onClick={() => {
+                    const validLangs = typeof getCodeLanguages === "function" ? getCodeLanguages() : [];
+                    if (!validLangs.includes(lang)) return;
                     editor.update(() => {
                       const sel = $getSelection();
                       if ($isRangeSelection(sel)) {

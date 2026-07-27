@@ -56,6 +56,9 @@ function validateEmail(email: string): boolean {
 
 const MAX_NAME_LENGTH = 200;
 const MAX_CONTENT_LENGTH = 10000;
+const MAX_COMMENTS_PER_DOC = 1000;
+const COMMENT_COOLDOWN_MS = 1000;
+let lastCommentTime = 0;
   try {
     const raw = localStorage.getItem("graphite_current_user");
     if (raw) {
@@ -249,8 +252,14 @@ export async function getDocComments(docId: string): Promise<Comment[]> {
 }
 
 export async function addComment(docId: string, authorId: string, authorName: string, content: string, parentId?: string, blockId?: string): Promise<Comment> {
+  const now = Date.now();
+  if (now - lastCommentTime < COMMENT_COOLDOWN_MS) throw new Error("Please wait before commenting again");
+  lastCommentTime = now;
   const cleanContent = content.trim().slice(0, MAX_CONTENT_LENGTH);
   if (!cleanContent) throw new Error("Comment content is required");
+  // Check comment cap per doc
+  const existing = await getDocComments(docId);
+  if (existing.length >= MAX_COMMENTS_PER_DOC) throw new Error("Maximum comments per document reached");
   const mentions = parseMentions(cleanContent);
   const comment: Comment = {
     id: "cmt_" + crypto.randomUUID().replace(/-/g, "").slice(0, 16),

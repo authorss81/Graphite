@@ -366,7 +366,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               onClick={() => {
                 if (
                   confirm(
-                    `Delete "${doc.title}"${
+                    `Delete "${doc.title.replace(/[\x00-\x1f]/g, "").slice(0, 100)}"${
                       doc.isFolder ? " and all its contents" : ""
                     }?`
                   )
@@ -386,7 +386,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               className="sidebar-row-delete-action"
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm(`Delete "${doc.title}"${doc.isFolder ? " and all its contents" : ""}?`)) {
+                if (confirm(`Delete "${doc.title.replace(/[\x00-\x1f]/g, "").slice(0, 100)}"${doc.isFolder ? " and all its contents" : ""}?`)) {
                   deleteDocument(doc.id);
                   if (navigator.vibrate) navigator.vibrate(20);
                 }

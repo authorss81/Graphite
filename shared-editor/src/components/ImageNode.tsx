@@ -54,6 +54,9 @@ export class ImageNode extends DecoratorNode<ReactElement> {
         if (url.protocol !== "https:" && url.protocol !== "http:" && url.protocol !== "data:" && url.protocol !== "blob:") {
           throw new Error("Image source uses a disallowed URL scheme");
         }
+        if (url.protocol === "data:" && !/^data:image\/(png|jpe?g|gif|webp|bmp|svg\+xml);/i.test(url.href)) {
+          throw new Error("data: URL must use an image MIME type");
+        }
       } catch {
         const cleaned = src.trim().replace(/[\n\r\t]/g, "");
         if (/^\s*javascript\s*:/i.test(cleaned)) {

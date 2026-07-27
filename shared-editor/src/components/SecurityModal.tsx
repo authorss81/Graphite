@@ -212,7 +212,7 @@ export function SecurityModal({
     try {
       // Recovery codes were stored during setup; verify the entered code
       // relies on in-memory recoveryCodes array (still populated from setup)
-      const valid = await verifyRecoveryCode(recoveryCodeInput.trim(), recoveryCodes);
+      const valid = await verifyRecoveryCode(recoveryCodeInput.trim());
       if (!valid) {
         setError("Invalid or already-used recovery code.");
         setIsProcessing(false);

@@ -3,7 +3,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { $createTextNode, $getRoot, $isParagraphNode, $isTextNode } from "lexical";
 import { $createBlockRefNode } from "./BlockRefNode";
 
-const BLOCK_REF_REGEX = /(!)?\[\[([\w-]+)#\^([\w-]+)\]\]/;
+const BLOCK_REF_REGEX = /(!)?\[\[([^\]#]+)#\^([^\]]+)\]\]/;
 
 export function BlockRefPlugin() {
   const [editor] = useLexicalComposerContext();

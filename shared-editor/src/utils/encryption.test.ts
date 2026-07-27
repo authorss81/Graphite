@@ -178,24 +178,24 @@ describe("recovery codes", () => {
 
   it("verifies a valid code", async () => {
     const codes = await generateRecoveryCodes();
-    const valid = await verifyRecoveryCode(codes[0], codes);
+    const valid = await verifyRecoveryCode(codes[0]);
     expect(valid).toBe(true);
   });
 
   it("rejects replayed code", async () => {
     const codes = await generateRecoveryCodes();
-    await verifyRecoveryCode(codes[0], codes);
-    const replayed = await verifyRecoveryCode(codes[0], codes);
+    await verifyRecoveryCode(codes[0]);
+    const replayed = await verifyRecoveryCode(codes[0]);
     expect(replayed).toBe(false);
   });
 
   it("allows replay after localStorage.clear (used-codes reset)", async () => {
     const codes = await generateRecoveryCodes();
     const hash = localStorage.getItem("graphite_recovery_hash_v1");
-    await verifyRecoveryCode(codes[0], codes);
+    await verifyRecoveryCode(codes[0]);
     localStorage.clear();
     localStorage.setItem("graphite_recovery_hash_v1", hash!);
-    const afterReset = await verifyRecoveryCode(codes[0], codes);
+    const afterReset = await verifyRecoveryCode(codes[0]);
     expect(afterReset).toBe(true);
   });
 });

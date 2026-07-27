@@ -120,7 +120,8 @@ export function extractHumanText(editorStateJSON: string): string {
     }
   }
 
-  return raw
+  const limited = raw.slice(0, 100000);
+  return limited
     .replace(/"(root|children|detail|format|mode|style|type|version|direction|indent|textFormat|textStyle|tag|checked)":\s*("[^"]*"|\d+|true|false|null)/gi, "")
     .replace(/[{}[\]"]/g, " ")
     .replace(/\s+/g, " ")

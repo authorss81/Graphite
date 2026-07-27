@@ -174,19 +174,22 @@ export async function generateRecoveryCodes(): Promise<string[]> {
       .toUpperCase()
   );
   const enc = new TextEncoder();
-  const hashBuf = await crypto.subtle.digest("SHA-256", enc.encode(codes.join(",")));
-  safeSetItem(RECOVERY_STORAGE_KEY, bufToBase64(hashBuf));
+  const hashBufs = await Promise.all(codes.map((c) => crypto.subtle.digest("SHA-256", enc.encode(c))));
+  const hashArr = hashBufs.map((b) => bufToBase64(b));
+  safeSetItem(RECOVERY_STORAGE_KEY, JSON.stringify(hashArr));
   localStorage.removeItem(USED_RECOVERY_KEY);
   return codes;
 }
 
-export async function verifyRecoveryCode(code: string, storedCodes: string[]): Promise<boolean> {
+export async function verifyRecoveryCode(code: string): Promise<boolean> {
   const normalized = code.toUpperCase();
   if (getUsedCodes().has(normalized)) return false;
-  const enc = new TextEncoder();
-  const testHash = await crypto.subtle.digest("SHA-256", enc.encode(storedCodes.join(",")));
   const stored = localStorage.getItem(RECOVERY_STORAGE_KEY);
-  const valid = stored === bufToBase64(testHash) && storedCodes.includes(normalized);
+  if (!stored) return false;
+  const hashArr: string[] = JSON.parse(stored);
+  const enc = new TextEncoder();
+  const testHash = bufToBase64(await crypto.subtle.digest("SHA-256", enc.encode(normalized)));
+  const valid = hashArr.some((h) => h === testHash);
   if (valid) markCodeUsed(normalized);
   return valid;
 }
