@@ -118,6 +118,9 @@ export function createPluginSandboxHTML(plugin: PluginDefinition): string {
 
   var script = document.createElement('script');
   script.src = ${safeSource};
+  script.crossOrigin = 'anonymous';
+  /* TODO: Add integrity attribute with known SRI hash for production.
+     For unpkg, use: https://www.srihash.org/ to generate the hash. */
   script.onerror = function() {
     var errDiv = document.createElement('div');
     errDiv.className = 'plugin-error';

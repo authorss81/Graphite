@@ -21,6 +21,32 @@ const AUDIT_KEY = "graphite_audit_log_v1";
 const HMAC_KEY_STORAGE = "graphite_audit_hmac_key";
 const MAX_EVENTS = 500; // cap to prevent unbounded growth
 
+// ─── Constant-time string comparison ─────────────────────────────────────
+function timingSafeEqual(a: string, b: string): boolean {
+  let result = a.length ^ b.length;
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    const ca = i < a.length ? a.charCodeAt(i) : 0;
+    const cb = i < b.length ? b.charCodeAt(i) : 0;
+    result |= ca ^ cb;
+  }
+  return result === 0;
+}
+
+// ─── HMAC key from passphrase ────────────────────────────────────────────
+export async function deriveAuditKey(passphrase: string, salt: Uint8Array): Promise<string> {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", enc.encode(passphrase), "PBKDF2", false, ["deriveBits"]
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: salt.buffer.slice(salt.byteOffset, salt.byteOffset + salt.byteLength) as ArrayBuffer, iterations: 600000, hash: "SHA-256" },
+    keyMaterial,
+    256
+  );
+  return Array.from(new Uint8Array(bits)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 // HMAC chain initialization — generates a key once, stored separately
 function getHmacKey(): string {
   let key = localStorage.getItem(HMAC_KEY_STORAGE);
@@ -73,7 +99,7 @@ export async function verifyAuditChain(): Promise<boolean> {
     const prevHmac = i === 0 ? "" : (events[i - 1] as any).hmac || "";
     const payload = prevHmac + JSON.stringify({ ...events[i], hmac: undefined });
     const actualHmac = await computeHmac(payload, key);
-    if (expectedHmac !== actualHmac) return false;
+    if (!timingSafeEqual(expectedHmac, actualHmac)) return false;
   }
   return true;
 }

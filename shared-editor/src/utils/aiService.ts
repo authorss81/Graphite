@@ -8,7 +8,7 @@ export interface AISuggestedLink {
   score: number;
 }
 
-function getConfig(): AIConfig {
+async function getConfig(): Promise<AIConfig> {
   return loadAIConfig();
 }
 
@@ -74,8 +74,27 @@ async function* streamAnthropic(prompt: string, systemMsg: string, config: AICon
   }
 }
 
+function isValidLocalEndpoint(endpoint: string): boolean {
+  try {
+    const url = new URL(endpoint);
+    const hostname = url.hostname;
+    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+    const isPrivateIP = /^10\.|^172\.(1[6-9]|2\d|3[01])\.|^192\.168\./.test(hostname);
+    if (!isLocalhost && !isPrivateIP) {
+      console.warn(`[Ollama] Non-local endpoint "${hostname}" — SSRF risk. Only localhost/private IP allowed.`);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function* streamOllama(prompt: string, systemMsg: string, config: AIConfig): AsyncGenerator<string> {
   const fullPrompt = `${systemMsg}\n\nUser: ${prompt}\n\nAssistant:`;
+  if (!isValidLocalEndpoint(config.ollamaEndpoint)) {
+    throw new Error("Ollama endpoint must be a localhost or private IP address (SSRF protection)");
+  }
   const res = await fetch(`${config.ollamaEndpoint}/api/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -109,7 +128,7 @@ function getStreamer(config: AIConfig): typeof streamOpenAI {
 }
 
 export async function* streamLLM(prompt: string, contextText: string): AsyncGenerator<string> {
-  const config = getConfig();
+  const config = await getConfig();
   const systemMsg = `You are Graphite AI, a helpful note-taking assistant. Use the following note context to answer accurately.\n\nNote Context:\n${contextText.slice(0, 8000)}`;
   const streamer = getStreamer(config);
 
@@ -174,7 +193,7 @@ function extractPlainText(editorState: string): string {
 }
 
 export async function autoSuggestTags(noteText: string, editorState?: string): Promise<string[]> {
-  const config = getConfig();
+  const config = await getConfig();
   const clean = editorState ? extractPlainText(editorState) : noteText;
 
   if (config.provider === "openai" && config.openaiKey) {
@@ -227,6 +246,9 @@ export async function autoSuggestTags(noteText: string, editorState?: string): P
 
   if (config.provider === "ollama" && config.ollamaEndpoint) {
     try {
+      if (!isValidLocalEndpoint(config.ollamaEndpoint)) {
+        throw new Error("Ollama endpoint must be a localhost or private IP address (SSRF protection)");
+      }
       const res = await fetch(`${config.ollamaEndpoint}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -297,7 +319,7 @@ export async function suggestSmartBacklinks(
 }
 
 export async function generateFromPrompt(prompt: string, contextText: string): Promise<string> {
-  const config = getConfig();
+  const config = await getConfig();
   const systemMsg = `You are Graphite AI. Generate rich note content based on the user's request. Use the following context for reference.\n\nContext:\n${contextText.slice(0, 4000)}`;
   const streamer = getStreamer(config);
 
@@ -331,7 +353,7 @@ export async function generateFromPrompt(prompt: string, contextText: string): P
 }
 
 export async function rewriteText(text: string, instruction: string): Promise<string> {
-  const config = getConfig();
+  const config = await getConfig();
   const systemMsg = `You are Graphite AI. Rewrite the following text according to the instruction. Return ONLY the rewritten text, no explanations.`;
   const prompt = `Instruction: ${instruction}\n\nText:\n${text}`;
 

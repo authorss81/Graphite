@@ -176,6 +176,10 @@ export async function flushPendingCommits() {
   await Promise.all(promises);
 }
 
+export function sanitizeDocId(docId: string): string {
+  return docId.replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
 export function scheduleDocCommit(docId: string, docTitle: string, editorState: string, canvasData: any) {
   if (_commitTimers[docId]) clearTimeout(_commitTimers[docId]);
   _commitQueue[docId] = () => {
@@ -187,6 +191,11 @@ export function scheduleDocCommit(docId: string, docTitle: string, editorState: 
 }
 
 export async function createDocCommit(docId: string, docTitle: string, editorState: string, canvasData: any, message?: string): Promise<DocCommit | null> {
+  const safeDocId = sanitizeDocId(docId);
+  // If doc is encrypted, skip saving plaintext to localStorage version history
+  if (typeof editorState === 'string' && editorState.startsWith('enc:')) {
+    return null;
+  }
   const map = loadHistoryMap();
   const list = map[docId] || [];
   const prevCommit = list[0];
@@ -199,10 +208,9 @@ export async function createDocCommit(docId: string, docTitle: string, editorSta
   if (fs) {
     try {
       await ensureGitRepo();
-      const filePath = `${docId}.md`;
       const noteText = extractHumanText(editorState);
-      await fs.promises.writeFile(`${GIT_DIR}/${filePath}`, noteText || editorState);
-      await git.add({ fs, dir: GIT_DIR, filepath: filePath });
+      await fs.promises.writeFile(`${GIT_DIR}/${safeDocId}.md`, noteText || editorState);
+      await git.add({ fs, dir: GIT_DIR, filepath: `${safeDocId}.md` });
       const realHash = await git.commit({
         fs,
         dir: GIT_DIR,

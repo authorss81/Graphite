@@ -466,7 +466,7 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 ---
 
-## Phase 12: Spatial Canvas & Canvas System
+## Phase 12: Spatial Canvas & Canvas System ✅ 10 done, 4 stubs
 
 | # | Item | Details | Effort | Status |
 |---|------|---------|--------|--------|
@@ -478,31 +478,31 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 | 12.6 | Search/zoom-to-card | Find by title, animate zoom with highlight | 4h | ✅ Done |
 | 12.7 | Card colors and groups | Color-code by tag, palette picker, color group action | 4h | ✅ Done |
 | 12.8 | Multi-select on SpatialCanvas | Ctrl+click multi-select, group drag, bulk delete, group color | 4h | ✅ Done |
-| 12.9 | Canvas presentation / slides mode | Select sequence, animated transitions, export | 12h | Pending |
-| 12.10 | Canvas onChange perf fix (DONE) | Buffer strokes, defer to pointerUp | 3h | Done |
-| 12.11 | Canvas drawing offset fix (DONE) | detectScroll=true, remove forced CSS, fix zoom math | 2h | Done |
-| 12.12 | Excalidraw image persistence fix (DONE) | Capture 3rd files arg | 2h | Done |
-| 12.13 | Nested canvases | Canvas inside canvas, canvas views in notes | 16h | Pending |
-| 12.14 | Stylus / Apple Pencil support | Pressure sensitivity, palm rejection | 8h | Pending |
-| 12.15 | Smart auto-resize of cards | Fit content; narrow to heading/block | 6h | Pending |
+| 12.9 | Canvas presentation / slides mode | Select sequence, animated transitions, export | 12h | ⚠️ Stub — overlay + keyboard nav exist; no sequence selection or export |
+| 12.10 | Canvas onChange perf fix (DONE) | Buffer strokes, defer to pointerUp | 3h | ✅ Done |
+| 12.11 | Canvas drawing offset fix (DONE) | detectScroll=true, remove forced CSS, fix zoom math | 2h | ✅ Done |
+| 12.12 | Excalidraw image persistence fix (DONE) | Capture 3rd files arg | 2h | ✅ Done |
+| 12.13 | Nested canvases | Canvas inside canvas, canvas views in notes | 16h | ⚠️ Stub — sub-canvas popup with 1 hardcoded card; no pan/zoom/edges |
+| 12.14 | Stylus / Apple Pencil support | Pressure sensitivity, palm rejection | 8h | ⚠️ Stub — pen detection + pressure display exist; pressure not applied to drawing |
+| 12.15 | Smart auto-resize of cards | Fit content; narrow to heading/block | 6h | ⚠️ Stub — character-count heuristic; no content-structure detection |
 | 12.16 | Drag-drop image import to SpatialCanvas | Drop JPG/PNG/GIF from desktop → image cards | 3h | ✅ Done |
 | 12.17 | Drag-drop PDF import to SpatialCanvas | PDF → one card per page with extracted text | 4h | ✅ Done |
 
 ---
 
-## Phase 13: Graph View Overhaul
+## Phase 13: Graph View Overhaul ✅ 5 done, 4 stubs
 
 | # | Item | Details | Effort | Status |
 |---|------|---------|--------|--------|
-| 13.1 | Replace physics with d3-force | Stable layout with drag, pin, controls | 6h | Pending |
-| 13.2 | Click node shows popup | Title, snippet, tags, Open button | 4h | Pending |
-| 13.3 | Filter by tag, date range, folder | Beyond title text filter | 4h | Pending |
-| 13.4 | Cluster by tag | Color-code groups, collapse clusters | 4h | Pending |
-| 13.5 | Edge weights | Thicker lines for more links | 2h | Pending |
-| 13.6 | Timeline slider | Graph formation over time | 6h | Pending |
-| 13.7 | Saved graph layouts | Snapshot + restore | 4h | Pending |
-| 13.8 | Fix RAF loop | Check mount, cancelAnimationFrame | 1h | Pending |
-| 13.9 | Fix useMemo mutation | useRef for simulation state | 1h | Pending |
+| 13.1 | Replace physics with d3-force | Stable layout with drag, pin, controls | 6h | ✅ Done |
+| 13.2 | Click node shows popup | Title, snippet, tags, Open button | 4h | ⚠️ Stub — title/tags/Open rendered; no content snippet |
+| 13.3 | Filter by tag, date range, folder | Beyond title text filter | 4h | ⚠️ Stub — tag + date filters work; no folder filter |
+| 13.4 | Cluster by tag | Color-code groups, collapse clusters | 4h | ⚠️ Stub — color-coded by tag; no collapse/expand |
+| 13.5 | Edge weights | Thicker lines for more links | 2h | ✅ Done |
+| 13.6 | Timeline slider | Graph formation over time | 6h | ⚠️ Stub — year dropdown exists; no continuous slider |
+| 13.7 | Saved graph layouts | Snapshot + restore | 4h | ✅ Done |
+| 13.8 | Fix RAF loop | Check mount, cancelAnimationFrame | 1h | ✅ Done |
+| 13.9 | Fix useMemo mutation | useRef for simulation state | 1h | ✅ Done |
 
 ---
 
@@ -527,28 +527,28 @@ This is a **technology prototype** — ~90% stubs/mocks. The `shared-editor` (Re
 
 ---
 
-## Phase 15: Testing & CI Overhaul
+## Phase 15: Testing & CI Overhaul ✅ 4 done, 3 partial, 11 pending
 
 | # | Item | Current | Target | Effort | Status |
 |---|-------|---------|--------|--------|--------|
-| 15.1 | Tests for encryption.ts | None | Full coverage | 4h | Pending |
-| 15.2 | Tests for auth.ts | None | Full coverage | 3h | Pending |
-| 15.3 | Tests for useNoteStore.ts | None | CRUD, initDocs, parseStats | 6h | Pending |
-| 15.4 | Tests for useAuthStore.ts | None | Login, register, logout, persist | 3h | Pending |
-| 15.5 | Tests for versionHistory.ts | None | Git commits, diff, restore | 4h | Pending |
-| 15.6 | Tests for embedding.ts | None | generateEmbedding, similarity | 3h | Pending |
-| 15.7 | Tests for upload.ts | None | Upload, clipboard, fallback | 2h | Pending |
-| 15.8 | Tests for exportDoc.ts | None | Markdown, HTML, download | 3h | Pending |
-| 15.9 | Tests for GraphView | None | Nodes, edges, simulation | 4h | Pending |
-| 15.10 | Tests for SpatialCanvas | None | Cards, drag, edges, persistence | 4h | Pending |
-| 15.11 | Tests for Sidebar | None | Tree, filter, rename, tags | 3h | Pending |
-| 15.12 | Kotlin SyncWorker tests | None | enqueue, syncDocument, markSynced | 4h | Pending |
-| 15.13 | Kotlin YjsSyncEngine tests | None | receiveUpdate, merge, state vector | 4h | Pending |
-| 15.14 | Kotlin AndroidDB tests | None | executeWrite, executeQuery, upgrade | 3h | Pending |
-| 15.15 | TypeScript strict mode | Loose types everywhere | Full strict checking | 8h | Pending |
-| 15.16 | Fix CI supabase test (use mocks) | Requires env vars | Mock-friendly | 2h | Pending |
-| 15.17 | E2E tests (Playwright/Cypress) | None | Core user flows | 16h | Pending |
-| 15.18 | Visual regression for canvas | None | Excalidraw screenshot compare | 8h | Pending |
+| 15.1 | Tests for encryption.ts | None | Full coverage | 4h | ✅ Done (38 tests) |
+| 15.2 | Tests for auth.ts | None | Full coverage | 3h | ⬜ Pending |
+| 15.3 | Tests for useNoteStore.ts | None | CRUD, initDocs, parseStats | 6h | ⬜ Pending |
+| 15.4 | Tests for useAuthStore.ts | None | Login, register, logout, persist | 3h | ⬜ Pending |
+| 15.5 | Tests for versionHistory.ts | None | Git commits, diff, restore | 4h | ✅ Done (12 tests) |
+| 15.6 | Tests for embedding.ts | None | generateEmbedding, similarity | 3h | ⬜ Pending |
+| 15.7 | Tests for upload.ts | None | Upload, clipboard, fallback | 2h | ⬜ Pending |
+| 15.8 | Tests for exportDoc.ts | None | Markdown, HTML, download | 3h | ✅ Done (16 tests) |
+| 15.9 | Tests for GraphView | None | Nodes, edges, simulation | 4h | ⬜ Pending |
+| 15.10 | Tests for SpatialCanvas | None | Cards, drag, edges, persistence | 4h | ⚠️ Partial — CanvasNode.test.ts (5 tests); no SpatialCanvas tests |
+| 15.11 | Tests for Sidebar | None | Tree, filter, rename, tags | 3h | ⬜ Pending |
+| 15.12 | Kotlin SyncWorker tests | None | enqueue, syncDocument, markSynced | 4h | ⬜ Pending |
+| 15.13 | Kotlin YjsSyncEngine tests | None | receiveUpdate, merge, state vector | 4h | ⬜ Pending |
+| 15.14 | Kotlin AndroidDB tests | None | executeWrite, executeQuery, upgrade | 3h | ✅ Done (6 tests) |
+| 15.15 | TypeScript strict mode | Loose types everywhere | Full strict checking | 8h | ⚠️ Partial — noUnusedLocals/Parameters on; strict:true, strictNullChecks, noImplicitAny OFF |
+| 15.16 | Fix CI supabase test (use mocks) | Requires env vars | Mock-friendly | 2h | ⚠️ Partial — 1 no-op test exists (returns early if no env vars) |
+| 15.17 | E2E tests (Playwright/Cypress) | None | Core user flows | 16h | ⬜ Pending |
+| 15.18 | Visual regression for canvas | None | Excalidraw screenshot compare | 8h | ⬜ Pending |
 
 ---
 
@@ -936,60 +936,60 @@ Independent audit of Phase 9 "Architecture & Code Quality Refactoring". The plan
 | 24.4 | 9.6 Layered architecture | `SpatialCanvas.tsx:4-8` imports directly from `../utils/spatialCanvasStorage`, bypassing store layer. Direct calls to `loadSpatialCanvasData()`/`saveSpatialCanvasData()` in component. | `SpatialCanvas.tsx:4-8,29,73` | HIGH | ✅ Done (27.5) |
 | 24.5 | 9.10 Stop imperative getState() | 18 `.getState()` calls remain across 7 component files. All in event handlers (not render paths) but far from "stopped". | `ModalManager.tsx:59,62`, `Sidebar.tsx:124` | MEDIUM | ✅ Done (reduced by 6) |
 | 24.6 | 9.12 Fix key={docId} | `key={docId}` **still present** on `<Canvas key={docId}>` at `App.tsx:354`. | `App.tsx:354` | MEDIUM | ✅ Done |
-| 24.7 | 9.15 Replace localStorage with IndexedDB | 7 files still use localStorage as PRIMARY storage with zero IndexedDB fallback. IndexedDB only used as async backup in `docStorage.ts:107-108,116`. Other files: `encryption.ts`, `auditLog.ts`, `versionHistory.ts`, `spatialCanvasStorage.ts`, `pluginSystem.ts`, `supabase.ts`, `teamWorkspace.ts` all localStorage-only. | Multiple files | HIGH | Deferred (major scope) |
+| 24.7 | 9.15 Replace localStorage with IndexedDB | 7 files still use localStorage as PRIMARY storage with zero IndexedDB fallback. IndexedDB only used as async backup in `docStorage.ts:107-108,116`. Other files: `encryption.ts`, `auditLog.ts`, `versionHistory.ts`, `spatialCanvasStorage.ts`, `pluginSystem.ts`, `supabase.ts`, `teamWorkspace.ts` all localStorage-only. | Multiple files | HIGH | ⚠️ Partial — teamWorkspace.ts migrated to IndexedDB as primary; 6 of 7 remaining files still localStorage-only |
 | 24.8 | 9.16 Pagination | `loadDocsPaginated()` defined in `docStorage.ts:44` but **never called**. `Sidebar.tsx:82` renders `tree.map(renderNode)` for ALL documents at once — no pagination. | `docStorage.ts:44`, `Sidebar.tsx:82` | MEDIUM | ✅ Done |
 
 ---
 
-## Phase 25: Phase 20 UX Improvements Audit — 15/23 FAIL ✅ All items remediated
+## Phase 25: Phase 20 UX Improvements Audit — 15/23 FAIL ✅ 10 done, 3 partial, 2 pending
 
 Independent audit of Phase 20 "UX Improvements & Usability Polish". The plan claims ALL items are done. Audit found **15 FAIL**, **8 PASS**.
 
 | # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
 |---|-------------|---------------|-----------|----------|--------|
-| 25.1 | 20.1.2 Modal aria-labels | Only `AIChatPanel.tsx:140` has `aria-label="Close modal"`. 6 other modals missing it: VersionHistoryModal, SecurityModal, PublishModal, SemanticSearchModal, TeamWorkspaceModal, PluginMarketplaceModal. | Multiple modal files | MEDIUM | Pending |
-| 25.2 | 20.1.3 Sidebar ARIA roles | Zero ARIA tree roles. No `role="tree"`, no `role="treeitem"`. Uses bare `<aside>` + `<div>`. | `Sidebar.tsx` | MEDIUM | Pending |
-| 25.3 | 20.1.5 Toast keyboard dismiss | Only `onClick` dismiss. No `onKeyDown` handler for Enter/Space. Toasts not focusable (no `tabIndex`). | `Toast.tsx:33-42` | LOW | Pending |
-| 25.4 | 20.2.1 Saving indicator | Editor.tsx has **zero** inline "Saving..."/"Saved" indicator. Silent debounced save with no UI feedback. | `Editor.tsx:323` | MEDIUM | Pending |
-| 25.5 | 20.2.4 Sync failure toast | All `syncDocument()` calls wrapped in `.catch(() => {})` — errors silently swallowed. No toast shown. | `useNoteStore.ts` | HIGH | Pending |
-| 25.6 | 20.2.5 Audit log confirmation | `clearAuditLog()` called directly with **zero confirmation dialog**. No `confirm()`, no modal prompt. | `SecurityModal.tsx:685` | MEDIUM | Pending |
-| 25.7 | 20.3.2 Zoom-scaled grid | Dot grid uses static `backgroundSize: "24px 24px"` — does NOT scale with zoomLevel. | `SpatialCanvas.tsx:179-180` | LOW | Pending |
-| 25.8 | 20.3.4 Link button guard | `TOGGLE_LINK_COMMAND` always dispatched with `"https://"` regardless of selection. No range/selection check. | `EditorToolbar.tsx:221` | MEDIUM | Pending |
-| 25.9 | 20.4.1 Escape key modals | Only AIChatPanel + SemanticSearchModal have Escape handlers. 4 other modals missing: SecurityModal, VersionHistoryModal, PublishModal, TeamWorkspaceModal. | Multiple modal files | MEDIUM | Pending |
-| 25.10 | 20.4.2 Focus trapping | Only AIChatPanel has `role="dialog"`/`aria-modal="true"`. 6 other modals lack these entirely. | Multiple modal files | MEDIUM | Pending |
-| 25.11 | 20.4.3 VersionHistory try-catch | `handleRestore` and `handleCreateSnapshot` have **zero try-catch** around async operations. | `VersionHistoryModal.tsx:37-51` | MEDIUM | Pending |
-| 25.12 | 20.5.1 Header overflow | No `overflow-x: auto` on header section. Buttons overflow on narrow viewports. | `App.tsx:164-252` | MEDIUM | Pending |
-| 25.13 | 20.5.2 Touch handlers | SpatialCanvas and GraphView have mouse-only handlers. No `onTouchStart/Move/End`. | `SpatialCanvas.tsx:170-172`, `GraphView.tsx:319-322` | HIGH | Pending |
-| 25.14 | 20.7.1 RAF early exit | RAF `simulate()` runs unconditionally every frame — no `if (nodes.length === 0) return;` guard. | `GraphView.tsx:137-207` | MEDIUM | Pending |
-| 25.15 | 20.7.2 Publish button styling | Publish button uses plain `.graphite-btn` with zero distinct styling. Visually indistinguishable from generic buttons. | `App.tsx:247-250` | LOW | Pending |
+| 25.1 | 20.1.2 Modal aria-labels | Only `AIChatPanel.tsx:140` has `aria-label="Close modal"`. 6 other modals missing it: VersionHistoryModal, SecurityModal, PublishModal, SemanticSearchModal, TeamWorkspaceModal, PluginMarketplaceModal. | Multiple modal files | MEDIUM | ⚠️ Partial — 9/13 modals have label; missing on SearchDialog, TemplatesGallery, QuickSearch, QuickOpen |
+| 25.2 | 20.1.3 Sidebar ARIA roles | Zero ARIA tree roles. No `role="tree"`, no `role="treeitem"`. Uses bare `<aside>` + `<div>`. | `Sidebar.tsx` | MEDIUM | ✅ Done |
+| 25.3 | 20.1.5 Toast keyboard dismiss | Only `onClick` dismiss. No `onKeyDown` handler for Enter/Space. Toasts not focusable (no `tabIndex`). | `Toast.tsx:33-42` | LOW | ✅ Done |
+| 25.4 | 20.2.1 Saving indicator | Editor.tsx has **zero** inline "Saving..."/"Saved" indicator. Silent debounced save with no UI feedback. | `Editor.tsx:323` | MEDIUM | ✅ Done |
+| 25.5 | 20.2.4 Sync failure toast | All `syncDocument()` calls wrapped in `.catch(() => {})` — errors silently swallowed. No toast shown. | `useNoteStore.ts` | HIGH | ✅ Done (8 sync error toasts) |
+| 25.6 | 20.2.5 Audit log confirmation | `clearAuditLog()` called directly with **zero confirmation dialog**. No `confirm()`, no modal prompt. | `SecurityModal.tsx:685` | MEDIUM | ✅ Done |
+| 25.7 | 20.3.2 Zoom-scaled grid | Dot grid uses static `backgroundSize: "24px 24px"` — does NOT scale with zoomLevel. | `SpatialCanvas.tsx:179-180` | LOW | ✅ Done |
+| 25.8 | 20.3.4 Link button guard | `TOGGLE_LINK_COMMAND` always dispatched with `"https://"` regardless of selection. No range/selection check. | `EditorToolbar.tsx:221` | MEDIUM | ✅ Done |
+| 25.9 | 20.4.1 Escape key modals | Only AIChatPanel + SemanticSearchModal have Escape handlers. 4 other modals missing: SecurityModal, VersionHistoryModal, PublishModal, TeamWorkspaceModal. | Multiple modal files | MEDIUM | ⚠️ Partial — 4 modals (AISettings, KeyboardCheatsheet, TemplatesGallery, PluginMarketplace) still lack Escape |
+| 25.10 | 20.4.2 Focus trapping | Only AIChatPanel has `role="dialog"`/`aria-modal="true"`. 6 other modals lack these entirely. | Multiple modal files | MEDIUM | ⚠️ Partial — QuickSearchModal missing `aria-modal="true"` |
+| 25.11 | 20.4.3 VersionHistory try-catch | `handleRestore` and `handleCreateSnapshot` have **zero try-catch** around async operations. | `VersionHistoryModal.tsx:37-51` | MEDIUM | ✅ Done |
+| 25.12 | 20.5.1 Header overflow | No `overflow-x: auto` on header section. Buttons overflow on narrow viewports. | `App.tsx:164-252` | MEDIUM | ⬜ Pending |
+| 25.13 | 20.5.2 Touch handlers | SpatialCanvas and GraphView have mouse-only handlers. No `onTouchStart/Move/End`. | `SpatialCanvas.tsx:170-172`, `GraphView.tsx:319-322` | HIGH | ✅ Done |
+| 25.14 | 20.7.1 RAF early exit | RAF `simulate()` runs unconditionally every frame — no `if (nodes.length === 0) return;` guard. | `GraphView.tsx:137-207` | MEDIUM | ⬜ Pending |
+| 25.15 | 20.7.2 Publish button styling | Publish button uses plain `.graphite-btn` with zero distinct styling. Visually indistinguishable from generic buttons. | `App.tsx:247-250` | LOW | ✅ Done |
 
 ### 🔴 Critical Bug Found (not in Phase 20 spec)
 
 | # | Bug | File:Line | Severity | Description | Status |
 |---|-----|-----------|----------|-------------|--------|
-| 25.16 | AIChatPanel key mismatch — **never opens** | `App.tsx:199` dispatches `"aiPanel"` but `ModalManager.tsx:51` checks `modals["ai"]` | CRITICAL | The AI Assistant button dispatches modal key `"aiPanel"` but the ModalManager reads `modals["ai"]` — key mismatch means the AI panel **never opens**. Feature is broken. | Pending |
+| 25.16 | AIChatPanel key mismatch — **never opens** | `App.tsx:199` dispatches `"aiPanel"` but `ModalManager.tsx:51` checks `modals["ai"]` | CRITICAL | The AI Assistant button dispatches modal key `"aiPanel"` but the ModalManager reads `modals["ai"]` — key mismatch means the AI panel **never opens**. Feature is broken. | ✅ Done |
 
 ---
 
-## Phase 26: Phase 21 Design Polish Audit — 4/7 FAIL + 1 Critical Bug ✅ All items remediated
+## Phase 26: Phase 21 Design Polish Audit — 4/7 FAIL + 1 Critical Bug ✅ 6 done, 2 pending
 
 Independent audit of Phase 21 "Aesthetic & UI Design Polish". The plan claims ALL items are done. Audit found **4 FAIL**, **3 PASS**.
 
 | # | Claimed Fix | Audit Finding | File:Line | Severity | Status |
 |---|-------------|---------------|-----------|----------|--------|
-| 26.1 | 21.1.1 Glass panels — sidebar | `.graphite-sidebar` uses solid `var(--bg-secondary)` background — **no backdrop-filter, no glass effect**. | `index.css:321-334` | MEDIUM | Pending |
-| 26.2 | 21.1.1 Glass panels — modal cards | Modals (PublishModal, SemanticSearch, VersionHistory, Security, TeamWorkspace, PluginMarketplace) all use solid `var(--bg-secondary)` — **no glassmorphism**. Only `AIChatPanel` has glass effect. | Multiple modal files | MEDIUM | Pending |
-| 26.3 | 21.1.1 Glass panels — border opacity & vendor prefix | `--glass-border` is `rgba(255,255,255,0.05)` not `0.08` as claimed. Zero `-webkit-backdrop-filter` for Safari <15. | `index.css:27` | LOW | Pending |
-| 26.4 | 21.3.1 Card hover -2px | Claimed `translateY(-2px)` does NOT exist. Actual hover uses `translateY(-1px)`. | `index.css:274` | LOW | Pending |
-| 26.5 | 21.3.2 Modal entrance animation | Only 1 of 6 modals (AIChatPanel) uses `.graphite-modal-card` with `modalScaleIn` keyframe. 5 other modals get zero entrance animation. | Multiple modal files | MEDIUM | Pending |
-| 26.6 | 21.4.1 Dual pane split view | Tab-based layout — **only ONE view at a time**. Never Editor+Canvas simultaneously. Single media query at 768px. No 1024px or 1440px breakpoints. | `App.tsx:338-503` | HIGH | Pending |
+| 26.1 | 21.1.1 Glass panels — sidebar | `.graphite-sidebar` uses solid `var(--bg-secondary)` background — **no backdrop-filter, no glass effect**. | `index.css:321-334` | MEDIUM | ✅ Done |
+| 26.2 | 21.1.1 Glass panels — modal cards | Modals (PublishModal, SemanticSearch, VersionHistory, Security, TeamWorkspace, PluginMarketplace) all use solid `var(--bg-secondary)` — **no glassmorphism**. Only `AIChatPanel` has glass effect. | Multiple modal files | MEDIUM | ✅ Done |
+| 26.3 | 21.1.1 Glass panels — border opacity & vendor prefix | `--glass-border` is `rgba(255,255,255,0.05)` not `0.08` as claimed. Zero `-webkit-backdrop-filter` for Safari <15. | `index.css:27` | LOW | ✅ Done |
+| 26.4 | 21.3.1 Card hover -2px | Claimed `translateY(-2px)` does NOT exist. Actual hover uses `translateY(-1px)`. | `index.css:274` | LOW | ✅ Done |
+| 26.5 | 21.3.2 Modal entrance animation | Only 1 of 6 modals (AIChatPanel) uses `.graphite-modal-card` with `modalScaleIn` keyframe. 5 other modals get zero entrance animation. | Multiple modal files | MEDIUM | ✅ Done |
+| 26.6 | 21.4.1 Dual pane split view | Tab-based layout — **only ONE view at a time**. Never Editor+Canvas simultaneously. Single media query at 768px. No 1024px or 1440px breakpoints. | `App.tsx:338-503` | HIGH | ✅ Done |
 
 ### Additional CSS Bugs Found
 
 | # | Bug | File:Line | Severity | Description | Status |
 |---|-----|-----------|----------|-------------|--------|
-| 26.7 | `!important` on drag handle hover | `index.css:924` | LOW | `.graphite-block-drag-handle:hover { opacity: 1 !important; }` breaks CSS cascade | Pending |
-| 26.8 | z-index collision — modals behind bottom nav | `SecurityModal.tsx:183` (z-index 1200), `TeamWorkspaceModal.tsx:134` (z-index 1100) vs `.graphite-bottom-nav` (z-index 1100) | MEDIUM | SecurityModal barely above bottom nav; TeamWorkspaceModal sits AT the same z-index, risking overlap on mobile | Pending |
+| 26.7 | `!important` on drag handle hover | `index.css:924` | LOW | `.graphite-block-drag-handle:hover { opacity: 1 !important; }` breaks CSS cascade | ⬜ Pending — no !important found on drag handle; inline styles used instead |
+| 26.8 | z-index collision — modals behind bottom nav | `SecurityModal.tsx:183` (z-index 1200), `TeamWorkspaceModal.tsx:134` (z-index 1100) vs `.graphite-bottom-nav` (z-index 1100) | MEDIUM | SecurityModal barely above bottom nav; TeamWorkspaceModal sits AT the same z-index, risking overlap on mobile | ⚠️ Partial — modals unified at z-index 2000; AISettingsModal at 2100 could conflict |
 
 ---
 

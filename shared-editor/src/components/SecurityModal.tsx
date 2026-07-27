@@ -72,7 +72,7 @@ export function SecurityModal({
   const [confirmPassphrase, setConfirmPassphrase] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [isSetupMode, setIsSetupMode] = useState(false);
-  const [cryptoKey, setCryptoKey] = useState<CryptoKey | null>(null);
+  const [hasCryptoKey, setHasCryptoKey] = useState(false);
   const [unlockPassphrase, setUnlockPassphrase] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -139,7 +139,7 @@ export function SecurityModal({
       const salt = getOrCreateSalt();
       const key = useHardwareKey ? await deriveKeyWithHardware(passphrase, salt) : await deriveKey(passphrase, salt);
       cryptoKeyRef.current = key;
-      setCryptoKey(key);
+      setHasCryptoKey(true);
       const codes = await generateRecoveryCodes();
       setRecoveryCodes(codes);
       setShowRecovery(true);
@@ -191,7 +191,7 @@ export function SecurityModal({
       const plaintext = await decryptText(liveContent, key);
       onDecryptDoc(plaintext);
       cryptoKeyRef.current = key;
-      setCryptoKey(key);
+      setHasCryptoKey(true);
       unlockAttemptsRef.current = 0;
       // Clear passphrase from memory
       setUnlockPassphrase("");
@@ -228,7 +228,7 @@ export function SecurityModal({
         onDecryptDoc(plaintext);
       }
       cryptoKeyRef.current = key;
-      setCryptoKey(key);
+      setHasCryptoKey(true);
       setRecoveryCodeInput("");
       setSuccess("Recovery code accepted. Document unlocked.");
       await logAuditEvent("encryption", "Document unlocked via recovery code", { docId: currentDocId });
@@ -387,10 +387,10 @@ export function SecurityModal({
                   alignItems: "center",
                   gap: "12px",
                   padding: "14px 16px",
-                  background: cryptoKey
+                  background: hasCryptoKey
                     ? "rgba(16, 185, 129, 0.1)"
                     : "rgba(99, 102, 241, 0.08)",
-                  border: `1px solid ${cryptoKey ? "rgba(16, 185, 129, 0.3)" : "rgba(99, 102, 241, 0.2)"}`,
+                  border: `1px solid ${hasCryptoKey ? "rgba(16, 185, 129, 0.3)" : "rgba(99, 102, 241, 0.2)"}`,
                   borderRadius: "10px",
                 }}
               >
@@ -399,21 +399,21 @@ export function SecurityModal({
                     width: 36,
                     height: 36,
                     borderRadius: "50%",
-                    background: cryptoKey ? "rgba(16,185,129,0.2)" : "rgba(99,102,241,0.15)",
+                    background: hasCryptoKey ? "rgba(16,185,129,0.2)" : "rgba(99,102,241,0.15)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     flexShrink: 0,
                   }}
                 >
-                  {cryptoKey ? <Unlock size={18} color="#10b981" /> : <Lock size={18} color="#6366f1" />}
+                  {hasCryptoKey ? <Unlock size={18} color="#10b981" /> : <Lock size={18} color="#6366f1" />}
                 </div>
                 <div>
                   <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
-                    {cryptoKey ? "Encryption Active — Key Loaded" : "Encryption Locked"}
+                    {hasCryptoKey ? "Encryption Active — Key Loaded" : "Encryption Locked"}
                   </div>
                   <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
-                    {cryptoKey
+                    {hasCryptoKey
                       ? "AES-256-GCM · PBKDF2 key derivation (600k iterations)"
                       : hasEncryptionSetup()
                       ? "Enter your passphrase to unlock encrypted documents"
@@ -446,7 +446,7 @@ export function SecurityModal({
               )}
 
               {/* Setup form */}
-              {(!hasEncryptionSetup() || isSetupMode) && !cryptoKey && (
+              {(!hasEncryptionSetup() || isSetupMode) && !hasCryptoKey && (
                 <div
                   style={{
                     background: "var(--bg-secondary)",
@@ -547,7 +547,7 @@ export function SecurityModal({
               )}
 
               {/* Unlock form */}
-              {hasEncryptionSetup() && !cryptoKey && !isSetupMode && (
+              {hasEncryptionSetup() && !hasCryptoKey && !isSetupMode && (
                 <div
                   style={{
                     background: "var(--bg-secondary)",
@@ -746,7 +746,7 @@ export function SecurityModal({
               )}
 
               {/* Encrypt current doc */}
-              {cryptoKey && (
+              {hasCryptoKey && (
                 <div
                   style={{
                     background: "var(--bg-secondary)",

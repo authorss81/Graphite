@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { createYjsBinding, CONNECTED_COMMAND } from "@lexical/yjs";
-import { getYDoc, setAwarenessState, clearAwareness } from "../utils/yjsSync";
+import { getYDoc, authorizeYDoc, deauthorizeYDoc, setAwarenessState, clearAwareness } from "../utils/yjsSync";
 import { getCurrentUser } from "../utils/userRegistry";
 
 interface MultiplayerPluginProps {
@@ -16,6 +16,7 @@ export function MultiplayerPlugin({ docId, onConnectionChange }: MultiplayerPlug
   const user = useRef(getCurrentUser());
 
   useEffect(() => {
+    authorizeYDoc(docId);
     const yDoc = getYDoc(docId);
 
     const binding = createYjsBinding({
@@ -38,6 +39,7 @@ export function MultiplayerPlugin({ docId, onConnectionChange }: MultiplayerPlug
     onConnectionChange?.(true);
 
     return () => {
+      deauthorizeYDoc(docId);
       clearAwareness(clientIdRef.current);
       try {
         (binding as any).destroy();

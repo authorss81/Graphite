@@ -44,6 +44,41 @@ export interface Comment {
 let dbPromise: Promise<IDBPDatabase> | null = null;
 const commentsChannel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("graphite-comments") : null;
 
+function getCurrentUserId(): string {
+  try {
+    const raw = localStorage.getItem("graphite_current_user");
+    if (raw) {
+      const user = JSON.parse(raw);
+      return user.id || "";
+    }
+  } catch {}
+  return "";
+}
+
+async function getWorkspace(wsId: string): Promise<Workspace | null> {
+  const all = await loadWorkspaces();
+  return all.find((w) => w.id === wsId) || null;
+}
+
+async function requireAdmin(wsId: string, userId: string): Promise<void> {
+  const ws = await getWorkspace(wsId);
+  if (!ws) throw new Error("Workspace not found");
+  const member = ws.members.find((m) => m.userId === userId);
+  if (!member || member.role !== "admin") {
+    throw new Error("Unauthorized: admin role required");
+  }
+}
+
+async function requireOwnerOrAdmin(wsId: string, userId: string): Promise<void> {
+  const ws = await getWorkspace(wsId);
+  if (!ws) throw new Error("Workspace not found");
+  if (ws.ownerId === userId) return;
+  const member = ws.members.find((m) => m.userId === userId);
+  if (!member || member.role !== "admin") {
+    throw new Error("Unauthorized: owner or admin role required");
+  }
+}
+
 function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
     dbPromise = openDB("graphite_team", 1, {
@@ -123,16 +158,22 @@ export async function createWorkspace(name: string, ownerId: string, ownerName: 
   return ws;
 }
 
-export async function updateWorkspace(id: string, patch: Partial<Workspace>): Promise<void> {
+export async function updateWorkspace(id: string, patch: Partial<Workspace>, userId?: string): Promise<void> {
+  const uid = userId || getCurrentUserId();
+  await requireAdmin(id, uid);
   const all = await loadWorkspaces();
   await saveWorkspaces(all.map((w) => (w.id === id ? { ...w, ...patch } : w)));
 }
 
-export async function deleteWorkspace(id: string): Promise<void> {
+export async function deleteWorkspace(id: string, userId?: string): Promise<void> {
+  const uid = userId || getCurrentUserId();
+  await requireOwnerOrAdmin(id, uid);
   await saveWorkspaces((await loadWorkspaces()).filter((w) => w.id !== id));
 }
 
-export async function addMemberToWorkspace(wsId: string, member: Omit<WorkspaceMember, "joinedAt">): Promise<void> {
+export async function addMemberToWorkspace(wsId: string, member: Omit<WorkspaceMember, "joinedAt">, userId?: string): Promise<void> {
+  const uid = userId || getCurrentUserId();
+  await requireAdmin(wsId, uid);
   const all = await loadWorkspaces();
   await saveWorkspaces(
     all.map((w) => {
@@ -143,17 +184,21 @@ export async function addMemberToWorkspace(wsId: string, member: Omit<WorkspaceM
   );
 }
 
-export async function updateMemberRole(wsId: string, userId: string, role: WorkspaceRole): Promise<void> {
+export async function updateMemberRole(wsId: string, targetUserId: string, role: WorkspaceRole, userId?: string): Promise<void> {
+  const uid = userId || getCurrentUserId();
+  await requireAdmin(wsId, uid);
   const all = await loadWorkspaces();
   await saveWorkspaces(
-    all.map((w) => (w.id !== wsId ? w : { ...w, members: w.members.map((m) => (m.userId === userId ? { ...m, role } : m)) }))
+    all.map((w) => (w.id !== wsId ? w : { ...w, members: w.members.map((m) => (m.userId === targetUserId ? { ...m, role } : m)) }))
   );
 }
 
-export async function removeMemberFromWorkspace(wsId: string, userId: string): Promise<void> {
+export async function removeMemberFromWorkspace(wsId: string, targetUserId: string, userId?: string): Promise<void> {
+  const uid = userId || getCurrentUserId();
+  await requireAdmin(wsId, uid);
   const all = await loadWorkspaces();
   await saveWorkspaces(
-    all.map((w) => (w.id !== wsId ? w : { ...w, members: w.members.filter((m) => m.userId !== userId) }))
+    all.map((w) => (w.id !== wsId ? w : { ...w, members: w.members.filter((m) => m.userId !== targetUserId) }))
   );
 }
 

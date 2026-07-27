@@ -222,6 +222,12 @@ export class SupabaseSyncService {
     this.state.status = failed.length > 0 ? "error" : "idle";
   }
 
+  /**
+   * NOTE: Row-Level Security (RLS) must be enabled on note_nodes and block_entities.
+   * SQL migration to create:
+   *   CREATE POLICY user_isolation ON note_nodes FOR ALL USING (auth.uid() = user_id);
+   *   CREATE POLICY user_isolation ON block_entities FOR ALL USING (auth.uid() = user_id);
+   */
   async pullFromSupabase(): Promise<Record<string, GraphiteDoc>> {
     if (!supabase || !this.session) return {};
 
@@ -336,11 +342,13 @@ export class SupabaseSyncService {
   ): () => void {
     if (!supabase || !this.session) return () => {};
     const channelTopic = `graphite_realtime_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const userId = this.session?.user?.id;
+    if (!userId) return () => {};
     const channel = supabase
       .channel(channelTopic)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "note_nodes" },
+        { event: "*", schema: "public", table: "note_nodes", filter: `user_id=eq.${userId}` },
         (payload: any) => {
           if (payload.eventType === "DELETE") {
             onDocDeleted(payload.old.id);
@@ -358,7 +366,7 @@ export class SupabaseSyncService {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "block_entities" },
+        { event: "*", schema: "public", table: "block_entities", filter: `user_id=eq.${userId}` },
         (payload: any) => {
           if (payload.new && payload.new.type === "document_content") {
             try {

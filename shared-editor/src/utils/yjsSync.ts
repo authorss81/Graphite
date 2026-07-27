@@ -5,6 +5,15 @@ import { awarenessStates } from "./userRegistry";
 const YJS_DB_PREFIX = "graphite_yjs_";
 
 const docs = new Map<string, { doc: Y.Doc; provider: any; channel: BroadcastChannel; interval: any }>();
+const authorizedDocs = new Set<string>();
+
+export function authorizeYDoc(docId: string): void {
+  authorizedDocs.add(docId);
+}
+
+export function deauthorizeYDoc(docId: string): void {
+  authorizedDocs.delete(docId);
+}
 const userColors = [
   "#a855f7", "#ec4899", "#3b82f6", "#10b981", "#f59e0b",
   "#ef4444", "#06b6d4", "#84cc16", "#8b5cf6", "#f97316",
@@ -17,6 +26,9 @@ function getUserColor(userId: string): string {
 }
 
 export function getYDoc(docId: string): Y.Doc {
+  if (!authorizedDocs.has(docId)) {
+    throw new Error(`Unauthorized access to document: ${docId}`);
+  }
   const existing = docs.get(docId);
   if (existing) return existing.doc;
 
@@ -41,9 +53,25 @@ export function getYDoc(docId: string): Y.Doc {
       Y.applyUpdateV2(doc, update, channel);
     }
     if (event.data.type === "yjs-awareness") {
-      const states = event.data.states;
-      for (const [clientId, state] of Object.entries(states)) {
-        awarenessStates.set(Number(clientId), state as any);
+      try {
+        const states = event.data.states;
+        if (!states || typeof states !== 'object') return;
+        const entries = Object.entries(states);
+        const capped = entries.slice(0, 50);
+        for (const [clientId, state] of capped) {
+          if (!state || typeof state !== 'object' || !state.user) continue;
+          const user = state.user;
+          if (typeof user.id !== 'string' || user.id.length > 64) continue;
+          if (typeof user.name !== 'string') continue;
+          const sanitizedName = user.name.replace(/[\x00-\x1f\x7f-\x9f]/g, '').slice(0, 30);
+          if (typeof user.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(user.color)) continue;
+          awarenessStates.set(Number(clientId), {
+            ...state,
+            user: { ...user, name: sanitizedName },
+          } as any);
+        }
+      } catch (e) {
+        console.warn('[Yjs] Failed to process awareness state:', e);
       }
     }
   };

@@ -279,11 +279,26 @@ export async function verifyHardwareKey(): Promise<boolean> {
           type: "public-key",
           transports: ["usb", "nfc", "ble", "internal"],
         }],
-        userVerification: "discouraged",
+        userVerification: "required",
         timeout: 60000,
       },
     });
-    return assertion !== null;
+    if (!assertion) return false;
+    const pubKeyAssertion = assertion as PublicKeyCredential;
+    // Verify clientDataJSON contains the original challenge
+    const clientData = JSON.parse(new TextDecoder().decode(pubKeyAssertion.response.clientDataJSON));
+    const base64url = (buf: Uint8Array): string => {
+      const base64 = btoa(String.fromCharCode(...buf));
+      return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    };
+    const expectedChallenge = base64url(challenge);
+    if (clientData.challenge !== expectedChallenge) {
+      console.warn("[WebAuthn] Challenge mismatch in assertion");
+      return false;
+    }
+    // NOTE: Full RP ID and origin verification requires a server.
+    // Client-side checks prevent basic replay attacks.
+    return true;
   } catch (err) {
     console.error("[WebAuthn] Verification failed:", err);
     return false;
