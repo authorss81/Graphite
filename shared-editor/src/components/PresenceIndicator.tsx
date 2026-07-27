@@ -1,19 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { useNoteStore } from "../store/useNoteStore";
-import { awarenessStates, type AwarenessState } from "../utils/userRegistry";
+import { awarenessStates, type AwarenessState, getCurrentUser } from "../utils/userRegistry";
 import { Users } from "lucide-react";
 
 export function PresenceIndicator() {
   const docId = useNoteStore((s) => s.docId);
   const [online, setOnline] = useState<AwarenessState[]>([]);
+  const currentUserIdRef = useRef(getCurrentUser().id);
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   useEffect(() => {
     const update = () => {
       const now = Date.now();
+      const ownId = currentUserIdRef.current;
       const active: AwarenessState[] = [];
       awarenessStates.forEach((state: AwarenessState) => {
-        if (state.docId === docId && now - state.lastSeen < 15000) {
+        if (state.docId === docId && now - state.lastSeen < 15000 && state.user.id !== ownId) {
           active.push(state);
         }
       });

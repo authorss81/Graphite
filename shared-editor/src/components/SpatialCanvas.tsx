@@ -255,6 +255,7 @@ export function SpatialCanvas() {
   };
 
   const addImageCard = (file: File, x: number, y: number) => {
+    if (file.size > 500 * 1024) return;
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
@@ -283,7 +284,8 @@ export function SpatialCanvas() {
             try {
               const text = await extractTextFromPdf(file);
               const pages = text.split(/\n\n(?=Page \d|$)/);
-              const newCards = pages.map((pageText, idx) => ({
+              const maxNew = Math.min(pages.length, Math.max(0, 500 - cards.length));
+              const newCards = pages.slice(0, maxNew).map((pageText, idx) => ({
                 id: "pdf_" + Date.now().toString(36) + "_" + idx,
                 docId: "pdf_" + Date.now().toString(36) + "_" + idx,
                 title: `${file.name} — Page ${idx + 1}`,
@@ -461,7 +463,7 @@ export function SpatialCanvas() {
   };
 
   const handleMouseUpCanvas = () => {
-    if (draggedCardId) persist(cards, edges);
+    if (draggedCardId) persist(cardsRef.current, edges);
     isPanningRef.current = false;
     setDraggedCardId(null);
     setGroupDrag(null);
@@ -473,6 +475,7 @@ export function SpatialCanvas() {
     e.stopPropagation();
     toggleSelect(card.id, e);
     if (connectingFromId && connectingFromId !== card.id) {
+      if (edges.length >= 500) { setConnectingFromId(null); return; }
       persist(cards, [...edges, { id: "edge_" + Math.random().toString(36).slice(2), fromCardId: connectingFromId, toCardId: card.id }]);
       setConnectingFromId(null);
       return;

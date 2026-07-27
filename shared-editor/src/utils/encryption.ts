@@ -40,6 +40,7 @@ export function bufToBase64(buf: ArrayBuffer): string {
 
 export function base64ToBuf(b64: string): ArrayBuffer {
   const sanitized = b64.replace(/=+$/, "");
+  if (!/^[A-Za-z0-9+\/]*$/.test(sanitized)) throw new Error("Invalid base64 input");
   const bytes: number[] = [];
   for (let i = 0; i < sanitized.length; i += 4) {
     const c0 = BASE64_CHARS.indexOf(sanitized[i]);
@@ -316,7 +317,11 @@ export async function deriveKeyWithHardware(passphrase: string, salt: Uint8Array
       try {
         const cred: WebAuthnCredential = JSON.parse(stored);
         keyMaterial = passphrase + cred.id + cred.rawId;
-      } catch {}
+      } catch {
+        console.warn("deriveKeyWithHardware: failed to parse stored credential, falling back to passphrase-only");
+      }
+    } else {
+      console.warn("deriveKeyWithHardware: hardware key is enabled but no credential stored, falling back to passphrase-only");
     }
   }
 

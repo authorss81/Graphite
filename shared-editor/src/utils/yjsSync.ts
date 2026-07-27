@@ -84,16 +84,16 @@ export function setAwarenessState(userId: string, userName: string, color: strin
   cursor: { x: number; y: number; };
   focused: boolean;
   docId: string;
-}>) {
-  const clientId = new Date().getTime();
-  awarenessStates.set(clientId, {
+}>, clientId?: number) {
+  const id = clientId ?? new Date().getTime();
+  awarenessStates.set(id, {
     user: { id: userId, name: userName, color: color || getUserColor(userId) },
     cursor: state.cursor || null,
     focused: state.focused ?? true,
     docId: state.docId || "",
     lastSeen: Date.now(),
   });
-  return clientId;
+  return id;
 }
 
 export function clearAwareness(clientId: number): void {

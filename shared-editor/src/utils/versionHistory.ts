@@ -166,11 +166,14 @@ export function generateHumanCommitMessage(docTitle: string, oldText: string, ne
 const _commitTimers: Record<string, ReturnType<typeof setTimeout>> = {};
 const _commitQueue: Record<string, () => void> = {};
 
-export function flushPendingCommits() {
+export async function flushPendingCommits() {
+  const promises: Promise<any>[] = [];
   for (const id of Object.keys(_commitTimers)) {
     clearTimeout(_commitTimers[id]);
-    _commitQueue[id]?.();
+    const fn = _commitQueue[id];
+    if (fn) promises.push(Promise.resolve(fn()));
   }
+  await Promise.all(promises);
 }
 
 export function scheduleDocCommit(docId: string, docTitle: string, editorState: string, canvasData: any) {
@@ -178,7 +181,7 @@ export function scheduleDocCommit(docId: string, docTitle: string, editorState: 
   _commitQueue[docId] = () => {
     delete _commitTimers[docId];
     delete _commitQueue[docId];
-    createDocCommit(docId, docTitle, editorState, canvasData);
+    return createDocCommit(docId, docTitle, editorState, canvasData);
   };
   _commitTimers[docId] = setTimeout(_commitQueue[docId]!, 2000);
 }
@@ -210,8 +213,8 @@ export async function createDocCommit(docId: string, docTitle: string, editorSta
         },
       });
       commitId = realHash;
-    } catch {
-      // Git commit failed, fall back to timestamp-based ID
+    } catch (err) {
+      console.warn("Git commit failed, using timestamp fallback:", err);
     }
   }
 
@@ -248,23 +251,39 @@ export function clearDocCommits(docId: string): void {
   saveHistoryMap(map);
 }
 
+// LCS-based diff: O(mn) time, O(min(m,n)) space for backtrace
+function buildLCSTable(a: string[], b: string[]): number[][] {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  return dp;
+}
+
 export function computeTextDiff(oldText: string, newText: string): { type: "add" | "del" | "same"; text: string }[] {
   const oldLines = extractHumanText(oldText).split("\n").filter((l) => l.trim() !== "");
   const newLines = extractHumanText(newText).split("\n").filter((l) => l.trim() !== "");
   const diffs: { type: "add" | "del" | "same"; text: string }[] = [];
 
-  const maxLen = Math.max(oldLines.length, newLines.length);
-  for (let i = 0; i < maxLen; i++) {
-    const o = oldLines[i];
-    const n = newLines[i];
-    if (o === n) {
-      if (o !== undefined) diffs.push({ type: "same", text: o });
+  const dp = buildLCSTable(oldLines, newLines);
+  let i = oldLines.length, j = newLines.length;
+  const reversed: typeof diffs = [];
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+      reversed.push({ type: "same", text: oldLines[i - 1] });
+      i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      reversed.push({ type: "add", text: newLines[j - 1] });
+      j--;
     } else {
-      if (o !== undefined) diffs.push({ type: "del", text: o });
-      if (n !== undefined) diffs.push({ type: "add", text: n });
+      reversed.push({ type: "del", text: oldLines[i - 1] });
+      i--;
     }
   }
-
+  for (let k = reversed.length - 1; k >= 0; k--) diffs.push(reversed[k]);
   return diffs;
 }
 

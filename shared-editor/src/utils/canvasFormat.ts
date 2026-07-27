@@ -65,24 +65,36 @@ export function exportToJsonCanvas(cards: any[], edges: any[]): string {
 
 // Import from JSON Canvas format to internal data
 export function importFromJsonCanvas(json: string): { cards: any[]; edges: any[] } | null {
+  if (json.length > 10 * 1024 * 1024) return null;
   try {
     const canvas: JsonCanvas = JSON.parse(json);
     if (!canvas.nodes || !Array.isArray(canvas.nodes)) return null;
+    if (canvas.nodes.length > 1000) return null;
 
-    const cards = canvas.nodes.map((n: JsonCanvasNode) => ({
-      id: n.id,
-      docId: n.id,
-      type: n.type === "group" ? "group" : "note",
-      x: n.x,
-      y: n.y,
-      width: n.width,
-      height: n.height,
-      title: n.text || n.label || "",
-      content: n.text || "",
-      color: n.color || undefined,
-    }));
+    const cards = canvas.nodes.slice(0, 1000).map((n: JsonCanvasNode) => {
+      let imageUrl: string | undefined;
+      if (n.file) {
+        try {
+          const url = new URL(n.file);
+          if (["https:", "http:", "data:", "blob:"].includes(url.protocol)) imageUrl = n.file;
+        } catch {}
+      }
+      return {
+        id: n.id,
+        docId: n.id,
+        type: n.type === "group" ? "group" : "note",
+        x: n.x,
+        y: n.y,
+        width: n.width,
+        height: n.height,
+        title: n.text || n.label || "",
+        content: n.text || "",
+        color: n.color || undefined,
+        imageUrl,
+      };
+    });
 
-    const edges = (canvas.edges || []).map((e: any) => ({
+    const edges = (canvas.edges || []).slice(0, 500).map((e: any) => ({
       id: e.id,
       fromCardId: e.fromNode || e.from || e.source || e.fromCardId,
       toCardId: e.toNode || e.to || e.target || e.toCardId,

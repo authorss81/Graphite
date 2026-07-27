@@ -41,9 +41,10 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
-function isJavaScriptUrl(url: string): boolean {
+export function isJavaScriptUrl(url: string): boolean {
   if (!url) return false;
-  return /^\s*javascript\s*:/i.test(url.trim());
+  const cleaned = url.replace(/\s/g, "");
+  return /^javascript:/i.test(cleaned);
 }
 
 function nodeToHtml(node: any): string {
@@ -130,9 +131,14 @@ export function downloadAsFile(content: string, filename: string, mime: string =
 export function printDocument(html: string) {
   const win = window.open("", "_blank");
   if (!win) return;
-  // Strip script tags from print HTML to prevent XSS in the popup window
-  const safe = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
-  win.document.write(safe);
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  for (const script of doc.querySelectorAll("script")) script.remove();
+  for (const el of doc.querySelectorAll("*")) {
+    for (const attr of el.attributes) {
+      if (attr.name.startsWith("on")) el.removeAttribute(attr.name);
+    }
+  }
+  win.document.write(doc.documentElement.outerHTML);
   win.document.close();
   win.focus();
   win.print();

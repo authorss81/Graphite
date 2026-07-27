@@ -337,9 +337,10 @@ export function GraphView() {
     return () => {
       mounted = false;
       simulation.stop();
+      simRef.current = null;
       cancelAnimationFrame(animIdRef.current);
     };
-  }, [edges, zoomLevel, offset]);
+  }, [edges, zoomLevel, offset, nodes]);
 
   // ── 13.2: Popup on click ──────────────────────────────────────────────
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -417,7 +418,7 @@ export function GraphView() {
   // ── 13.7: Save / load layouts ──────────────────────────────────────────
   const saveCurrentLayout = useCallback(() => {
     const name = prompt("Layout name:", `layout-${Date.now().toString(36)}`);
-    if (!name) return;
+    if (!name || name === "__proto__" || name === "constructor" || name === "toString") return;
     const sim: any = simRef.current;
     const simNodes = sim?.nodes();
     const pos: Record<string, { x: number; y: number }> = {};

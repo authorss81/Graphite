@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { awarenessStates, type AwarenessState } from "../utils/userRegistry";
+import { awarenessStates, type AwarenessState, getCurrentUser } from "../utils/userRegistry";
 
 interface CursorDisplay {
   user: { id: string; name: string; color: string };
@@ -10,6 +10,7 @@ interface CursorDisplay {
 
 export function AwarenessCursorsPlugin() {
   const [editor] = useLexicalComposerContext();
+  const currentUserIdRef = useRef(getCurrentUser().id);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cursorsRef = useRef<CursorDisplay[]>([]);
   const rafRef = useRef<number>(0);
@@ -41,10 +42,12 @@ export function AwarenessCursorsPlugin() {
 
       const now = Date.now();
       const activeCursors: CursorDisplay[] = [];
+      const ownId = currentUserIdRef.current;
 
       awarenessStates.forEach((state: AwarenessState) => {
         if (!state.cursor || !state.focused) return;
         if (now - state.lastSeen > 10000) return;
+        if (state.user.id === ownId) return;
         activeCursors.push({
           user: state.user,
           x: state.cursor.x,

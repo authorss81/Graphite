@@ -1,0 +1,40 @@
+name: iOS Release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Build Web App
+        working-directory: shared-editor
+        run: npm ci && npm run build
+
+      - name: Capacitor Sync
+        working-directory: shared-editor
+        run: npx cap sync ios
+
+      - uses: apple-actions/import-codesign-certs@v2
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERT_P12_B64 }}
+          p12-password:    ${{ secrets.APPLE_CERT_P12_PASS }}
+
+      - name: Build & Archive
+        working-directory: shared-editor/ios/App
+        run: |
+          xcodebuild archive \
+            -scheme App -configuration Release \
+            -archivePath App.xcarchive \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release
+          path: shared-editor/ios/App/App.xcarchive

@@ -46,7 +46,7 @@ export function MultiplayerPlugin({ docId, onConnectionChange }: MultiplayerPlug
     };
   }, [docId, editor, onConnectionChange]);
 
-  const updateCursor = useCallback(() => {
+  const updateCursor = useCallback((cid?: number) => {
     const rootEl = editor.getRootElement();
     if (!rootEl) return;
     const sel = document.getSelection();
@@ -55,7 +55,7 @@ export function MultiplayerPlugin({ docId, onConnectionChange }: MultiplayerPlug
     const rect = range.getBoundingClientRect();
     const editorRect = rootEl.getBoundingClientRect();
 
-    setAwarenessState(
+    return setAwarenessState(
       user.current.id,
       user.current.name,
       user.current.color,
@@ -63,7 +63,8 @@ export function MultiplayerPlugin({ docId, onConnectionChange }: MultiplayerPlug
         cursor: { x: rect.left - editorRect.left, y: rect.top - editorRect.top },
         focused: true,
         docId,
-      }
+      },
+      cid
     );
   }, [editor, docId]);
 
@@ -73,25 +74,27 @@ export function MultiplayerPlugin({ docId, onConnectionChange }: MultiplayerPlug
 
     const onMouseMove = () => {
       if (document.activeElement === rootEl) {
-        updateCursor();
+        clientIdRef.current = updateCursor(clientIdRef.current) || clientIdRef.current;
       }
     };
 
     const onFocus = () => {
-      setAwarenessState(
+      clientIdRef.current = setAwarenessState(
         user.current.id,
         user.current.name,
         user.current.color,
-        { focused: true, docId }
+        { focused: true, docId },
+        clientIdRef.current
       );
     };
 
     const onBlur = () => {
-      setAwarenessState(
+      clientIdRef.current = setAwarenessState(
         user.current.id,
         user.current.name,
         user.current.color,
-        { focused: false, docId }
+        { focused: false, docId },
+        clientIdRef.current
       );
     };
 

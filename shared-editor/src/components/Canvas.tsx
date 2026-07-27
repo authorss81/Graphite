@@ -15,7 +15,9 @@ function loadLibrary(): any[] {
 
 function saveLibrary(items: any[]) {
   try {
-    localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+    if (!Array.isArray(items)) return;
+    const valid = items.slice(0, 500).filter(item => item && typeof item === "object");
+    localStorage.setItem(LIBRARY_KEY, JSON.stringify(valid));
   } catch {}
 }
 

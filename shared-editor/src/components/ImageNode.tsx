@@ -55,7 +55,8 @@ export class ImageNode extends DecoratorNode<ReactElement> {
           throw new Error("Image source uses a disallowed URL scheme");
         }
       } catch {
-        if (src.trim().toLowerCase().startsWith("javascript:")) {
+        const cleaned = src.trim().replace(/[\n\r\t]/g, "");
+        if (/^\s*javascript\s*:/i.test(cleaned)) {
           throw new Error("Image source cannot be a javascript: URL");
         }
       }

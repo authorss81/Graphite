@@ -26,6 +26,19 @@ export interface SpatialCanvasData {
 }
 
 const SPATIAL_KEY = "graphite_spatial_canvas_v1";
+const SPATIAL_WORKSPACE_ID_KEY = "graphite_spatial_workspace_id";
+
+function getWorkspaceId(): string {
+  try {
+    const existing = localStorage.getItem(SPATIAL_WORKSPACE_ID_KEY);
+    if (existing) return existing;
+    const id = "ws_" + crypto.randomUUID();
+    localStorage.setItem(SPATIAL_WORKSPACE_ID_KEY, id);
+    return id;
+  } catch {
+    return "spatial_workspace";
+  }
+}
 
 export function loadSpatialCanvasData(): SpatialCanvasData {
   try {
@@ -52,7 +65,7 @@ export function saveSpatialCanvasData(data: SpatialCanvasData): void {
     supabase
       .from("canvas_edges")
       .upsert({
-        id: "spatial_workspace",
+        id: getWorkspaceId(),
         data: data,
         updated_at: new Date().toISOString(),
       })
