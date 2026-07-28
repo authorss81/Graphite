@@ -6,7 +6,6 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   define: {
     global: "globalThis",
-    Buffer: ["buffer", "Buffer"],
   },
   plugins: [
     react(),
