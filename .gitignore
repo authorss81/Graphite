@@ -13,6 +13,13 @@ shared-editor/dist/
 *.keystore
 *.jks
 
+# Security audit temp files
+security-agent-*.md
+security-live-*.md
+security-js-analysis.md
+live-*
+nul
+
 # Backups
 *.bak
 *.backup
