@@ -9,6 +9,7 @@ export function AuthScreen() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   if (isInitializing) {
     return <div className="auth-loading"><div className="auth-loading-spinner" /></div>;
@@ -28,6 +29,7 @@ export function AuthScreen() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     clearError();
+    setSuccessMessage(null);
 
     if (!email.trim()) {
       toast("Please enter your email", "error");
@@ -46,7 +48,8 @@ export function AuthScreen() {
       } else {
         await register(email, password);
         setPassword("");
-        toast("Account created! Check your email to confirm.", "success");
+        setSuccessMessage("Account created! A confirmation link has been sent to your email. Please check your inbox and confirm your email before signing in.");
+        toast("Confirmation email sent!", "success");
       }
     } catch {
       setPassword("");
@@ -56,6 +59,7 @@ export function AuthScreen() {
   const toggleMode = () => {
     setMode(mode === "login" ? "signup" : "login");
     clearError();
+    setSuccessMessage(null);
   };
 
   return (
@@ -65,6 +69,18 @@ export function AuthScreen() {
         <p className="auth-subtitle">
           {mode === "login" ? "Welcome back" : "Create your account"}
         </p>
+
+        {successMessage ? (
+          <div className="auth-success-box" style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "12px 16px", margin: "16px 0", color: "#34d399", fontSize: "14px", lineHeight: "1.5" }}>
+            <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+              <span style={{ fontSize: "18px", lineHeight: 1 }}>✓</span>
+              <div>{successMessage}</div>
+            </div>
+            <button className="auth-link" onClick={() => setSuccessMessage(null)} style={{ marginTop: "12px", display: "block" }}>
+              Dismiss
+            </button>
+          </div>
+        ) : null}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="auth-label">
@@ -120,7 +136,10 @@ export function AuthScreen() {
                     return;
                   }
                   try {
+                    clearError();
+                    setSuccessMessage(null);
                     await resetPasswordForEmail(email);
+                    setSuccessMessage("Password reset link sent! Please check your email inbox and spam folders for the recovery link.");
                     toast("Password reset email sent!", "success");
                   } catch (err: unknown) {
                     toast(err instanceof Error ? err.message : "Reset failed", "error");
