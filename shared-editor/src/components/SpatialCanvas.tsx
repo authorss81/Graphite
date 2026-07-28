@@ -207,10 +207,6 @@ export function SpatialCanvas() {
     }
   }, [expandedSubCanvas, subCanvasData]);
 
-  const updateSubCanvas = useCallback((cardId: string, subCards: SpatialCard[], subEdges: SpatialEdge[]) => {
-    setSubCanvasData(prev => ({ ...prev, [cardId]: { cards: subCards, edges: subEdges } }));
-  }, []);
-
   // ── Smart auto-resize: fit card to content ────────────────────────────
   const fitCardToContent = useCallback((card: SpatialCard) => {
     const doc = documents[card.docId];
@@ -429,7 +425,7 @@ export function SpatialCanvas() {
     handleMouseMoveCanvas(e as unknown as React.MouseEvent);
   };
 
-  const handlePointerUp = (e: React.PointerEvent) => {
+  const handlePointerUp = (_e: React.PointerEvent) => {
     setStylusMode(false);
     setPointerPressure(0);
     handleMouseUpCanvas();

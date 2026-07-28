@@ -59,8 +59,9 @@ export function getYDoc(docId: string): Y.Doc {
         const entries = Object.entries(states);
         const capped = entries.slice(0, 50);
         for (const [clientId, state] of capped) {
-          if (!state || typeof state !== 'object' || !state.user) continue;
-          const user = state.user;
+          const s = state as Record<string, any>;
+          if (!s || typeof s !== 'object' || !s.user) continue;
+          const user = s.user;
           if (typeof user.id !== 'string' || user.id.length > 64) continue;
           if (typeof user.name !== 'string') continue;
           const sanitizedName = user.name.replace(/[\x00-\x1f\x7f-\x9f]/g, '').slice(0, 30);

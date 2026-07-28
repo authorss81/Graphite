@@ -350,8 +350,9 @@ export async function deriveKeyWithHardware(passphrase: string, salt: Uint8Array
       const pubKeyAssertion = assertion as PublicKeyCredential;
       // Mix assertion response bytes (authenticatorData + signature) into key material
       // These bytes are not stored in localStorage — produced fresh by hardware key each time
-      const authData = new Uint8Array(pubKeyAssertion.response.authenticatorData);
-      const sig = new Uint8Array(pubKeyAssertion.response.signature);
+      const resp = pubKeyAssertion.response as AuthenticatorAssertionResponse;
+      const authData = new Uint8Array(resp.authenticatorData);
+      const sig = new Uint8Array(resp.signature);
       const combined = new Uint8Array(authData.length + sig.length);
       combined.set(authData, 0);
       combined.set(sig, authData.length);

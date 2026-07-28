@@ -213,11 +213,11 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
     [editor],
   );
 
-  const handleLibraryChange = useCallback((libraryItems: any[]) => {
+  const handleLibraryChange = useCallback((libraryItems: any) => {
     saveLibrary(libraryItems);
   }, []);
 
-  const generateIdForFile = useCallback((file: File) => {
+  const generateIdForFile = useCallback((_file: File) => {
     return `file_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
   }, []);
 

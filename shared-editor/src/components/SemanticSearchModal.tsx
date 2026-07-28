@@ -105,7 +105,7 @@ export function SemanticSearchModal({ isOpen, onClose }: Props) {
   const handleRerank = async () => {
     const current = resultsRef.current;
     if (current.length === 0) return;
-    const config = loadAIConfig();
+    const config = await loadAIConfig();
     if (config.provider === "openai" && !config.openaiKey) { toast("Configure OpenAI API key in AI Settings for LLM reranking", "error"); return; }
     if (config.provider === "anthropic" && !config.anthropicKey) { toast("Configure Anthropic API key in AI Settings for LLM reranking", "error"); return; }
 

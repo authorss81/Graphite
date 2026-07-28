@@ -22,7 +22,7 @@ export function GhostTextPlugin() {
     }
     ghostAbortController = new AbortController();
 
-    const config = loadAIConfig();
+    const config = await loadAIConfig();
 
     if (config.provider === "openai" && !config.openaiKey) return;
     if (config.provider === "anthropic" && !config.anthropicKey) return;

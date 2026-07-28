@@ -201,7 +201,7 @@ export async function addMemberToWorkspace(wsId: string, member: Omit<WorkspaceM
   if (!cleanDisplayName) throw new Error("Display name is required");
   const db = await getDB();
   const ws = await db.get("workspaces", wsId);
-  if (ws && !ws.members.some((m) => m.userId === member.userId)) {
+  if (ws && !ws.members.some((m: any) => m.userId === member.userId)) {
     ws.members.push({ ...member, email: cleanEmail, displayName: cleanDisplayName, joinedAt: Date.now() });
     await db.put("workspaces", ws);
   }
@@ -213,7 +213,7 @@ export async function updateMemberRole(wsId: string, targetUserId: string, role:
   const db = await getDB();
   const ws = await db.get("workspaces", wsId);
   if (ws) {
-    const idx = ws.members.findIndex((m) => m.userId === targetUserId);
+    const idx = ws.members.findIndex((m: any) => m.userId === targetUserId);
     if (idx !== -1) {
       ws.members[idx].role = role;
       await db.put("workspaces", ws);
@@ -227,7 +227,7 @@ export async function removeMemberFromWorkspace(wsId: string, targetUserId: stri
   const db = await getDB();
   const ws = await db.get("workspaces", wsId);
   if (ws) {
-    ws.members = ws.members.filter((m) => m.userId !== targetUserId);
+    ws.members = ws.members.filter((m: any) => m.userId !== targetUserId);
     await db.put("workspaces", ws);
   }
 }

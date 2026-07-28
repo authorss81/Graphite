@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useNoteStore } from "../store/useNoteStore";
-import { Network, Filter, Tags, Calendar, Save, Upload, X, ExternalLink } from "lucide-react";
+import { Network, Filter, Tags, Calendar, Save, X, ExternalLink } from "lucide-react";
 import { ZoomControls } from "./ZoomControls";
 import {
   forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide,
@@ -282,7 +282,6 @@ export function GraphView() {
       ctx.scale(zoomLevel, zoomLevel);
 
       // Draw edges with weight-based thickness (13.5)
-      const nodeMap = new Map(simNodes.map((n: any) => [n.id, n]));
       for (const edge of edges) {
         const s = simNodes.find((n: any) => n.id === edge.source) as any;
         const t = simNodes.find((n: any) => n.id === edge.target) as any;

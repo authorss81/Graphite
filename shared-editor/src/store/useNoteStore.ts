@@ -3,7 +3,7 @@ import type { GraphiteDoc } from "../utils/docStorage";
 import { newDocId, loadDocs, saveDocs, loadDocsPaginated } from "../utils/docStorage";
 import type { SpatialCard, SpatialEdge } from "../utils/spatialCanvasStorage";
 import { SupabaseSyncService } from "../utils/supabase";
-import { scheduleDocCommit, flushPendingCommits } from "../utils/versionHistory";
+import { scheduleDocCommit } from "../utils/versionHistory";
 import { toast } from "../components/Toast";
 
 let unsubscribeRealtime: (() => void) | null = null;

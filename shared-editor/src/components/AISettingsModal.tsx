@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Bot, Key, Server, Save } from "lucide-react";
 import { loadAIConfig, saveAIConfig, type AIConfig, type AIProvider } from "../utils/aiConfig";
 import { toast } from "./Toast";
@@ -15,7 +15,12 @@ interface AISettingsModalProps {
 }
 
 export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
-  const [config, setConfig] = useState<AIConfig>(loadAIConfig());
+  const [config, setConfig] = useState<AIConfig>({
+    provider: "ollama", openaiKey: "", openaiModel: "gpt-4o-mini",
+    anthropicKey: "", anthropicModel: "claude-3-haiku-20240307",
+    ollamaEndpoint: "http://localhost:11434", ollamaModel: "llama3",
+  });
+  useEffect(() => { loadAIConfig().then(setConfig); }, []);
   const [saving, setSaving] = useState(false);
 
   if (!isOpen) return null;
