@@ -1,7 +1,9 @@
-import { Suspense, lazy, useCallback, useMemo, useRef, useEffect } from "react";
+import { Suspense, lazy, useCallback, useMemo, useRef, useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $getNodeByKey, $createParagraphNode } from "lexical";
 import { $isCanvasNode, type CanvasData } from "./CanvasNode";
+import { CanvasBrushPresets } from "./CanvasBrushPresets";
+import { CanvasLibraryImport } from "./CanvasLibraryImport";
 
 const Excalidraw = lazy(() =>
   import("@excalidraw/excalidraw").then((m) => ({ default: m.Excalidraw })),
@@ -20,7 +22,9 @@ function loadLibrary(): any[] {
 
 function saveLibrary(items: any[]) {
   try {
-    localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+    if (!Array.isArray(items)) return;
+    const valid = items.slice(0, 500).filter(item => item && typeof item === "object");
+    localStorage.setItem(LIBRARY_KEY, JSON.stringify(valid));
   } catch {}
 }
 
@@ -28,6 +32,8 @@ interface Props {
   nodeKey: string;
   data: CanvasData;
 }
+
+const SHAPE_TOOLS = new Set(["rectangle", "diamond", "ellipse", "arrow", "line", "freedraw"]);
 
 const BRUSH_PROPS = [
   "viewBackgroundColor",
@@ -60,7 +66,10 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
   const nodeKeyRef = useRef(nodeKey);
   nodeKeyRef.current = nodeKey;
   const excalidrawAPIRef = useRef<any>(null);
+  const [apiReady, setApiReady] = useState(false);
   const libraryLoadedRef = useRef(false);
+  const lastShapeToolRef = useRef<string | null>(null);
+  const prevElementCountRef = useRef<number>(data?.elements?.length || 0);
 
   const stateRef = useRef<{
     elements: any[];
@@ -77,6 +86,12 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
 
     const handlePointerDown = () => {
       isDrawingRef.current = true;
+      if (excalidrawAPIRef.current?.getAppState) {
+        const tool = excalidrawAPIRef.current.getAppState().activeTool;
+        if (tool?.type && tool.type !== "selection") {
+          lastShapeToolRef.current = tool.type;
+        }
+      }
     };
 
     const handlePointerUp = () => {
@@ -154,6 +169,19 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
 
   const onChange = useCallback(
     (elements: readonly any[], appState: any, files: any) => {
+      const prevCount = prevElementCountRef.current;
+      const newCount = elements.length;
+      prevElementCountRef.current = newCount;
+
+      if (newCount > prevCount) {
+        const tool = lastShapeToolRef.current;
+        if (tool && SHAPE_TOOLS.has(tool)) {
+          requestAnimationFrame(() => {
+            excalidrawAPIRef.current?.setActiveTool({ type: tool });
+          });
+        }
+      }
+
       const brush = pickBrushState(appState);
       stateRef.current = {
         elements: [...elements],
@@ -238,7 +266,7 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
       >
         <Excalidraw
           theme="dark"
-          excalidrawAPI={(api) => { excalidrawAPIRef.current = api; }}
+          excalidrawAPI={(api) => { excalidrawAPIRef.current = api; setApiReady(true); }}
           initialData={initialCanvasData}
           onChange={onChange}
           onLibraryChange={handleLibraryChange}
@@ -247,29 +275,43 @@ export function ExcalidrawCanvasComponent({ nodeKey, data }: Props) {
           detectScroll={true}
         />
       </Suspense>
-      <button
-        type="button"
-        className="graphite-canvas-exit-btn"
-        title="Continue writing text below canvas"
-        onClick={insertParagraphBelow}
+      <div
         style={{
           position: "absolute",
           bottom: 8,
           right: 8,
           zIndex: 100,
-          background: "var(--bg-tertiary)",
-          color: "var(--text-primary)",
-          border: "1px solid var(--border-color)",
-          borderRadius: 6,
-          padding: "4px 10px",
-          fontSize: 12,
-          fontWeight: 500,
-          cursor: "pointer",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+          display: "flex",
+          gap: 6,
+          alignItems: "center",
         }}
       >
-        ↓ Write Below
-      </button>
+        {apiReady && (
+          <>
+            <CanvasLibraryImport excalidrawAPI={excalidrawAPIRef.current} />
+            <CanvasBrushPresets excalidrawAPI={excalidrawAPIRef.current} />
+          </>
+        )}
+        <button
+          type="button"
+          className="graphite-canvas-exit-btn"
+          title="Continue writing text below canvas"
+          onClick={insertParagraphBelow}
+          style={{
+            background: "var(--bg-tertiary)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border-color)",
+            borderRadius: 6,
+            padding: "4px 10px",
+            fontSize: 12,
+            fontWeight: 500,
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+          }}
+        >
+          ↓ Write Below
+        </button>
+      </div>
     </div>
   );
 }

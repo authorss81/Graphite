@@ -1,6 +1,8 @@
-import { useMemo, useRef, useCallback, useEffect } from "react";
+import { useMemo, useRef, useCallback, useEffect, useState } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import { logToNative } from "../utils/bridge";
+import { CanvasBrushPresets } from "./CanvasBrushPresets";
+import { CanvasLibraryImport } from "./CanvasLibraryImport";
 
 const LIBRARY_KEY = "graphite_excalidraw_library";
 
@@ -25,6 +27,8 @@ interface CanvasProps {
   initialData?: any;
   onChange?: (data: any) => void;
 }
+
+const SHAPE_TOOLS = new Set(["rectangle", "diamond", "ellipse", "arrow", "line", "freedraw"]);
 
 const BRUSH_PROPS = [
   "viewBackgroundColor",
@@ -64,9 +68,13 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
   onChangeRef.current = onChange;
 
   const excalidrawAPIRef = useRef<any>(null);
+  const [apiReady, setApiReady] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFingerprintRef = useRef<string>("");
   const libraryLoadedRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const lastShapeToolRef = useRef<string | null>(null);
+  const prevElementCountRef = useRef<number>(initialData?.elements?.length || 0);
 
   useEffect(() => {
     if (initialData) {
@@ -101,6 +109,19 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
     }
 
     lastFingerprintRef.current = fingerprint;
+
+    const prevCount = prevElementCountRef.current;
+    const newCount = elements.length;
+    prevElementCountRef.current = newCount;
+
+    if (newCount > prevCount) {
+      const tool = lastShapeToolRef.current;
+      if (tool && SHAPE_TOOLS.has(tool)) {
+        requestAnimationFrame(() => {
+          excalidrawAPIRef.current?.setActiveTool({ type: tool });
+        });
+      }
+    }
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -163,7 +184,19 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
   }, [savedLibrary]);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const handler = () => {
+      if (excalidrawAPIRef.current?.getAppState) {
+        const tool = excalidrawAPIRef.current.getAppState().activeTool;
+        if (tool?.type && tool.type !== "selection") {
+          lastShapeToolRef.current = tool.type;
+        }
+      }
+    };
+    container.addEventListener("pointerdown", handler);
     return () => {
+      container.removeEventListener("pointerdown", handler);
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
@@ -184,6 +217,7 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
 
   return (
     <div
+      ref={containerRef}
       className="graphite-canvas-container"
       style={{
         height: "100%",
@@ -197,7 +231,7 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
     >
       <Excalidraw
         theme="dark"
-        excalidrawAPI={(api) => { excalidrawAPIRef.current = api; }}
+        excalidrawAPI={(api) => { excalidrawAPIRef.current = api; setApiReady(true); }}
         initialData={initialCanvasData}
         onChange={handleCanvasChange}
         onLibraryChange={handleLibraryChange}
@@ -205,6 +239,22 @@ export function Canvas({ initialData, onChange }: CanvasProps) {
         UIOptions={uiOptions}
         detectScroll={true}
       />
+      {apiReady && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 8,
+            right: 8,
+            zIndex: 100,
+            display: "flex",
+            gap: 6,
+            alignItems: "center",
+          }}
+        >
+          <CanvasLibraryImport excalidrawAPI={excalidrawAPIRef.current} />
+          <CanvasBrushPresets excalidrawAPI={excalidrawAPIRef.current} />
+        </div>
+      )}
     </div>
   );
 }

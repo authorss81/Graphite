@@ -59,6 +59,8 @@ const MAX_CONTENT_LENGTH = 10000;
 const MAX_COMMENTS_PER_DOC = 1000;
 const COMMENT_COOLDOWN_MS = 1000;
 let lastCommentTime = 0;
+
+function getCurrentUserId(): string {
   try {
     const raw = localStorage.getItem("graphite_current_user");
     if (raw) {
