@@ -71,16 +71,22 @@ function trimForStorage(docs: Record<string, GraphiteDoc>): Record<string, Graph
 
   const slimStr = JSON.stringify(slim);
   if (new Blob([slimStr]).size <= MAX_BYTES) {
-    // Slim version fits — include canvasData only for recent 5 docs
+    // Include canvasData only for recent 5 docs (use a temporary object to check fit)
+    const withCanvas: Record<string, GraphiteDoc> = {};
+    for (const [id, doc] of Object.entries(slim)) {
+      withCanvas[id] = { ...doc };
+    }
     const recent = Object.values(docs)
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, 5)
       .map((d) => d.id);
     for (const id of recent) {
-      if (docs[id]) slim[id] = { ...docs[id] };
+      if (docs[id]) withCanvas[id] = { ...docs[id] };
     }
-    const withCanvas = JSON.stringify(slim);
-    if (new Blob([withCanvas]).size <= MAX_BYTES) return slim;
+    const withCanvasStr = JSON.stringify(withCanvas);
+    if (new Blob([withCanvasStr]).size <= MAX_BYTES) {
+      return withCanvas;
+    }
   }
 
   return slim;

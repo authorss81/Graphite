@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { GraphiteDoc } from "../utils/docStorage";
 import { newDocId, loadDocs, saveDocs, loadDocsPaginated } from "../utils/docStorage";
+import { idbLoadAllDocs } from "../utils/idbStorage";
 import type { SpatialCard, SpatialEdge } from "../utils/spatialCanvasStorage";
 import { SupabaseSyncService } from "../utils/supabase";
 import { scheduleDocCommit } from "../utils/versionHistory";
@@ -171,6 +172,44 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       docPage: 0,
       docTotal: Object.keys(documents).length,
       ...parseStats(current.editorState),
+    });
+
+    // Asynchronously load all full documents from IndexedDB (restoring canvasData if trimmed from localStorage)
+    idbLoadAllDocs().then((idbDocs) => {
+      if (idbDocs.length === 0) return;
+      const merged = { ...get().documents };
+      let changed = false;
+      for (const doc of idbDocs) {
+        const local = merged[doc.id];
+        if (!local) {
+          merged[doc.id] = doc;
+          changed = true;
+        } else if (doc.updatedAt >= local.updatedAt || (doc.canvasData && !local.canvasData)) {
+          merged[doc.id] = {
+            ...local,
+            ...doc,
+            updatedAt: Math.max(local.updatedAt, doc.updatedAt),
+          };
+          changed = true;
+        }
+      }
+      if (changed) {
+        const currentDoc = merged[get().docId];
+        const state: Partial<NoteStore> = { documents: merged, docTotal: Object.keys(merged).length };
+        if (currentDoc) {
+          state.editorState = currentDoc.editorState;
+          state.canvasData = currentDoc.canvasData;
+          const stats = parseStats(currentDoc.editorState);
+          state.wordCount = stats.wordCount;
+          state.charCount = stats.charCount;
+          state.backlinks = stats.backlinks;
+          state.totalTodos = stats.totalTodos;
+          state.completedTodos = stats.completedTodos;
+        }
+        set(state as any);
+      }
+    }).catch((err) => {
+      console.error("[IDB] failed to load docs:", err);
     });
 
     // Register auto-pull callback (fired after auth state change in SupabaseSyncService)
@@ -482,9 +521,19 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const nextPage = docPage + 1;
     const { docs } = loadDocsPaginated(nextPage);
     if (Object.keys(docs).length === 0) return;
+    
+    const current = { ...get().documents };
+    for (const [id, doc] of Object.entries(docs)) {
+      const existing = current[id];
+      current[id] = {
+        ...existing,
+        ...doc,
+        canvasData: doc.canvasData || existing?.canvasData || null,
+      };
+    }
     set({
       docPage: nextPage,
-      documents: { ...get().documents, ...docs },
+      documents: current,
     });
   },
 }));
