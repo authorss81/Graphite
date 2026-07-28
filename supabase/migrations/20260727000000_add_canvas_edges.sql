@@ -12,6 +12,7 @@ CREATE INDEX IF NOT EXISTS idx_canvas_edges_doc_id ON canvas_edges(doc_id);
 
 ALTER TABLE canvas_edges ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage edges of their own documents" ON canvas_edges;
 CREATE POLICY "Users can manage edges of their own documents" 
     ON canvas_edges FOR ALL 
     USING (auth.uid() IS NOT NULL);

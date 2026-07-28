@@ -71,11 +71,13 @@ ALTER TABLE backlink_entities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document_embeddings ENABLE ROW LEVEL SECURITY;
 
 -- Note Nodes Policies
+DROP POLICY IF EXISTS "Users can manage their own note nodes" ON note_nodes;
 CREATE POLICY "Users can manage their own note nodes" 
     ON note_nodes FOR ALL 
     USING (auth.uid() = user_id);
 
 -- Block Entities Policies (checks user ownership of parent Note)
+DROP POLICY IF EXISTS "Users can manage blocks of their own notes" ON block_entities;
 CREATE POLICY "Users can manage blocks of their own notes" 
     ON block_entities FOR ALL 
     USING (
@@ -87,6 +89,7 @@ CREATE POLICY "Users can manage blocks of their own notes"
     );
 
 -- Backlinks Policies (Checks BOTH source_note_id and target_note_id ownership - F7 Fix)
+DROP POLICY IF EXISTS "Users can manage backlinks of their own notes" ON backlink_entities;
 CREATE POLICY "Users can manage backlinks of their own notes" 
     ON backlink_entities FOR ALL 
     USING (
@@ -102,6 +105,7 @@ CREATE POLICY "Users can manage backlinks of their own notes"
     );
 
 -- Embeddings Policies
+DROP POLICY IF EXISTS "Users can manage embeddings of their own notes" ON document_embeddings;
 CREATE POLICY "Users can manage embeddings of their own notes" 
     ON document_embeddings FOR ALL 
     USING (
@@ -113,7 +117,16 @@ CREATE POLICY "Users can manage embeddings of their own notes"
     );
 
 -- Setup Realtime replication for collaborative document edits
-ALTER PUBLICATION supabase_realtime ADD TABLE note_nodes, block_entities, backlink_entities;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'note_nodes'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE note_nodes, block_entities, backlink_entities;
+  END IF;
+END
+$$;
 
 -- 5. Create document_sync table for tracking sync state
 CREATE TABLE IF NOT EXISTS document_sync (
@@ -131,10 +144,12 @@ CREATE INDEX IF NOT EXISTS idx_document_sync_doc_id ON document_sync(doc_id);
 CREATE INDEX IF NOT EXISTS idx_document_sync_created_at ON document_sync(created_at);
 
 -- Insert policies for authenticated users
+DROP POLICY IF EXISTS "Users can insert into document_sync" ON document_sync;
 CREATE POLICY "Users can insert into document_sync" 
   ON document_sync FOR INSERT 
   WITH CHECK (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "Users can read their own sync records" ON document_sync;
 CREATE POLICY "Users can read their own sync records" 
   ON document_sync FOR SELECT 
   USING (auth.uid() IS NOT NULL);
