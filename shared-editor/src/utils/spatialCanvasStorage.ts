@@ -67,8 +67,9 @@ export function saveSpatialCanvasData(data: SpatialCanvasData): void {
   }
 
   if (isSupabaseAvailable() && supabase) {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      supabase
+    const client = supabase;
+    client.auth.getSession().then(({ data: { session } }) => {
+      client
         .from("canvas_edges")
         .upsert({
           id: getWorkspaceId(),

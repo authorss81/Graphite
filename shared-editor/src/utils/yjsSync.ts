@@ -67,7 +67,7 @@ export function getYDoc(docId: string): Y.Doc {
           const sanitizedName = user.name.replace(/[\x00-\x1f\x7f-\x9f]/g, '').slice(0, 30);
           if (typeof user.color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(user.color)) continue;
           awarenessStates.set(Number(clientId), {
-            ...state,
+            ...s,
             user: { ...user, name: sanitizedName },
           } as any);
         }
